@@ -12,6 +12,7 @@ dependencies = [
     "pytest-cov>=5.0",
     "pandas>=2.0",
     "certifi>=2024.0",
+    "hypothesis>=6.161",
 ]
 
 [project.optional-dependencies]
