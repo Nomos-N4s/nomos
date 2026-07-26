@@ -56,13 +56,14 @@ def _log_benchmark_to_backend(backend: Optional[OntologyBackend], benchmarks: Di
     if backend is None or not benchmarks:
         return
     try:
-        for mode, data in benchmarks.items():
+        for item in benchmarks.get("aggregates", []):
             backend.add_entity("benchmark", {
-                "mode": mode,
-                "avg_reward": data.get("avg_reward", 0),
-                "std_reward": data.get("std_reward", 0),
-                "avg_violations": data.get("avg_violations", 0),
-                "n_seeds": data.get("n_seeds", 0),
+                "strategy": item.get("strategy"),
+                "scenario": item.get("scenario"),
+                "mean_reward": item.get("mean_reward", 0),
+                "std_reward": item.get("std_reward", 0),
+                "mean_violations": item.get("mean_violations", 0),
+                "num_seeds": item.get("num_seeds", 0),
             })
     except Exception:
         pass
@@ -113,58 +114,35 @@ def render_benchmarks_tab(backend: Optional[OntologyBackend] = None):
                     st.json(eval_data.get("metrics_per_episode", []))
         return
 
-    gov = benchmarks.get("governance", {})
-    no_gov = benchmarks.get("no_governance", {})
+    aggregates = benchmarks.get("aggregates", [])
+    if not aggregates:
+        st.info("No aggregates found in benchmark data.")
+        return
 
-    col_g, col_n = st.columns(2)
-    with col_g:
-        st.metric("🏛️ Governance",
-                  f"{gov.get('avg_reward', 0):.2f} ± {gov.get('std_reward', 0):.2f}",
-                  help=f"Violations: {gov.get('avg_violations', 0):.2f}")
-    with col_n:
-        st.metric("⚡ No Governance",
-                  f"{no_gov.get('avg_reward', 0):.2f} ± {no_gov.get('std_reward', 0):.2f}",
-                  help=f"Violations: {no_gov.get('avg_violations', 0):.2f}")
+    agg_df = pd.DataFrame(aggregates)
 
-    st.divider()
-
-    comparison_df = pd.DataFrame([
-        {"mode": "Governance", "avg_reward": gov.get("avg_reward", 0),
-         "std_reward": gov.get("std_reward", 0),
-         "avg_violations": gov.get("avg_violations", 0)},
-        {"mode": "No Governance", "avg_reward": no_gov.get("avg_reward", 0),
-         "std_reward": no_gov.get("std_reward", 0),
-         "avg_violations": no_gov.get("avg_violations", 0)},
-    ])
-
-    col_chart, col_stats = st.columns(2)
-    with col_chart:
-        st.subheader("Reward Comparison")
-        chart = alt.Chart(comparison_df).mark_bar().encode(
-            x="mode:N",
-            y="avg_reward:Q",
-            color="mode:N",
-        ).properties(height=300)
-        error = alt.Chart(comparison_df).mark_errorbar(extent="ci").encode(
-            x="mode:N",
-            y=alt.Y("avg_reward:Q", scale=alt.Scale(zero=False)),
-        )
-        st.altair_chart(chart + error, use_container_width=True)
-
-    with col_stats:
-        st.subheader("Constraints")
-        chart2 = alt.Chart(comparison_df).mark_bar().encode(
-            x="mode:N",
-            y="avg_violations:Q",
-            color="mode:N",
-        ).properties(height=300)
-        st.altair_chart(chart2, use_container_width=True)
+    st.subheader("Per-Scenario Results")
+    for scenario in agg_df["scenario"].unique():
+        sub = agg_df[agg_df["scenario"] == scenario]
+        with st.expander(scenario, expanded=True):
+            display = sub.rename(columns={
+                "strategy": "Strategy", "mean_reward": "Reward",
+                "std_reward": "σ", "mean_violations": "Violations",
+                "mean_deadlocks": "Deadlocks", "num_seeds": "Seeds",
+            })
+            st.dataframe(display, use_container_width=True, hide_index=True)
 
     st.divider()
-    st.subheader("Per-Seed Details")
-    for mode, data in benchmarks.items():
-        with st.expander(f"{mode} ({data.get('n_seeds', 0)} seeds)"):
-            evals = data.get("eval_results", [])
-            if evals:
-                evals_df = pd.DataFrame(evals)
-                st.dataframe(evals_df)
+    st.subheader("Aggregate Comparison")
+    pivot = agg_df.pivot_table(
+        index="strategy", columns="scenario",
+        values="mean_reward", aggfunc="first",
+    )
+    st.dataframe(pivot, use_container_width=True)
+
+    effect_sizes = benchmarks.get("effect_sizes", [])
+    if effect_sizes:
+        st.divider()
+        st.subheader("Effect Sizes (Cohen's d)")
+        es_df = pd.DataFrame(effect_sizes)
+        st.dataframe(es_df, use_container_width=True, hide_index=True)

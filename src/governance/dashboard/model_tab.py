@@ -10,13 +10,14 @@ import streamlit as st
 import altair as alt
 import pandas as pd
 
-from ..prove.predictions import ALL_PREDICTIONS, run_all
+from ..prove.predictions import ALL_PREDICTIONS
+from ..prove.runner import run_all
 from ..ontology.backend import OntologyBackend
 from ..identity.core import IdentityCore, CoreCommitment, CommitmentType, CommitmentThreshold, EnforcementMode
 
 
 def render_model_tab(backend: OntologyBackend):
-    st.header("Formal Model $\mathcal{I} = \langle \mathcal{O}, \mathcal{C}_{\\text{core}}, \mathcal{K}, \mathcal{P} \\rangle$")
+    st.header(r"Formal Model $\mathcal{I} = \langle \mathcal{O}, \mathcal{C}_{\text{core}}, \mathcal{K}, \mathcal{P} \rangle$")
     st.caption("The Identity Layer tuple with live values from the ontology backend.")
 
     col1, col2, col3, col4 = st.columns(4)
@@ -25,7 +26,7 @@ def render_model_tab(backend: OntologyBackend):
     identity_vec = backend.get_identity_vector()
 
     with col1:
-        st.metric("$\mathcal{O}$ (Ontology)", f"{len(entities)} entities",
+        st.metric(r"$\mathcal{O}$ (Ontology)", f"{len(entities)} entities",
                   help="Action namespace with runtime integrity hashes")
         if entities:
             with st.expander("Entity list"):
@@ -38,20 +39,20 @@ def render_model_tab(backend: OntologyBackend):
             CommitmentType.VALUE_PRINCIPLE, "Always classify honestly",
             CommitmentThreshold.SUPERMAJORITY, EnforcementMode.INTEGRITY_VETO,
         ))
-        st.metric("$\mathcal{C}_{\\text{core}}$", f"{len(core.commitments)} commitments",
+        st.metric(r"$\mathcal{C}_{\text{core}}$", f"{len(core.commitments)} commitments",
                   help="Core commitments (read-only)")
         with st.expander("Commitments"):
             for c in core.commitments:
                 st.markdown(f"- **{c.type.value}**: {c.statement[:50]}...")
 
     with col3:
-        st.metric("$\mathcal{K}$ (Extended Knowledge)", "bootstrapped",
+        st.metric(r"$\mathcal{K}$ (Extended Knowledge)", "bootstrapped",
                   help="Extended ontology from genesis bootstrapping")
 
     with col4:
         from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
         params = DEFAULT_PARAMETER_ENVELOPE.snapshot()
-        st.metric("$\mathcal{P}$ (Parameters)", f"{len(params)} params",
+        st.metric(r"$\mathcal{P}$ (Parameters)", f"{len(params)} params",
                   help=f"Bounds: quorum={params.get('quorum_threshold', '?')}")
         with st.expander("Parameter values"):
             for k, v in params.items():
