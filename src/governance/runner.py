@@ -27,6 +27,15 @@ from .experiments.metrics import ExperimentReport
 ALL_STRATEGIES = ["governance", "monolithic_rl", "random", "static_masking", "veto_only"]
 
 
+def _resolve_csv_path(csv_arg):
+    if csv_arg is None:
+        return None
+    if csv_arg == "":
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return f"results/run_{ts}.csv"
+    return csv_arg
+
+
 def _export_csv(reports: List[ExperimentReport], path: str):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", newline="") as f:
@@ -78,35 +87,38 @@ def cmd_speaker(args):
     _run_speaker_quick_test()
 
 
+def _optionally_export_csv(args, reports):
+    csv_path = _resolve_csv_path(getattr(args, "csv", None))
+    if csv_path:
+        _export_csv(reports, csv_path)
+        print(f"CSV exported to {csv_path}")
+
+
 def cmd_gridworld(args):
     flags = _build_baseline_flags(args)
     reports = run_gridworld_experiments(**flags)
-    if args.csv:
-        _export_csv(reports, args.csv)
+    _optionally_export_csv(args, reports)
     print_all_reports(reports)
 
 
 def cmd_temptation(args):
     flags = _build_baseline_flags(args)
     reports = run_temptation_experiments(**flags)
-    if args.csv:
-        _export_csv(reports, args.csv)
+    _optionally_export_csv(args, reports)
     print_all_reports(reports)
 
 
 def cmd_drift(args):
     flags = _build_baseline_flags(args)
     reports = run_drift_experiments(**flags)
-    if args.csv:
-        _export_csv(reports, args.csv)
+    _optionally_export_csv(args, reports)
     print_all_reports(reports)
 
 
 def cmd_deadlock(args):
     flags = _build_baseline_flags(args)
     reports = run_deadlock_experiments(**flags)
-    if args.csv:
-        _export_csv(reports, args.csv)
+    _optionally_export_csv(args, reports)
     print_all_reports(reports)
 
 
@@ -133,9 +145,7 @@ def cmd_all(args):
     print(f"\nTotal time: {elapsed:.2f}s")
     print(f"Total reports: {len(reports)}")
 
-    if args.csv:
-        _export_csv(reports, args.csv)
-        print(f"CSV exported to {args.csv}")
+    _optionally_export_csv(args, reports)
 
     if getattr(args, "baselines", False):
         try:
@@ -172,6 +182,17 @@ def cmd_prove(args):
         export_json(results, args.json)
         print(f"Exported to {args.json}")
 
+    csv_path = _resolve_csv_path(getattr(args, "csv", None))
+    if csv_path:
+        import csv as _csv
+        os.makedirs(os.path.dirname(csv_path) or ".", exist_ok=True)
+        with open(csv_path, "w", newline="") as f:
+            w = _csv.writer(f)
+            w.writerow(["id", "chapter", "prediction", "status", "details"])
+            for r in results:
+                w.writerow([r.id, r.chapter, r.name, r.status, r.details])
+        print(f"CSV exported to {csv_path}")
+
 
 def cmd_adversary(args):
     from .experiments.rl_adversary import main as adversary_main
@@ -188,8 +209,15 @@ def _add_shared_args(parser):
                         help="Run all baseline strategies alongside governance")
     parser.add_argument("--strategies", type=str,
                         help="Comma-separated sub-list for selective benchmarking")
-    parser.add_argument("--csv", type=str,
-                        help="Export results to CSV file")
+    parser.add_argument("--csv", nargs="?", const="", default=None,
+                        help="Export results to CSV (default: results/run_<timestamp>.csv)")
+
+    def _validate_positive(parser, ns):
+        if ns.steps is not None and ns.steps < 1:
+            parser.error("--steps must be > 0")
+        if ns.seeds is not None and ns.seeds < 1:
+            parser.error("--seeds must be > 0")
+    parser.set_defaults(_validate=_validate_positive)
 
 
 def main():
@@ -222,6 +250,8 @@ def main():
     p_prove.add_argument("--ch4", action="store_true", help="Chapter 4 predictions")
     p_prove.add_argument("--single", type=int, metavar="N", help="Single prediction N (1-12)")
     p_prove.add_argument("--json", type=str, help="Export to JSON")
+    p_prove.add_argument("--csv", nargs="?", const="", default=None,
+                         help="Export to CSV (default: results/run_<timestamp>.csv)")
     p_prove.set_defaults(func=cmd_prove)
 
     p_adv = sub.add_parser("adversary", help="RL adversary experiment (needs torch+sb3)")
@@ -232,6 +262,10 @@ def main():
     if args.command is None:
         parser.print_help()
         sys.exit(1)
+    if hasattr(args, 'steps') and args.steps is not None and args.steps < 1:
+        parser.error("--steps must be > 0")
+    if hasattr(args, 'seeds') and args.seeds is not None and args.seeds < 1:
+        parser.error("--seeds must be > 0")
     args.func(args)
 
 
