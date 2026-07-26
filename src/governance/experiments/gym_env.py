@@ -53,20 +53,18 @@ try:
 except ImportError:
     pass
 
-# Determine the base class(es):
-# - SB3's _patch_env checks isinstance(env, gym.Env) when old gym is installed.
-# - If both are on the system (common on Colab), inherit from both so SB3 passes.
-# - Prefer gymnasium for the canonical spaces import.
+# Determine the base class:
+# Prefer gymnasium.Env (SB3 >= 2.0 supports it natively).
+# Only fall back to old gym.Env if gymnasium is absent.
 BASES = [object]
+GYM_AVAILABLE = False
 if _gymnasium_available:
-    BASES.insert(0, _gymnasium_mod.Env)
-if _old_gym_available and _gymnasium_available:
-    BASES.append(_old_gym_mod.Env)
-elif _old_gym_available and not _gymnasium_available:
+    BASES = [_gymnasium_mod.Env]
+    GYM_AVAILABLE = True
+elif _old_gym_available:
     from gym import spaces
     BASES = [_old_gym_mod.Env]
-
-GYM_AVAILABLE = _gymnasium_available or _old_gym_available
+    GYM_AVAILABLE = True
 
 
 TILE_EMPTY = 0
@@ -81,9 +79,7 @@ DIRECTION_VECTORS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 class GovernanceGridWorld(*BASES):
     """
     Grid world environment with pluggable governance.
-
-    Inherits from gymnasium.Env (and also gym.Env when old gym is co-installed
-    on Colab) for stable-baselines3 compatibility.
+    Inherits from gymnasium.Env (or gym.Env fallback).
     """
 
     metadata = {"render_modes": []} if GYM_AVAILABLE else {}
