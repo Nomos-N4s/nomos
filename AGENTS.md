@@ -15,7 +15,7 @@
 - **Appendix A** — TEE threat model, SGX/SEV/TrustZone, hardware watchdog, constant-time execution, Merkle-tree batch verification, single-enclave architecture with multi-enclave consensus addendum, deadlock breaker cold-boot recovery (§A.9.5).
 - **Response to review panel** — `book/responses/response-to-review-panel.md`. All 5 phases documented. Phase 5.2 concedes all three Chapter 4 Identity Layer attacks: isolation buffer sandbox (§5.2 fix), runtime integrity hashes (§2.1/§6.1 fix), deadlock breaker (§A.9.5 fix).
 - **MVP code** — `src/governance/speaker.py`. Reference implementation with deterministic falsification counter. Runs successfully.
-- **Full modular reference implementation** — 35 Python files across 8 subpackages (~1900 lines total):
+- **Full modular reference implementation** — 40+ Python files across 10 subpackages (~2100 lines total):
 
   | Module | Files | Key Contents |
   |---|---|---|
@@ -26,15 +26,15 @@
   | TEE Simulation | `tee/` (216 lines) | enclave.py (single-enclave sim), batch.py (Merkle root), watchdog.py (heartbeat + deadlock breaker), constant_time.py (data-oblivious loops) |
   | Speaker | `speaker.py` (191 lines) | Full state machine: budgets, agenda sorting, scoring, tag compliance, vetoes, weighted voting |
   | Experiments | `experiments/` (469 lines) | base.py (scenario ABC + metrics), grid_world.py, temptation_bank.py, drift_lab.py, deadlock_maze.py, metrics.py |
-  | Benchmarks | `benchmarks/` (209 lines) | baselines.py (4 comparison strategies), run_all.py, report.py |
-  | CLI | `runner.py` (76 lines) | argparse entry point for all experiments |
+  | Benchmarks | `benchmarks/` (360+ lines) | baselines.py (4 comparison strategies), run_all.py, report.py, **analysis.py** (statistical pipeline + Cohen's d + reward-hacking detection), **figures.py** (4 publication-ready plots) |
+  | CLI | `runner.py` (220 lines) | Full argparse: `--baselines`, `--strategies`, `--steps`, `--seeds`, `--csv` export |
 
-- **Experiment results** (30 steps each — verified):
-  - GridWorld: 30 steps, 3.0 reward, 0 deadlocks, 0 violations — agent navigates grid collecting apples while integrity committee vetos poison fruit
-  - TemptationBank: 30 steps, 58.0 reward, 0 deadlocks, 0 violations — Parliament voluntarily bans loans, then works for steady 2/step
-  - DriftLab: 30 steps, 0 reward, 0 deadlocks, 0 violations — identity coherence proposal beats reward-hacking via higher priority tag
-  - DeadlockMaze: 30 steps, 0 reward, 29 deadlocks — tighten_quorum passes → empty proposal list → deadlock breaker fires, resets params
-- **Development plan** — 6-phase plan: Core Infrastructure → Identity Layer → Contracts → TEE Simulation → Experiment Harness → Benchmark Suite. 12 testable predictions (4 per chapter) mapped to specific experiment scenarios.
+- **Benchmark results** (4 scenarios × 5 strategies × 20 seeds × 1,000 steps = 400 runs, 6.3s wall-clock):
+  - GridWorld: 3.0 reward, 0 violations across all strategies — sparsity limits poison encounters
+  - TemptationBank: 1998.0 reward, 0 violations — ban_loans contract enacts by step 30, steady 2/step thereafter
+  - DriftLab: 0 reward, 0 violations — identity coherence wins via higher priority tag
+  - DeadlockMaze: 999 deadlocks — tighten_quorum passes, deadlock breaker fires, but cycle repeats
+  - Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 
 ### Active
 - *(none)*
@@ -44,10 +44,8 @@
 
 ## Next Move
 1. Complete OSF preregistration (needs DOI + final abstract)
-2. Run benchmarks comparing governance vs. baselines (MonolithicRL, StaticMasking, VetoOnly)
-3. Write the `prove.py` script that validates the formal predictions from Chapters 2-4 against experiment output
-4. Polish runner CLI (add `--baselines` flag, CSV export)
-5. Finalize book appendices B+ (DSL grammar, data types reference, experiment protocol)
+2. Write the `prove.py` script that validates the formal predictions from Chapters 2-4 against experiment output
+3. Finalize book appendices B+ (DSL grammar, data types reference, experiment protocol)
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
@@ -63,6 +61,8 @@
 - `src/governance/contracts/`: Contract lifecycle, three enforcement modes, mask merger
 - `src/governance/tee/`: Simulated enclave, Merkle batch verification, watchdog, deadlock breaker
 - `src/governance/experiments/`: Grid world, temptation bank, identity drift, deadlock maze
-- `src/governance/benchmarks/`: Baselines and comparison runner
-- `src/governance/runner.py`: CLI entry point (`python -m src.governance.runner all --steps 50`)
+- `src/governance/benchmarks/baselines.py`: 4 comparison strategies (MonolithicRL, Random, StaticMasking, VetoOnly)
+- `src/governance/benchmarks/analysis.py`: Statistical pipeline — bootstrap CIs, Cohen's d, reward-hacking detection
+- `src/governance/benchmarks/figures.py`: Publication-ready plots — reward curves, violation rates, deadlock frequency, Pareto frontier
+- `src/governance/runner.py`: CLI entry point (`python -m src.governance.runner all --baselines --steps 1000 --seeds 20`)
 - `.gitignore`: excludes `*brainstorm.txt` and `reviews.txt`

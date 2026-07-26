@@ -3,7 +3,7 @@ run_all.py — Run all experiments and baselines, produce comparison report.
 """
 
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..committee.members import (
     ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
@@ -33,71 +33,122 @@ def build_governance_layer():
     )
 
 
-def _run_with_baseline(scenario_class, speaker, baseline: BaselineGovernance,
-                       steps: int, scenario_kwargs: dict = None) -> ExperimentReport:
-    scenario = scenario_class(speaker, **(scenario_kwargs or {}))
+def _run_scenario(scenario_class, scenario_kwargs: dict,
+                  strategy_name: str,
+                  steps: int, seed: int, baseline=None) -> ExperimentReport:
+    speaker = build_governance_layer()
+
+    if scenario_class.__name__ == "DriftLab":
+        from ..identity.core import IdentityCore, CoreCommitment, CommitmentType, CommitmentThreshold, EnforcementMode
+        identity = IdentityCore()
+        identity.add_commitment(CoreCommitment(
+            CommitmentType.VALUE_PRINCIPLE,
+            "Always classify honestly",
+            CommitmentThreshold.SUPERMAJORITY,
+            EnforcementMode.INTEGRITY_VETO,
+            affected_action_indices=[0],
+        ))
+        scenario = scenario_class(speaker, identity, **(scenario_kwargs or {}))
+    elif scenario_class.__name__ == "DeadlockMaze":
+        from ..tee.watchdog import DeadlockBreaker
+        breaker = DeadlockBreaker(threshold_cycles=5)
+        scenario = scenario_class(speaker, breaker, **(scenario_kwargs or {}))
+    else:
+        scenario = scenario_class(speaker, **(scenario_kwargs or {}))
+
     scenario.reset()
-    for _ in range(steps):
+    step_records = []
+    t0 = time.time()
+
+    for i in range(steps):
         state = "normal"
         proposals = scenario.get_proposals(state)
-        decision = baseline.decide(state, proposals)
-        result = scenario.step(state)
-    return generate_report(baseline.name, scenario.metrics, scenario.history)
+
+        if baseline is not None:
+            baseline.decide(state, proposals)
+            scenario.step(state)
+        else:
+            scenario.step(state)
+
+        step_records.append({
+            "step": i,
+            "reward": scenario.metrics.total_reward,
+            "violations": scenario.metrics.constraint_violations,
+            "deadlocks": scenario.metrics.deadlock_count,
+            "runtime_ms": (time.time() - t0) * 1000 / max(1, i + 1),
+        })
+
+    report = generate_report(f"{strategy_name}_{scenario_class.__name__}",
+                              scenario.metrics, scenario.history)
+    report.metadata["strategy"] = strategy_name
+    report.metadata["seed"] = seed
+    report.metadata["step_records"] = step_records
+    return report
 
 
-def run_gridworld_experiments(steps: int = 50) -> List[ExperimentReport]:
+def _get_baseline(strategy: str, seed: int):
+    mapping = {
+        "monolithic_rl": MonolithicRL(),
+        "random": RandomBaseline(seed=seed),
+        "static_masking": StaticMasking(blocked_actions=frozenset()),
+        "veto_only": VetoOnly(),
+    }
+    return mapping.get(strategy)
+
+
+def _run_experiment_set(scenario_class, scenario_kwargs: dict,
+                         steps: int, seeds: int,
+                         strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
     reports = []
+    if strategies is None:
+        strategies = ["governance"]
 
-    governance = build_governance_layer()
-    gw = GridWorld(governance, size=6, seed=42)
-    gw.reset()
-    for _ in range(steps):
-        gw.step("normal")
-    reports.append(generate_report("governance_gridworld", gw.metrics, gw.history))
-
+    for seed in range(seeds):
+        for strategy in strategies:
+            baseline = _get_baseline(strategy, seed) if strategy != "governance" else None
+            report = _run_scenario(
+                scenario_class=scenario_class,
+                scenario_kwargs=scenario_kwargs,
+                strategy_name=strategy,
+                steps=steps,
+                seed=seed,
+                baseline=baseline,
+            )
+            reports.append(report)
     return reports
 
 
-def run_temptation_experiments(steps: int = 30) -> List[ExperimentReport]:
-    reports = []
-    governance = build_governance_layer()
-    tb = TemptationBank(governance)
-    tb.reset()
-    for _ in range(steps):
-        tb.step("routine")
-    reports.append(generate_report("governance_temptation", tb.metrics, tb.history))
-    return reports
+def run_gridworld_experiments(steps: int = 1000, seeds: int = 1,
+                               strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    return _run_experiment_set(
+        GridWorld, {"size": 6, "seed": 42},
+        steps=steps, seeds=seeds, strategies=strategies,
+    )
 
 
-def run_drift_experiments(steps: int = 100) -> List[ExperimentReport]:
-    reports = []
-    identity = IdentityCore()
-    identity.add_commitment(CoreCommitment(
-        CommitmentType.VALUE_PRINCIPLE,
-        "Always classify honestly",
-        CommitmentThreshold.SUPERMAJORITY,
-        EnforcementMode.INTEGRITY_VETO,
-        affected_action_indices=[0],
-    ))
-    governance = build_governance_layer()
-    dl = DriftLab(governance, identity)
-    dl.reset()
-    for _ in range(steps):
-        dl.step("routine")
-    reports.append(generate_report("governance_drift", dl.metrics, dl.history))
-    return reports
+def run_temptation_experiments(steps: int = 1000, seeds: int = 1,
+                                strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    return _run_experiment_set(
+        TemptationBank, {},
+        steps=steps, seeds=seeds, strategies=strategies,
+    )
 
 
-def run_deadlock_experiments(steps: int = 110) -> List[ExperimentReport]:
-    reports = []
-    governance = build_governance_layer()
-    breaker = DeadlockBreaker(threshold_cycles=5)
-    dm = DeadlockMaze(governance, breaker)
-    dm.reset()
-    for _ in range(steps):
-        dm.step("routine")
-    reports.append(generate_report("governance_deadlock", dm.metrics, dm.history))
-    return reports
+def run_drift_experiments(steps: int = 1000, seeds: int = 1,
+                           strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    scenario_kwargs = {}
+    return _run_experiment_set(
+        DriftLab, scenario_kwargs,
+        steps=steps, seeds=seeds, strategies=strategies,
+    )
+
+
+def run_deadlock_experiments(steps: int = 1000, seeds: int = 1,
+                              strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    return _run_experiment_set(
+        DeadlockMaze, {},
+        steps=steps, seeds=seeds, strategies=strategies,
+    )
 
 
 def run_all(iterations: int = 1) -> Dict[str, Any]:
