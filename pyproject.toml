@@ -20,6 +20,10 @@ rl = [
     "torch>=2.0",
     "stable-baselines3>=2.3",
 ]
+minigrid = [
+    "minigrid>=3.1",
+    "pygame-ce>=2.4",
+]
 
 [tool.coverage.run]
 source = ["src/governance"]
