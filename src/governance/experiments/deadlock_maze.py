@@ -6,7 +6,7 @@ then tests whether the deadlock breaker fires and restores genesis baseline.
 """
 
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..models import Proposal, PriorityTag, GovernanceDecision
 from ..speaker import SpeakerStateMachine
@@ -52,12 +52,15 @@ class DeadlockMaze(ExperimentScenario):
     def transition(self, state, decision: GovernanceDecision) -> Any:
         return state
 
-    def step(self, state, decision_class="routine"):
+    def step(self, state, decision_class="routine", external_decision=None):
         if self._phase == PHASE_NORMAL:
             proposals = self.get_proposals(state)
-            decision = self.speaker.run_governance_cycle(
-                state, proposals, decision_class
-            )
+            if external_decision is not None:
+                decision = external_decision
+            else:
+                decision = self.speaker.run_governance_cycle(
+                    state, proposals, decision_class
+                )
             if decision.action == "tighten_quorum" and not decision.is_default:
                 self.params.set("quorum_threshold", 0.9)
                 self._phase = PHASE_DEADLOCK
@@ -69,9 +72,12 @@ class DeadlockMaze(ExperimentScenario):
             return result
 
         proposals = []
-        decision = self.speaker.run_governance_cycle(
-            state, proposals, decision_class
-        )
+        if external_decision is not None:
+            decision = external_decision
+        else:
+            decision = self.speaker.run_governance_cycle(
+                state, proposals, decision_class
+            )
         self.breaker.record_cycle(not decision.is_default)
         result = StepResult(decision=decision, state=self._phase, reward=0.0)
         self.metrics.total_steps += 1

@@ -5,9 +5,10 @@
 ## Important Details
 - Author is a solo software builder, not an academic. Repo is `xcoder-es/governance-layer`.
 - All Mermaid diagrams and LaTeX must avoid HTML tags (`<br/>`), custom `classDef` styling, and nested `\text{}` for GitHub compatibility. Use `\mathrm{}` instead.
-- Review panel completed 5 rounds of critiques across all three layers. All accepted fixes executed. Panel signed off theoretical vetting as complete. Three residual risks acknowledged (social engineering, hardware supply chain, adaptive proxy gap) as unavoidable physical-world limits.
-- OSF preregistration in progress — user has account, CC-BY 4.0 license chosen. Title: "The Governance Layer: A Formal Framework for Self-Governing Artificial Intelligence".
-- We are now building the full reference implementation (Phases 1-5). The architecture is Capability → Governance → Identity. Deep learning, JEPA world models, and computer vision are Capability Layer technologies; the Governance Layer constrains them.
+- **First review panel** (5 rounds) completed theoretical vetting across all three layers. All accepted fixes executed. Panel signed off. Three residual risks acknowledged (social engineering, hardware supply chain, adaptive proxy gap) as unavoidable physical-world limits.
+- **Second harder review panel** (2026-07-26) evaluated the implementation with grade C-. One genuine bug found (baseline decoupling in benchmarks) and fixed. Full response at `book/responses/response-to-expert-panel-harder-review.md`.
+- OSF preregistration deferred — placeholder DOI was removed from README after the harder panel correctly identified it as misleading before experiments.
+- Architecture: Capability → Governance → Identity. Deep learning, JEPA world models, and computer vision are Capability Layer technologies; the Governance Layer constrains them.
 
 ## Work State
 ### Completed
@@ -38,7 +39,7 @@
   - TemptationBank: 1998.0 reward, 0 violations — ban_loans contract enacts by step 30, steady 2/step thereafter
   - DriftLab: 0 reward, 0 violations — identity coherence wins via higher priority tag
   - DeadlockMaze: 999 deadlocks — tighten_quorum passes, deadlock breaker fires, but cycle repeats
-  - Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
+  - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 
 ### Active
 - *(none)*
@@ -58,6 +59,7 @@
 - `book/chapter-04/04-identity-layer.md`: Chapter 4 — Identity Layer (573 lines)
 - `book/appendix-a/tee-isolation.md`: TEE threat model, hardware watchdog, constant-time, Merkle-tree batching, single-enclave architecture, deadlock breaker
 - `book/responses/response-to-review-panel.md`: all 5 phases of review responses (accepts all three Phase 5.2 fixes)
+- `book/responses/response-to-expert-panel-harder-review.md`: response to second harder review (baseline bug fix, 11-point rebuttal)
 - `src/governance/speaker.py`: Speaker state machine reference implementation
 - `src/governance/models.py`: Core data types
 - `src/governance/committee/members.py`: 7 Parliament members

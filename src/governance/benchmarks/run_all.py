@@ -65,8 +65,8 @@ def _run_scenario(scenario_class, scenario_kwargs: dict,
         proposals = scenario.get_proposals(state)
 
         if baseline is not None:
-            baseline.decide(state, proposals)
-            scenario.step(state)
+            decision = baseline.decide(state, proposals)
+            scenario.step(state, external_decision=decision)
         else:
             scenario.step(state)
 

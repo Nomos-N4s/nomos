@@ -32,7 +32,7 @@ def _load_env() -> Dict[str, str]:
         os.path.dirname(__file__)))), ".env")
     result = {
         "NEO4J_URI": os.environ.get("NEO4J_URI", ""),
-        "NEO4J_USER": os.environ.get("NEO4J_USER", ""),
+        "NEO4J_USER": os.environ.get("NEO4J_USER", os.environ.get("NEO4J_USERNAME", "")),
         "NEO4J_PASSWORD": os.environ.get("NEO4J_PASSWORD", ""),
     }
     if os.path.exists(env_path):
@@ -41,8 +41,12 @@ def _load_env() -> Dict[str, str]:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
-                    if k in result and not result[k]:
-                        result[k] = v.strip().strip('"').strip("'")
+                    val = v.strip().strip('"').strip("'")
+                    if k == "NEO4J_USERNAME":
+                        if not result["NEO4J_USER"]:
+                            result["NEO4J_USER"] = val
+                    elif k in result and not result[k]:
+                        result[k] = val
     return result
 
 

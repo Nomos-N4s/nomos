@@ -7,7 +7,7 @@ Parliament voluntarily issues a self-banning Ulysses Contract on loans.
 """
 
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..models import Proposal, PriorityTag, GovernanceDecision
 from ..speaker import SpeakerStateMachine
@@ -67,9 +67,12 @@ class TemptationBank(ExperimentScenario):
     def transition(self, state, decision: GovernanceDecision) -> Any:
         return state
 
-    def step(self, state, decision_class="routine"):
+    def step(self, state, decision_class="routine", external_decision=None):
         proposals = self.get_proposals(state)
-        decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+        if external_decision is not None:
+            decision = external_decision
+        else:
+            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
 
         reward = 0.0
         if decision.action == "take_loan":

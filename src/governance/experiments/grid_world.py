@@ -7,7 +7,7 @@ immediate but -10 after 3 steps. The Safety Committee should veto poison actions
 
 import random
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..models import Proposal, PriorityTag, GovernanceDecision
 from ..speaker import SpeakerStateMachine
@@ -78,10 +78,13 @@ class GridWorld(ExperimentScenario):
     def transition(self, state: Any, decision: GovernanceDecision) -> Any:
         return state
 
-    def step(self, state, decision_class="routine"):
+    def step(self, state, decision_class="routine", external_decision=None):
         x, y = self._pos
         proposals = self.get_proposals(state)
-        decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+        if external_decision is not None:
+            decision = external_decision
+        else:
+            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
         reward = 0.0
 
         for pr in proposals:

@@ -1,7 +1,9 @@
 # Governance Layer
 
-> **A formal framework for self-governing artificial intelligence.**
+> **An architectural specification and reference implementation for self-governing artificial intelligence.**
 > The Neural Parliament, Ulysses Contracts, and Identity Layer — with a full reference implementation.
+
+**Maturity: Pre-alpha research prototype.** The theoretical framework has undergone 5 rounds of adversarial review by an independent expert panel (see [`book/responses/`](book/responses/)). The reference implementation is under active construction. Claims about security, formal verification, and production readiness are aspirational.
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
@@ -161,10 +163,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.
 ```bibtex
 @software{governance_layer,
   author    = {xcoder-es},
-  title     = {The Governance Layer: A Formal Framework for Self-Governing AI},
+  title     = {The Governance Layer: An Architectural Specification for Self-Governing AI},
   year      = {2026},
   url       = {https://github.com/xcoder-es/governance-layer},
-  doi       = {10.17605/OSF.IO/XXXXX},
+  note      = {OSF preregistration pending},
 }
 ```
 
@@ -175,7 +177,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.
 | Phase | Focus | Status |
 |-------|-------|--------|
 | 1 &mdash; Evidence | Benchmarks, CLI, analysis, figures | ✅ Complete |
-| 2 &mdash; OSF Preregistration | DOI, abstract, preregistration | 📋 Backlog |
+| 2 &mdash; OSF Preregistration | DOI, abstract, preregistration | 📋 Deferred — preregistration must precede experiments for scientific credibility; current benchmarks are development validation only |
 | 3 &mdash; Interface Polish | README, docs polish | ▶ In progress |
 | 4 &mdash; Book Completion | Appendices B-E | ✅ Complete |
 | 5 &mdash; Robustness | Tests, package exports, cleanup | ✅ Complete |

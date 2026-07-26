@@ -8,7 +8,7 @@ Measures identity drift distance with and without the Identity Layer.
 import math
 import random
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..models import Proposal, PriorityTag, GovernanceDecision
 from ..speaker import SpeakerStateMachine
@@ -66,10 +66,13 @@ class DriftLab(ExperimentScenario):
     def transition(self, state, decision: GovernanceDecision) -> Any:
         return state
 
-    def step(self, state, decision_class="routine"):
+    def step(self, state, decision_class="routine", external_decision=None):
         self._drift += 0.001
         proposals = self.get_proposals(state)
-        decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+        if external_decision is not None:
+            decision = external_decision
+        else:
+            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
 
         current_vector = self.identity.identity_vector
         drift_dist = self._cosine_distance(self._original_vector, current_vector)

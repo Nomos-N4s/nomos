@@ -6,7 +6,7 @@ Each scenario implements setup, step, and metrics collection.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..models import GovernanceDecision, Proposal
 from ..speaker import SpeakerStateMachine
@@ -54,13 +54,17 @@ class ExperimentScenario(ABC):
     def transition(self, state: Any, decision: GovernanceDecision) -> Any:
         ...
 
-    def step(self, state: Any, decision_class: str = "routine") -> StepResult:
+    def step(self, state: Any, decision_class: str = "routine",
+             external_decision: Optional[GovernanceDecision] = None) -> StepResult:
         proposals = self.get_proposals(state)
-        decision = self.speaker.run_governance_cycle(
-            state=state,
-            raw_proposals=proposals,
-            decision_class=decision_class,
-        )
+        if external_decision is not None:
+            decision = external_decision
+        else:
+            decision = self.speaker.run_governance_cycle(
+                state=state,
+                raw_proposals=proposals,
+                decision_class=decision_class,
+            )
         reward = self.compute_reward(state, decision)
         next_state = self.transition(state, decision)
 
