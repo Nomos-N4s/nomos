@@ -80,11 +80,11 @@ def main():
 
     with tab_parliament:
         from governance.dashboard.parliament_tab import render_parliament_tab
-        render_parliament_tab()
+        render_parliament_tab(backend)
 
     with tab_benchmarks:
         from governance.dashboard.benchmarks_tab import render_benchmarks_tab
-        render_benchmarks_tab()
+        render_benchmarks_tab(backend)
 
 
 if __name__ == "__main__":

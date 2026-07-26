@@ -16,6 +16,8 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
+from ..ontology.backend import OntologyBackend
+
 _src = os.path.join(os.path.dirname(__file__), "..", "..")
 if _src not in sys.path:
     sys.path.insert(0, os.path.abspath(_src))
@@ -111,7 +113,31 @@ def _render_scores(step_data: Dict):
     st.altair_chart(chart, use_container_width=True)
 
 
-def render_parliament_tab():
+def _log_step_to_backend(backend: Optional[OntologyBackend], step: Dict):
+    if backend is None:
+        return
+    try:
+        eid = backend.add_entity("decision", {
+            "step": step.get("step", 0),
+            "action": step.get("action", -1),
+            "reward": step.get("reward", 0.0),
+            "violations": step.get("violations", 0),
+            "is_default": step.get("is_default", False),
+            "apples_collected": step.get("apples_collected", 0),
+            "total_reward": step.get("total_reward", 0.0),
+        })
+        scores = step.get("scores", {})
+        for member_id, score in scores.items():
+            backend.add_entity("member_score", {
+                "decision_id": eid,
+                "member": member_id,
+                "score": score,
+            })
+    except Exception:
+        pass
+
+
+def render_parliament_tab(backend: Optional[OntologyBackend] = None):
     st.header("🏛️ Parliament Live")
     st.caption("Replay an experiment episode step-by-step. Load a JSONL log file from `results/`.")
 
@@ -137,10 +163,12 @@ def render_parliament_tab():
         if st.button("Run demo"):
             for i in range(steps_to_run):
                 action = (env._pos[0] + env._pos[1]) % 4
-                obs, reward, terminated, truncated, info = env.step(action)
+                obs, reward, terminated, truncated, info =                 env.step(action)
                 if terminated:
                     break
             st.session_state.parliament_steps = env.decision_history
+            for step_data in env.decision_history:
+                _log_step_to_backend(backend, step_data)
             st.session_state.parliament_step_index = 0
             st.rerun()
         return
@@ -182,6 +210,7 @@ def render_parliament_tab():
 
     st.session_state.parliament_step_index = idx
     step_data = steps[idx]
+    _log_step_to_backend(backend, step_data)
 
     col_grid, col_vote = st.columns([1, 2])
     with col_grid:

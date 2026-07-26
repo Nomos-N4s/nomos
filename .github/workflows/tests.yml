@@ -26,6 +26,9 @@ jobs:
       - name: Sync dependencies
         run: uv sync
 
+      - name: Install package in editable mode
+        run: uv pip install -e .
+
       - name: Run tests with coverage
         run: uv run pytest -v --tb=short --cov=src.governance --cov-report=term-missing
 

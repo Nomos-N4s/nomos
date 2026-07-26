@@ -99,10 +99,29 @@ src/governance/
 ├── committee/         # 7 Parliament member implementations
 ├── contracts/         # Ulysses Contracts lifecycle & enforcement
 ├── identity/          # Ontology, commitments, tiers, keys
+├── ontology/          # Storage: MemoryBackend (default) + Neo4jBackend (optional)
 ├── tee/               # Simulated enclave, watchdog, Merkle batching
 ├── experiments/       # 4 experimental scenarios
-└── benchmarks/        # Baselines, analysis, figures
+├── benchmarks/        # Baselines, analysis, figures
+└── dashboard/         # Streamlit UI: Formal Model, Parliament Live, Benchmarks
 ```
+
+### Ontology Backend
+
+The dashboard supports two ontology storage backends:
+
+- **MemoryBackend** (default): in-memory dicts, no dependencies, ephemeral
+- **Neo4jBackend** (optional): persistent storage via Neo4j Aura
+
+To enable Neo4j, create a `.env` file in the project root:
+
+```bash
+NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password
+```
+
+The dashboard auto-detects Neo4j credentials and uses them for ontology entity storage and decision logging. Falls back to `MemoryBackend` when unavailable.
 
 ### Implementation Properties
 
@@ -154,8 +173,8 @@ python -m src.governance.runner prove --ch2 --json results/ch2.json
 | 1 &mdash; Evidence | Benchmarks, CLI, analysis, figures | ✅ Complete |
 | 2 &mdash; OSF Preregistration | DOI, abstract, preregistration | 📋 Backlog |
 | 3 &mdash; Interface Polish | README, docs polish | ▶ In progress |
-| 4 &mdash; Book Completion | Appendices B-E | 📋 Backlog |
-| 5 &mdash; Robustness | Tests, package exports, cleanup | 📋 Backlog |
+| 4 &mdash; Book Completion | Appendices B-E | ✅ Complete |
+| 5 &mdash; Robustness | Tests, package exports, cleanup | ✅ Complete |
 
 See the [GitHub Project Board](https://github.com/xcoder-es/governance-layer/projects) for detailed tracking.
 

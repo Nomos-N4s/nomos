@@ -11,6 +11,8 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
+from ..ontology.backend import OntologyBackend
+
 import streamlit as st
 import altair as alt
 import pandas as pd
@@ -50,11 +52,28 @@ def _load_all_results() -> Dict[str, List[Any]]:
     return data
 
 
-def render_benchmarks_tab():
+def _log_benchmark_to_backend(backend: Optional[OntologyBackend], benchmarks: Dict):
+    if backend is None or not benchmarks:
+        return
+    try:
+        for mode, data in benchmarks.items():
+            backend.add_entity("benchmark", {
+                "mode": mode,
+                "avg_reward": data.get("avg_reward", 0),
+                "std_reward": data.get("std_reward", 0),
+                "avg_violations": data.get("avg_violations", 0),
+                "n_seeds": data.get("n_seeds", 0),
+            })
+    except Exception:
+        pass
+
+
+def render_benchmarks_tab(backend: Optional[OntologyBackend] = None):
     st.header("📊 Benchmark Results")
     st.caption("Statistical comparison between governance and baselines.")
 
     benchmarks = _load_benchmark()
+    _log_benchmark_to_backend(backend, benchmarks)
 
     if benchmarks is None:
         st.info(
