@@ -1,0 +1,11 @@
+label,env,seed,timesteps,mean_reward,std_reward,mean_episode_length,eval_vetoes
+governed,DoorKey-8x8,0,33,0.0,0.0,500.0,0
+governed,DoorKey-8x8,1,37,0.0,0.0,500.0,499
+governed,DoorKey-8x8,2,35,0.0,0.0,500.0,500
+governed,Empty-8x8,0,3166,0.9613,0.0,11.0,0
+governed,Empty-8x8,1,3002,0.9578,0.0,12.0,0
+governed,Empty-8x8,2,2546,0.9578,0.0,12.0,0
+ungoverned,DoorKey-8x8,0,78,0.0,0.0,500.0,0
+ungoverned,DoorKey-8x8,1,78,0.0,0.0,500.0,0
+ungoverned,Empty-8x8,0,2216,0.9578,0.0,12.0,0
+ungoverned,Empty-8x8,1,2187,0.9578,0.0,12.0,0
