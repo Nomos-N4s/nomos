@@ -1,0 +1,10 @@
+# RL pinned dependencies for the Governance Layer (optional)
+# Install with: pip install -r requirements-rl.txt
+
+etils==1.14.0
+glfw==2.10.2
+mujoco==3.10.0
+protobuf==7.35.1
+safety-gymnasium==1.0.0
+stable_baselines3==2.9.0
+torch==2.13.0

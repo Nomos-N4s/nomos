@@ -10,6 +10,8 @@
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
 [![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 [![Security](https://img.shields.io/badge/Security-SECURITY.md-blue)](SECURITY.md)
+[![Tests](https://github.com/xcoder-es/governance-layer/actions/workflows/tests.yml/badge.svg)](https://github.com/xcoder-es/governance-layer/actions/workflows/tests.yml)
+[![Docs](https://github.com/xcoder-es/governance-layer/actions/workflows/docs.yml/badge.svg)](https://github.com/xcoder-es/governance-layer/actions/workflows/docs.yml)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
 
 ---
