@@ -1,8 +1,12 @@
 """
-model_tab.py — Tab 1: Formal model viewer.
+Dashboard Tab 1: Formal model viewer (Chapter 4 §1).
 
-Displays the I = <O, C_core, K, P> tuple with live values
-from the ontology backend. Each component is expandable.
+Displays the identity tuple :math:`\\mathcal{I} = \\langle \\mathcal{O},
+\\mathcal{C}_{\\text{core}}, \\mathcal{K}, \\mathcal{P} \\rangle` with
+live values from the ontology backend. Each component is expandable.
+
+Also shows the identity vector as a bar chart and the formal prediction
+verification results.
 """
 
 import json

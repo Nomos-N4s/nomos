@@ -1,12 +1,16 @@
 """
-runner.py — CLI entry point for the Governance Layer reference implementation.
+CLI entry point for the Governance Layer reference implementation.
+
+Provides commands for running experiments, verifying formal predictions,
+and exporting results.
 
 Usage:
-    python -m src.governance.runner all
-    python -m src.governance.runner all --baselines
-    python -m src.governance.runner all --steps 1000 --seeds 20
-    python -m src.governance.runner all --baselines --csv results/run.csv
-    python -m src.governance.runner gridworld --baselines --strategies governance,monolithic_rl
+    ``python -m src.governance.runner all``
+    ``python -m src.governance.runner all --baselines --steps 1000 --seeds 20``
+    ``python -m src.governance.runner all --baselines --csv results/run.csv``
+    ``python -m src.governance.runner gridworld --baselines --strategies governance,monolithic_rl``
+    ``python -m src.governance.runner prove --all``
+    ``python -m src.governance.runner prove --ch4``
 """
 
 import argparse

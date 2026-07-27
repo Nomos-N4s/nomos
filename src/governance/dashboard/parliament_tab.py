@@ -1,13 +1,19 @@
 """
-parliament_tab.py — Tab 2: Parliament live viewer.
+Dashboard Tab 2: Parliament live viewer.
 
-Loads a JSONL file from results/ (written during eval) and replays it
-step-by-step or auto-plays. Shows grid, scores, vetoes, and timeline.
+Loads a JSONL file from ``results/`` (written during eval) and replays it
+step-by-step or auto-plays. Shows the grid world, Parliament member scores,
+vetoes, and a reward/violations timeline.
 
-Usage:
-  1. Train an agent on Colab (exports live_governance.jsonl)
-  2. Download the JSONL to results/
-  3. Open this tab, select the file
+Workflow:
+  1. Train an agent on Colab (exports ``live_governance.jsonl``)
+  2. Download the JSONL to ``results/``
+  3. Open this tab, select the file, and replay
+
+Real-world analogy:
+    A flight data recorder (black box) replay. Every decision, score,
+    and veto is recorded and can be replayed step by step to understand
+    what the Parliament was thinking at each moment.
 """
 
 import json

@@ -1,10 +1,16 @@
 """
-benchmarks_tab.py — Tab 3: Benchmark comparison.
+Dashboard Tab 3: Benchmark comparison.
 
-Loads benchmark_results.json from results/ and displays:
-  - Side-by-side reward comparison (±CI)
-  - Violation counts
-  - Statistical summary
+Loads ``benchmark_results.json`` from ``results/`` and displays:
+- Side-by-side reward comparison with confidence intervals
+- Violation counts per scenario-strategy
+- Cohen's d effect sizes between governance and baselines
+- Formal prediction verification (``prove.py``) — always available
+
+Real-world analogy:
+    A clinical trial results page. Each treatment arm (strategy) is shown
+    with its outcome (reward), side effects (violations), and statistical
+    significance (effect sizes).
 """
 
 import json

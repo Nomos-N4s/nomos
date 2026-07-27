@@ -1,5 +1,14 @@
 """
-run_all.py — Run all experiments and baselines, produce comparison report.
+Run all experiments and baselines, produce comparison reports.
+
+Orchestrates the full benchmark suite: runs every scenario-strategy-seed
+combination, collects metrics, and delegates to the analysis pipeline.
+
+Real-world analogy:
+    A test harness for an engine. It runs every fuel type (strategy)
+    on every terrain (scenario) for multiple laps (seeds), recording
+    fuel efficiency (reward), breakdowns (deadlocks), and safety
+    incidents (violations).
 """
 
 import time
@@ -20,7 +29,13 @@ from ..identity.core import IdentityCore, CoreCommitment, CommitmentType, Commit
 from .baselines import MonolithicRL, RandomBaseline, StaticMasking, VetoOnly, BaselineGovernance
 
 
-def build_governance_layer():
+def build_governance_layer() -> SpeakerStateMachine:
+    """Construct a Speaker with the four standard committee members.
+
+    Returns:
+        A :class:`~..speaker.SpeakerStateMachine` with reward, safety,
+        integrity, and planning members.
+    """
     members = {
         "reward": ExampleRewardMember(),
         "safety": ExampleSafetyMember(),
@@ -36,6 +51,21 @@ def build_governance_layer():
 def _run_scenario(scenario_class, scenario_kwargs: dict,
                   strategy_name: str,
                   steps: int, seed: int, baseline=None) -> ExperimentReport:
+    """Run a single scenario-strategy-seed combination.
+
+    Args:
+        scenario_class: Experiment scenario class (subclass of
+            :class:`~..experiments.base.ExperimentScenario`).
+        scenario_kwargs: Keyword arguments for the scenario constructor.
+        strategy_name: Label for this strategy (e.g. ``"governance"``).
+        steps: Number of steps to run.
+        seed: Random seed (for reproducibility).
+        baseline: Optional :class:`BaselineGovernance` instance.
+            If None, the full Speaker is used.
+
+    Returns:
+        An :class:`~..experiments.metrics.ExperimentReport`.
+    """
     speaker = build_governance_layer()
 
     if scenario_class.__name__ == "DriftLab":
@@ -87,6 +117,7 @@ def _run_scenario(scenario_class, scenario_kwargs: dict,
 
 
 def _get_baseline(strategy: str, seed: int):
+    """Map a strategy name to a baseline instance."""
     mapping = {
         "monolithic_rl": MonolithicRL(),
         "random": RandomBaseline(seed=seed),
@@ -99,6 +130,18 @@ def _get_baseline(strategy: str, seed: int):
 def _run_experiment_set(scenario_class, scenario_kwargs: dict,
                          steps: int, seeds: int,
                          strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    """Run all strategy-seed combinations for a single scenario.
+
+    Args:
+        scenario_class: The scenario class.
+        scenario_kwargs: Constructor kwargs for the scenario.
+        steps: Steps per run.
+        seeds: Number of random seeds.
+        strategies: List of strategy names (default: ``["governance"]``).
+
+    Returns:
+        A list of :class:`~..experiments.metrics.ExperimentReport`.
+    """
     reports = []
     if strategies is None:
         strategies = ["governance"]
@@ -120,6 +163,7 @@ def _run_experiment_set(scenario_class, scenario_kwargs: dict,
 
 def run_gridworld_experiments(steps: int = 1000, seeds: int = 1,
                                strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    """Run GridWorld (poison fruit) experiments across strategies."""
     return _run_experiment_set(
         GridWorld, {"size": 6, "seed": 42},
         steps=steps, seeds=seeds, strategies=strategies,
@@ -128,6 +172,7 @@ def run_gridworld_experiments(steps: int = 1000, seeds: int = 1,
 
 def run_temptation_experiments(steps: int = 1000, seeds: int = 1,
                                 strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    """Run TemptationBank (voluntary self-binding) experiments."""
     return _run_experiment_set(
         TemptationBank, {},
         steps=steps, seeds=seeds, strategies=strategies,
@@ -136,6 +181,7 @@ def run_temptation_experiments(steps: int = 1000, seeds: int = 1,
 
 def run_drift_experiments(steps: int = 1000, seeds: int = 1,
                            strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    """Run DriftLab (identity drift) experiments."""
     scenario_kwargs = {}
     return _run_experiment_set(
         DriftLab, scenario_kwargs,
@@ -145,6 +191,7 @@ def run_drift_experiments(steps: int = 1000, seeds: int = 1,
 
 def run_deadlock_experiments(steps: int = 1000, seeds: int = 1,
                               strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+    """Run DeadlockMaze (deadlock recovery) experiments."""
     return _run_experiment_set(
         DeadlockMaze, {},
         steps=steps, seeds=seeds, strategies=strategies,
@@ -152,6 +199,14 @@ def run_deadlock_experiments(steps: int = 1000, seeds: int = 1,
 
 
 def run_all(iterations: int = 1) -> Dict[str, Any]:
+    """Run all four experiments once each (legacy interface).
+
+    Args:
+        iterations: Number of times to repeat (default 1).
+
+    Returns:
+        Dict mapping experiment keys to lists of reports.
+    """
     reports = {}
     for i in range(iterations):
         reports[f"gridworld_{i}"] = run_gridworld_experiments()

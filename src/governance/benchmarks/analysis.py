@@ -1,8 +1,14 @@
 """
-analysis.py — Statistical analysis pipeline for benchmark results.
+Statistical analysis pipeline for benchmark results.
 
-Computes per-strategy-scenario aggregates, Cohen's d effect sizes,
-detects reward-hacking episodes, and exports to JSON/CSV.
+Computes per-strategy-scenario aggregates with bootstrap confidence
+intervals, Cohen's :math:`d` effect sizes comparing governance against
+each baseline, detects reward-hacking episodes, and exports to JSON/CSV.
+
+Real-world analogy:
+    A medical trial analysis: split patients by treatment group (strategy),
+    compute mean outcomes (reward), statistical significance (effect sizes),
+    and flag adverse events (reward hacking).
 """
 
 import csv
@@ -19,6 +25,16 @@ from ..experiments.metrics import ExperimentReport
 
 def _bootstrap_ci(values: List[float], n_resamples: int = 10000,
                   ci: float = 0.95) -> Tuple[float, float]:
+    """Compute bootstrap confidence interval for a list of values.
+
+    Args:
+        values: The observed values.
+        n_resamples: Number of bootstrap resamples (default 10000).
+        ci: Confidence level (default 0.95).
+
+    Returns:
+        ``(lower_bound, upper_bound)``.
+    """
     if len(values) < 2:
         return (values[0] if values else 0.0,
                 values[0] if values else 0.0)
@@ -36,6 +52,18 @@ def _bootstrap_ci(values: List[float], n_resamples: int = 10000,
 
 
 def _cohens_d(control: List[float], treatment: List[float]) -> float:
+    """Compute Cohen's d effect size between two groups.
+
+    Positive values mean the control (governance) outperforms treatment.
+
+    Args:
+        control: Governance rewards.
+        treatment: Baseline rewards.
+
+    Returns:
+        Cohen's d value. Conventional thresholds:
+        |d| < 0.2 negligible, < 0.5 small, < 0.8 medium, >= 0.8 large.
+    """
     if len(control) < 2 or len(treatment) < 2:
         return 0.0
     m1 = statistics.mean(control)
@@ -51,6 +79,22 @@ def _cohens_d(control: List[float], treatment: List[float]) -> float:
 
 def _detect_reward_hacking(step_records: List[Dict],
                            window: int = 10) -> List[Dict]:
+    """Detect reward-hacking episodes from step-level records.
+
+    A reward-hacking episode is defined as a step where a violation occurs
+    AND the mean reward in the trailing 5 steps is 50% higher than the
+    preceding window.
+
+    Args:
+        step_records: List of per-step dicts with ``reward`` and
+            ``violations`` keys.
+        window: Number of steps to look back for the baseline comparison
+            window (default 10).
+
+    Returns:
+        List of episode dicts with ``step``, ``reward_spike``, and
+        ``violation_count``.
+    """
     episodes = []
     for i in range(len(step_records)):
         if step_records[i].get("violations", 0) > 0:
@@ -71,6 +115,20 @@ def _detect_reward_hacking(step_records: List[Dict],
 
 @dataclass
 class StrategyAggregate:
+    """Aggregated statistics for a single strategy-scenario pair.
+
+    Attributes:
+        strategy: Strategy name (e.g. ``"governance"``).
+        scenario: Scenario name (e.g. ``"GridWorld"``).
+        num_seeds: Number of random seeds in the aggregate.
+        mean_reward: Mean total reward across seeds.
+        std_reward: Standard deviation of total reward.
+        mean_deadlocks: Mean deadlock count across seeds.
+        mean_violations: Mean constraint violation count.
+        ci_lower: Bootstrap 95% CI lower bound.
+        ci_upper: Bootstrap 95% CI upper bound.
+    """
+
     strategy: str
     scenario: str
     num_seeds: int
@@ -83,6 +141,14 @@ class StrategyAggregate:
 
 
 def aggregate_reports(reports: List[ExperimentReport]) -> List[StrategyAggregate]:
+    """Group reports by strategy+scenario and compute aggregates.
+
+    Args:
+        reports: Flattened list of all experiment reports.
+
+    Returns:
+        List of :class:`StrategyAggregate` instances.
+    """
     groups = defaultdict(list)
     for r in reports:
         key = (r.metadata.get("strategy", "unknown"),
@@ -111,6 +177,16 @@ def compute_effect_sizes(
     aggregates: List[StrategyAggregate],
     reports: List[ExperimentReport],
 ) -> List[Dict]:
+    """Compute Cohen's d for each scenario comparing governance vs baselines.
+
+    Args:
+        aggregates: Aggregates (used to determine which scenarios exist).
+        reports: Full report list (used to access raw rewards per group).
+
+    Returns:
+        List of dicts with keys ``scenario``, ``governance_vs`` (baseline name),
+        ``cohens_d``, ``n_governance``, ``n_baseline``, ``interpretation``.
+    """
     groups = defaultdict(list)
     for r in reports:
         key = (r.metadata.get("strategy", "unknown"),
@@ -144,6 +220,17 @@ def compute_effect_sizes(
 
 
 def detect_hacking_episodes(reports: List[ExperimentReport]) -> List[Dict]:
+    """Scan all reports for reward-hacking episodes.
+
+    Each episode is tagged with its strategy, scenario, and seed for
+    traceability.
+
+    Args:
+        reports: List of all experiment reports.
+
+    Returns:
+        List of episode dicts.
+    """
     all_episodes = []
     for r in reports:
         step_records = r.metadata.get("step_records", [])
@@ -157,6 +244,12 @@ def detect_hacking_episodes(reports: List[ExperimentReport]) -> List[Dict]:
 
 
 def export_summary_csv(aggregates: List[StrategyAggregate], path: str):
+    """Export aggregate statistics to a CSV file.
+
+    Args:
+        aggregates: The aggregates to export.
+        path: File path for the CSV output.
+    """
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
@@ -176,6 +269,15 @@ def export_results_json(reports: List[ExperimentReport],
                          effect_sizes: List[Dict],
                          hacking_episodes: List[Dict],
                          path: str):
+    """Export all analysis results to a single JSON file.
+
+    Args:
+        reports: Full report list.
+        aggregates: Aggregates.
+        effect_sizes: Effect size comparisons.
+        hacking_episodes: Detected episodes.
+        path: File path for JSON output.
+    """
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     data = {
         "aggregates": [
@@ -202,6 +304,16 @@ def export_results_json(reports: List[ExperimentReport],
 
 def run_analysis(reports: List[ExperimentReport],
                  output_dir: str = "results") -> Dict:
+    """Run the full analysis pipeline: aggregate, effect sizes, detect, export.
+
+    Args:
+        reports: All experiment reports.
+        output_dir: Directory for output files (default ``"results"``).
+
+    Returns:
+        Dict with keys ``aggregates``, ``effect_sizes``, ``hacking_episodes``,
+        ``summary_csv``, ``results_json``.
+    """
     os.makedirs(output_dir, exist_ok=True)
 
     aggregates = aggregate_reports(reports)

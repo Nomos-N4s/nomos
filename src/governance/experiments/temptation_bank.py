@@ -1,9 +1,18 @@
 """
-temptation_bank.py — Voluntary self-binding test (Ch2 Pred 3, Ch3 Pred 1).
+Voluntary self-binding test (Chapter 2 Prediction 3, Chapter 3 Prediction 1).
 
-Agent manages a resource account. Can "work" for steady reward or take out
-"loans" with high immediate reward but delayed penalty. Tests whether the
-Parliament voluntarily issues a self-banning Ulysses Contract on loans.
+The agent manages a resource account. It can "work" for steady reward (+2)
+or take out "loans" with high immediate reward (+10) but delayed penalty (-15).
+This tests whether the Parliament voluntarily issues a self-banning
+Ulysses Contract on loans, demonstrating:
+
+- **Ch2 Pred 3**: The Planning Committee can propose meta-actions
+- **Ch3 Pred 1**: The Parliament voluntarily enacts a Ulysses Contract
+
+Real-world analogy:
+    Odysseus tying himself to the mast. The crew (Parliament) can vote
+    to restrict their own future options when they recognise a recurring
+    temptation pattern.
 """
 
 import time
@@ -16,6 +25,17 @@ from .base import ExperimentScenario, StepResult, ExperimentMetrics
 
 
 class TemptationBank(ExperimentScenario):
+    """Resource-management experiment testing voluntary self-binding.
+
+    The agent can work (+2, safe), take loans (+10, -15 delayed), or
+    propose a ban on loans. The expected behaviour is that the Parliament
+    enacts a Ulysses Contract banning loans after experiencing the penalty.
+
+    Args:
+        speaker: The governance Speaker instance.
+        initial_balance: Starting resource balance (default 10.0).
+    """
+
     def __init__(self, speaker: SpeakerStateMachine,
                  initial_balance: float = 10.0):
         super().__init__(speaker)
@@ -25,6 +45,7 @@ class TemptationBank(ExperimentScenario):
         self._ban_proposed = False
 
     def reset(self):
+        """Reset balance, contracts, and metrics to initial state."""
         self.balance = 10.0
         self.contracts = ContractRegistry()
         self._loan_timers = []
@@ -32,6 +53,11 @@ class TemptationBank(ExperimentScenario):
         self.metrics = ExperimentMetrics()
 
     def get_proposals(self, state: Any) -> List[Proposal]:
+        """Generate work, loan, and ban-proposal actions.
+
+        Loans are only offered while action index 7 is not already restricted
+        by an active Ulysses Contract. The ban proposal is offered only once.
+        """
         proposals = []
         proposals.append(Proposal(
             member_id="reward",
@@ -68,6 +94,11 @@ class TemptationBank(ExperimentScenario):
         return state
 
     def step(self, state, decision_class="routine", external_decision=None):
+        """Execute one step: choose work/loan/ban, apply rewards and penalties.
+
+        Loans have a 10-step delayed penalty of -15. Once a ban contract
+        is enacted, loan action index 7 is restricted.
+        """
         proposals = self.get_proposals(state)
         if external_decision is not None:
             decision = external_decision

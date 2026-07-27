@@ -1,10 +1,11 @@
 """
-rl_train.py — PPO training harness for GovernanceGridWorld.
+PPO training harness for GovernanceGridWorld (requires stable-baselines3).
 
-Trains a stable-baselines3 PPO agent under one of three modes:
-  - governance: Parliament filters actions
-  - no_governance: actions go directly to environment
-  - static_mask: poison actions are statically blocked
+Trains a PPO agent under one of three modes:
+
+- **governance** — Parliament filters actions via full committee deliberation
+- **no_governance** — Actions go directly to the environment (no oversight)
+- **static_mask** — Poison actions are statically blocked (simple filter)
 
 Exports trained model + evaluation logs for the Streamlit dashboard.
 """
@@ -28,6 +29,20 @@ def make_env(
     max_steps: int = 200,
     live_log_path: Optional[str] = None,
 ) -> GovernanceGridWorld:
+    """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
+
+    Args:
+        mode: ``"governance"`` (default), ``"no_governance"``, or ``"static_mask"``.
+        size: Grid dimension.
+        seed: Random seed.
+        poison_ratio: Fraction of tiles that are poison.
+        apple_count: Number of apples to place.
+        max_steps: Episode length limit.
+        live_log_path: Optional path for JSONL step logging.
+
+    Returns:
+        A configured :class:`~.gym_env.GovernanceGridWorld`.
+    """
     if mode == "no_governance":
         parliament = None
     else:
@@ -49,6 +64,19 @@ def evaluate(
     episodes: int = 5,
     deterministic: bool = True,
 ) -> Dict[str, Any]:
+    """Evaluate a trained PPO model for a number of episodes.
+
+    Args:
+        env: The GovernanceGridWorld environment.
+        model: A trained stable-baselines3 ``PPO`` model.
+        episodes: Number of evaluation episodes.
+        deterministic: Whether to use deterministic action selection.
+
+    Returns:
+        Dict with ``metrics_per_episode``, ``avg_reward``, ``std_reward``,
+        ``avg_violations``, ``avg_apples``, ``total_steps``, and
+        ``decision_history``.
+    """
     metrics_list = []
     all_histories = []
 
@@ -104,6 +132,23 @@ def train_ppo(
     live_log: bool = True,
     eval_episodes: int = 10,
 ) -> Dict[str, Any]:
+    """Train a PPO agent on GovernanceGridWorld.
+
+    Saves the trained model and evaluation results to ``log_dir``.
+
+    Args:
+        mode: ``"governance"``, ``"no_governance"``, or ``"static_mask"``.
+        total_timesteps: Number of training timesteps.
+        size: Grid dimension.
+        seed: Random seed.
+        log_dir: Output directory for model, logs, and results.
+        live_log: Whether to write a live JSONL step log.
+        eval_episodes: Number of evaluation episodes after training.
+
+    Returns:
+        Dict with ``mode``, ``total_timesteps``, ``train_time_seconds``,
+        ``model_path``, ``eval`` results, and ``training_log``.
+    """
     try:
         from stable_baselines3 import PPO
         from stable_baselines3.common.callbacks import BaseCallback

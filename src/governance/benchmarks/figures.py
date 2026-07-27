@@ -1,11 +1,19 @@
 """
-figures.py — Publication-ready comparison figures from benchmark results.
+Publication-ready comparison figures from benchmark results.
 
-Generates:
-  1. Reward curves over time (mean ± 95% CI shaded)
-  2. Violation rate bar chart with error bars
-  3. Deadlock frequency comparison (grouped bar)
-  4. Pareto frontier: cumulative reward vs safety violations
+Generates four publication-quality plots:
+
+1. **Reward curves** — Mean cumulative reward over time with shaded 95% CI
+2. **Violation rates** — Grouped bar chart per scenario-strategy with error bars
+3. **Deadlock frequency** — Grouped bar chart of deadlock rates
+4. **Pareto frontier** — Reward vs. safety violations across all strategies
+
+Each figure is saved as both PNG (150 dpi) and SVG.
+
+Real-world analogy:
+    A medical journal's "results" section: survival curves (reward),
+    adverse event rates (violations), treatment failure frequencies
+    (deadlocks), and efficacy-vs-safety tradeoff (Pareto).
 """
 
 import os
@@ -22,6 +30,15 @@ def _ensure_dir(path: str):
 
 def plot_reward_curves(reports: List[ExperimentReport],
                        output_dir: str = "results/figures"):
+    """Plot mean cumulative reward curves with 95% CI shaded bands.
+
+    Creates a 2×2 subplot panel with one scenario per subplot.
+    Each subplot shows all strategies as separate coloured lines.
+
+    Args:
+        reports: List of experiment reports.
+        output_dir: Directory for output files (default ``results/figures``).
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -86,6 +103,14 @@ def plot_reward_curves(reports: List[ExperimentReport],
 
 def plot_violation_rates(reports: List[ExperimentReport],
                           output_dir: str = "results/figures"):
+    """Plot grouped bar chart of constraint violation rates per scenario.
+
+    Each strategy is a different coloured bar within each scenario group.
+
+    Args:
+        reports: List of experiment reports.
+        output_dir: Directory for output files.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -136,6 +161,12 @@ def plot_violation_rates(reports: List[ExperimentReport],
 
 def plot_deadlock_frequency(reports: List[ExperimentReport],
                              output_dir: str = "results/figures"):
+    """Plot grouped bar chart of deadlock rates per scenario.
+
+    Args:
+        reports: List of experiment reports.
+        output_dir: Directory for output files.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -186,6 +217,15 @@ def plot_deadlock_frequency(reports: List[ExperimentReport],
 
 def plot_pareto_frontier(reports: List[ExperimentReport],
                           output_dir: str = "results/figures"):
+    """Plot Pareto frontier of total reward vs. constraint violations.
+
+    Each point is a single run. The upper-left region is the Pareto-optimal
+    frontier (high reward, few violations).
+
+    Args:
+        reports: List of experiment reports.
+        output_dir: Directory for output files.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -225,6 +265,12 @@ def plot_pareto_frontier(reports: List[ExperimentReport],
 
 def generate_all_figures(reports: List[ExperimentReport],
                           output_dir: str = "results/figures"):
+    """Generate all four publication-ready figures.
+
+    Args:
+        reports: List of experiment reports.
+        output_dir: Directory for output files.
+    """
     print("Generating figures...")
     plot_reward_curves(reports, output_dir)
     plot_violation_rates(reports, output_dir)

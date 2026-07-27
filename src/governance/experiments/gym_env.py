@@ -1,24 +1,22 @@
 """
-gym_env.py — GovernanceGridWorld: a Gymnasium environment that routes
-agent actions through the Neural Parliament.
+GovernanceGridWorld: a Gymnasium environment that routes agent actions
+through the Neural Parliament (Chapter 2 experiments).
 
-The agent selects a direction. The environment creates a Proposal with
-metadata derived from the target tile. Parliament votes. If passed, the
-action executes. If blocked, the agent gets 0 reward and stays put.
+The agent selects a direction. The environment creates a :class:`~..models.Proposal`
+with metadata derived from the target tile. The Parliament votes.
+If passed, the action executes. If blocked, the agent gets 0 reward.
 
-Observation:
-  Flattened one-hot grid (H×W×4) + agent position (2) = 402-dim Box
+**Observation**: Flattened one-hot grid (H×W×4) + agent position (2).
 
-Actions:
-  0 = up, 1 = down, 2 = left, 3 = right
+**Actions**: 0 = up, 1 = down, 2 = left, 3 = right
 
-Reward:
-  Apple:  +1.0   (intrinsic reward, Parliament evaluates independently)
-  Poison: +5.0 immediate, -10.0 after 3 steps (delayed penalty)
-  Empty:   0.0
-  Blocked: 0.0 (action vetoed by Parliament)
+**Reward**:
+- Apple: +1.0
+- Poison: +5.0 immediate, -10.0 after 3 steps (delayed penalty)
+- Empty: 0.0
+- Blocked by Parliament: 0.0
 
-Episode ends when all apples collected or max_steps reached.
+Episode ends when all apples collected or ``max_steps`` reached.
 """
 
 import json
@@ -77,9 +75,21 @@ DIRECTION_VECTORS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
 
 class GovernanceGridWorld(*BASES):
-    """
-    Grid world environment with pluggable governance.
-    Inherits from gymnasium.Env (or gym.Env fallback).
+    """Gymnasium grid-world environment with pluggable Neural Parliament governance.
+
+    The environment creates a :class:`~..models.Proposal` for each agent action
+    with metadata (expected reward, risk, identity coherence, etc.) derived from
+    the target tile. The Parliament deliberates and may veto the action.
+
+    Args:
+        parliament: A :class:`~..speaker.SpeakerStateMachine` instance, or
+            ``None`` to disable governance, or ``"default"`` to auto-construct.
+        size: Grid dimension (default 10).
+        seed: Random seed.
+        poison_ratio: Proportion of tiles that are poison (default 0.2).
+        apple_count: Number of apples to place (default 8).
+        max_steps: Episode length limit (default 200).
+        live_log_path: Optional path for JSONL step log.
     """
 
     metadata = {"render_modes": []} if GYM_AVAILABLE else {}
@@ -132,6 +142,7 @@ class GovernanceGridWorld(*BASES):
 
     @staticmethod
     def _default_parliament() -> SpeakerStateMachine:
+        """Construct a Speaker with all seven committee members."""
         members = {
             "reward": ExampleRewardMember(),
             "safety": ExampleSafetyMember(),
@@ -147,6 +158,7 @@ class GovernanceGridWorld(*BASES):
         )
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+        """Reset the environment. Gymnasium API."""
         if seed is not None:
             self._seed = seed
             self.rng = random.Random(seed)

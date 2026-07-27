@@ -1,8 +1,14 @@
 """
-deadlock_maze.py — Procedural asymmetry deadlock recovery test (Ch4 §3.6).
+Procedural asymmetry deadlock recovery test (Chapter 4 §3.6, Appendix A §9.5).
 
-Deliberately creates a governance deadlock by over-tightening quorum,
-then tests whether the deadlock breaker fires and restores genesis baseline.
+Deliberately creates a governance deadlock by over-tightening the quorum
+threshold, then tests whether the :class:`~..tee.watchdog.DeadlockBreaker`
+fires and restores the genesis parameter baseline.
+
+Real-world analogy:
+    A parliamentary body that votes to require a 90% majority for all
+    decisions. This causes gridlock on routine matters. Eventually the
+    rules are reset to prevent complete paralysis.
 """
 
 import time
@@ -20,6 +26,21 @@ PHASE_RECOVERED = 2
 
 
 class DeadlockMaze(ExperimentScenario):
+    """Governance deadlock recovery test.
+
+    Three phases:
+    1. **Normal** — Proposes tightening quorum to 0.9.
+    2. **Deadlock** — After quorum is tightened, no proposal can pass.
+    3. **Recovered** — The deadlock breaker resets parameters to defaults.
+
+    Args:
+        speaker: The governance Speaker instance.
+        deadlock_breaker: The :class:`~..tee.watchdog.DeadlockBreaker`
+            to test.
+        params_envelope: Optional parameter envelope (defaults to
+            :const:`~..identity.params.DEFAULT_PARAMETER_ENVELOPE`).
+    """
+
     def __init__(self, speaker: SpeakerStateMachine,
                  deadlock_breaker: DeadlockBreaker,
                  params_envelope=None):
@@ -29,12 +50,14 @@ class DeadlockMaze(ExperimentScenario):
         self._phase = PHASE_NORMAL
 
     def reset(self):
+        """Reset breaker, parameters, and phase to initial state."""
         self.breaker.reset()
         self.params.reset_to_defaults()
         self._phase = PHASE_NORMAL
         self.metrics = ExperimentMetrics()
 
     def get_proposals(self, state: Any) -> List[Proposal]:
+        """During normal phase, propose tightening the quorum threshold."""
         return [
             Proposal(
                 member_id="safety",
@@ -53,6 +76,12 @@ class DeadlockMaze(ExperimentScenario):
         return state
 
     def step(self, state, decision_class="routine", external_decision=None):
+        """Execute one step, tracking the three-phase lifecycle.
+
+        After the quorum is tightened, the deadlock breaker counts
+        consecutive default decisions. When ``threshold_cycles`` is
+        reached, it triggers cold boot (parameter reset).
+        """
         if self._phase == PHASE_NORMAL:
             proposals = self.get_proposals(state)
             if external_decision is not None:

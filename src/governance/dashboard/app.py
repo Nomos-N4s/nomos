@@ -1,12 +1,20 @@
 """
-app.py — Streamlit dashboard for the Governance Layer.
+Streamlit dashboard for the Governance Layer.
+
+Provides a visual interface for exploring the formal model, replaying
+Parliament decisions, viewing benchmark comparisons, and inspecting RL
+training results.
 
 Usage:
-    streamlit run src/governance/dashboard/app.py
-    streamlit run src/governance/dashboard/app.py -- --neo4j
+    ``streamlit run src/governance/dashboard/app.py``
 
-Connects to Neo4j Aura if .env has valid credentials.
-Loads experiment results from results/ directory.
+Auto-detects Neo4j Aura if ``NEO4J_URI`` is present in ``.env``;
+falls back to in-memory storage.
+
+Real-world analogy:
+    A mission control dashboard for a spacecraft. Each tab monitors a
+    different subsystem: the flight computer (formal model), the crew
+    (Parliament), the telemetry (benchmarks), and the engine tests (RL).
 """
 
 import os

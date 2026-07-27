@@ -1,17 +1,21 @@
 """
-SafetyGymWrapper — wraps Safety-Gymnasium environments with the Neural Parliament.
+Gymnasium wrapper that routes Safety-Gymnasium environments through the
+Neural Parliament (RL adversary experiment, Safety Grid variant).
 
-Architecture mirrors GovernedMinigridWrapper. Maps Safety-Gym observation
-features (hazards, vases, goals, robot position) to proposal metadata for
-Parliament evaluation.
+Maps observation features (hazards, goal, robot position) to proposal
+metadata for Parliament evaluation. Mirrors the architecture of
+:class:`~.minigrid_wrapper.GovernedMinigridWrapper`.
 
-Requires: safety-gymnasium, mujoco (platform-dependent).
-Import is safe — fails gracefully with ImportError if deps missing.
+Requires ``safety-gymnasium`` and ``mujoco`` (platform-dependent).
+Import is safe — fails gracefully if deps are missing.
 
 Usage (when deps are available):
-    import safety_gymnasium
-    env = gym.make("SafetyPointGoal1-v0")
-    env = SafetyGymWrapper(env)
+    ``import safety_gymnasium; env = gym.make("SafetyPointGoal1-v0"); env = SafetyGymWrapper(env)``
+
+Real-world analogy:
+    A safety inspector riding along in a self-driving car. Every time
+    the car approaches a hazard, the inspector (Parliament) can flag
+    the action before it happens.
 """
 
 import time
@@ -100,6 +104,7 @@ class SafetyGymWrapper(gym.Wrapper):
         self._reset_metrics()
 
     def _reset_metrics(self):
+        """Zero out all tracking counters for a new episode."""
         self._step_count = 0
         self._total_reward = 0.0
         self._total_cost = 0.0
@@ -109,6 +114,7 @@ class SafetyGymWrapper(gym.Wrapper):
         self._decision_history: List[Dict] = []
 
     def reset(self, **kwargs) -> Tuple[np.ndarray, Dict]:
+        """Reset the wrapped Safety-Gymnasium environment. Gymnasium API."""
         obs, info = self.env.reset(**kwargs)
         self._last_obs = obs
         self._reset_metrics()

@@ -1,11 +1,18 @@
 """
-rl_adversary.py — CLI for the RL adversary experiment.
+CLI entry point for the RL adversary experiment.
+
+Provides three subcommands:
+
+- **train**: Train a PPO agent (governed or ungoverned)
+- **eval**: Evaluate a trained model on the environment
+- **benchmark**: Run comparison across multiple seeds
+
+Requires ``stable-baselines3`` (install with ``uv sync --extra rl``).
 
 Usage:
-  python -m src.governance.experiments.rl_adversary train --mode governance --timesteps 100000
-  python -m src.governance.experiments.rl_adversary train --mode no_governance --timesteps 100000
-  python -m src.governance.experiments.rl_adversary benchmark --timesteps 100000 --seeds 42 43 44
-  python -m src.governance.experiments.rl_adversary eval --model results/ppo_governance.zip --episodes 5
+  ``python -m src.governance.experiments.rl_adversary train --mode governance --timesteps 100000``
+  ``python -m src.governance.experiments.rl_adversary benchmark --timesteps 100000 --seeds 42 43 44``
+  ``python -m src.governance.experiments.rl_adversary eval --model results/ppo_governance.zip --episodes 5``
 """
 
 import argparse

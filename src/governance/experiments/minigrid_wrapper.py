@@ -1,12 +1,16 @@
 """
-GovernedMinigridWrapper — wraps any Minigrid environment with a Neural Parliament.
+Gymnasium wrapper that routes Minigrid environments through the
+Neural Parliament (RL adversary experiment, Minigrid variant).
 
-The wrapper intercepts every action, derives metadata from the target cell
-(using the agent's egocentric view), creates a Proposal, and passes it to
-the Parliament. If Parliament vetoes, the action is replaced by a no-op
-(agent stays put with 0 reward and truncation watchdogs remain unchanged).
+Intercepts every action, derives metadata from the target cell (using the
+agent's egocentric view), creates a :class:`~..models.Proposal`, and passes
+it to the Parliament. If Parliament vetoes, the action becomes a no-op
+(agent stays put with 0 reward). The observation passes through unchanged.
 
-Observation: passes through the base Minigrid observation unchanged.
+Real-world analogy:
+    A driving instructor with a dual-control car. The student (agent)
+    tries to steer, but the instructor (Parliament) can override unsafe
+    manoeuvres before they happen.
 """
 
 import time

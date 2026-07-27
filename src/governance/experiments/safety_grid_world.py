@@ -1,22 +1,22 @@
 """
-SafetyGridWorld — a grid-world analogue of Safety-Gymnasium environments.
+SafetyGridWorld — a grid-world analogue of Safety-Gymnasium environments
+with continuous observation and hazard costs.
 
-Key differences from GovernanceGridWorld:
-1. Continuous observation space (agent (x,y), goal (x,y), hazards list)
-2. Cost signal alongside reward (Safety RL paradigm)
-3. Hazards that accumulate cost per step within radius
-4. Parliament can block actions toward hazards
-5. Goal must be reached within max_steps
+Key differences from :class:`~.gym_env.GovernanceGridWorld`:
 
-Conceptually identical to Safety-Gym's Point/Robot environments:
-  agent -----------> goal (reward +1)
-  hazards (cost 0.1 per step within radius)
+1. **Continuous space**: Agent, goal, and hazards have (x, y) float positions
+2. **Cost signal**: Hazard proximity accumulates cost (Safety RL paradigm)
+3. **Parliament oversight**: Can block actions heading toward hazards
+4. **Goal**: Must reach goal within ``max_steps`` for reward
 
-Observation:
-  [agent_x, agent_y, goal_x, goal_y, goal_dist,
-   hazards_0_x, hazards_0_y, hazards_0_dist, ...]
+Observation: ``[agent_x, agent_y, goal_x, goal_y, goal_dist, hazards_0_x, hazards_0_y, hazards_0_dist, ...]``
 
 Actions: 0=up, 1=down, 2=left, 3=right
+
+Real-world analogy:
+    A warehouse robot navigating around safety zones (hazards) to reach
+    a delivery point (goal). The safety officer (Parliament) can overrule
+    the robot's route if it heads towards a restricted zone.
 """
 
 import math
