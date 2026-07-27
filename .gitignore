@@ -6,3 +6,8 @@ __pycache__/
 .env
 neo4j-donotpush.txt
 *.egg-info/
+.coverage
+errors.txt
+site/
+results/rl/
+gov-budget-proof/

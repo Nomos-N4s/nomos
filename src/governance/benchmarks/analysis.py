@@ -77,6 +77,83 @@ def _cohens_d(control: list[float], treatment: list[float]) -> float:
     return (m1 - m2) / pooled
 
 
+def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
+    """Compute Mann-Whitney U test and two-tailed p-value (normal approx).
+
+    Uses the normal approximation with tie correction, valid when both
+    sample sizes are >= 8.
+
+    Args:
+        x: First group of observed values.
+        y: Second group of observed values.
+
+    Returns:
+        ``(U_statistic, p_value)`` -- U is the smaller of U1 and U2.
+        Returns ``(0.0, 1.0)`` if either group has fewer than 2 elements.
+    """
+    n1, n2 = len(x), len(y)
+    if n1 < 2 or n2 < 2:
+        return (0.0, 1.0)
+
+    combined = sorted([(v, 0) for v in x] + [(v, 1) for v in y])
+    n = n1 + n2
+    ranks = [0.0] * n
+    tie_adjustment = 0.0
+    i = 0
+    while i < n:
+        j = i
+        while j < n and combined[j][0] == combined[i][0]:
+            j += 1
+        tie_count = j - i
+        avg_rank = (i + 1 + j) / 2.0
+        for k in range(i, j):
+            ranks[k] = avg_rank
+        if tie_count > 1:
+            tie_adjustment += tie_count**3 - tie_count
+        i = j
+
+    r1 = sum(ranks[k] for k in range(n) if combined[k][1] == 0)
+    u1 = r1 - n1 * (n1 + 1) / 2.0
+    u2 = n1 * n2 - u1
+    u = min(u1, u2)
+
+    mean_u = n1 * n2 / 2.0
+    variance = (n1 * n2 / 12.0) * ((n + 1) - tie_adjustment / (n * (n - 1)))
+    if variance <= 0:
+        return (round(u, 2), 1.0)
+
+    z = (u - mean_u) / math.sqrt(variance)
+    p = math.erfc(abs(z) / math.sqrt(2.0))
+    p = max(0.0, min(1.0, p))
+    return (round(u, 2), round(p, 4))
+
+
+def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict]:
+    """Apply Bonferroni correction for multiple comparisons.
+
+    Args:
+        p_values: Raw p-values (one per comparison).
+        alpha: Family-wise error rate (default 0.05).
+
+    Returns:
+        List of dicts with keys ``raw_p``, ``corrected_p``, ``significant``.
+    """
+    m = len(p_values)
+    if m == 0:
+        return []
+    results = []
+    for raw_p in p_values:
+        corrected = min(raw_p * m, 1.0)
+        results.append(
+            {
+                "raw_p": raw_p,
+                "corrected_p": round(corrected, 4),
+                "significant": corrected < alpha,
+            }
+        )
+    return results
+
+
 def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[dict]:
     """Detect reward-hacking episodes from step-level records.
 
@@ -179,16 +256,24 @@ def aggregate_reports(reports: list[ExperimentReport]) -> list[StrategyAggregate
 def compute_effect_sizes(
     aggregates: list[StrategyAggregate],
     reports: list[ExperimentReport],
+    alpha: float = 0.05,
 ) -> list[dict]:
-    """Compute Cohen's d for each scenario comparing governance vs baselines.
+    """Compute Cohen's d and Mann-Whitney U with Bonferroni correction.
+
+    For each scenario, governance rewards are compared against every
+    baseline using Cohen's d (parametric effect size) and Mann-Whitney U
+    (non-parametric test). Raw p-values are Bonferroni-corrected across
+    all comparisons within the call.
 
     Args:
         aggregates: Aggregates (used to determine which scenarios exist).
         reports: Full report list (used to access raw rewards per group).
+        alpha: Family-wise error rate for Bonferroni correction (default 0.05).
 
     Returns:
-        List of dicts with keys ``scenario``, ``governance_vs`` (baseline name),
-        ``cohens_d``, ``n_governance``, ``n_baseline``, ``interpretation``.
+        List of dicts with keys ``scenario``, ``governance_vs``, ``cohens_d``,
+        ``mannwhitney_u``, ``p_value_raw``, ``p_value_corrected``,
+        ``significant``, ``n_governance``, ``n_baseline``, ``interpretation``.
     """
     groups = defaultdict(list)
     for r in reports:
@@ -200,16 +285,21 @@ def compute_effect_sizes(
     governance_key = "governance"
     baselines = ["monolithic_rl", "random", "static_masking", "veto_only"]
 
+    raw_p_values = []
     for scenario in sorted(scenarios):
         control_rewards = groups.get((governance_key, scenario), [])
         for bl in baselines:
             treatment_rewards = groups.get((bl, scenario), [])
             d = _cohens_d(control_rewards, treatment_rewards)
+            u_stat, p_raw = _mannwhitney_u(control_rewards, treatment_rewards)
+            raw_p_values.append(p_raw)
             effect_sizes.append(
                 {
                     "scenario": scenario,
                     "governance_vs": bl,
                     "cohens_d": round(d, 3),
+                    "mannwhitney_u": u_stat,
+                    "p_value_raw": p_raw,
                     "n_governance": len(control_rewards),
                     "n_baseline": len(treatment_rewards),
                     "interpretation": (
@@ -223,6 +313,12 @@ def compute_effect_sizes(
                     ),
                 }
             )
+
+    corrections = _bonferroni_correct(raw_p_values, alpha)
+    for es, corr in zip(effect_sizes, corrections):
+        es["p_value_corrected"] = corr["corrected_p"]
+        es["significant"] = corr["significant"]
+
     return effect_sizes
 
 

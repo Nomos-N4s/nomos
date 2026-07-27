@@ -2,6 +2,10 @@
 
 Thanks for your interest! This is a solo project but community contributions are welcome.
 
+> **By submitting a contribution, you agree to the [Contributor License Agreement](CLA.md).**
+> You retain copyright over your own contributions but grant the project owner
+> a perpetual license to use them. See [`CLA.md`](CLA.md) for the full terms.
+
 ## Workflow
 
 1. **Open an issue** first to discuss what you'd like to change
@@ -9,7 +13,7 @@ Thanks for your interest! This is a solo project but community contributions are
 3. **Create a branch** named `issue-XX-description` (e.g. `issue-42-fix-speaker-budget`)
 4. **Make your changes**
 5. **Run tests**: `python -m pytest tests/ -v`
-6. **Submit a PR** against `main`
+6. **Submit a PR** against `main` — by opening the PR you accept the CLA
 
 ## Commit Style
 
