@@ -6,6 +6,8 @@
 **Maturity: Pre-alpha research prototype.** The theoretical framework has undergone 5 rounds of adversarial review by an independent expert panel (see [`book/responses/`](book/responses/)). The reference implementation is under active construction. Claims about security, formal verification, and production readiness are aspirational.
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
+[![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
+[![Security](https://img.shields.io/badge/Security-SECURITY.md-blue)](SECURITY.md)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
 
 ---
