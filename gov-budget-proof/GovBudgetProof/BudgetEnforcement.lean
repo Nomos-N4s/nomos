@@ -49,7 +49,7 @@ inductive Decision : Type
   Otherwise reject with budgetExhausted.
 -/
 def processProposal (state : BudgetState) (p : Proposal) : BudgetState × Decision :=
-  if h : state.used p.member < state.budgets p.member then
+  if _h : state.used p.member < state.budgets p.member then
     ({ state with used := λ m =>
       if m = p.member then state.used m + 1 else state.used m
     }, Decision.approved)
