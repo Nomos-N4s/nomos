@@ -128,9 +128,7 @@ def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
     return (round(u, 2), round(p, 4))
 
 
-def _bonferroni_correct(
-    p_values: list[float], alpha: float = 0.05
-) -> list[dict]:
+def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict]:
     """Apply Bonferroni correction for multiple comparisons.
 
     Args:
