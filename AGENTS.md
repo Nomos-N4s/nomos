@@ -7,7 +7,8 @@
 - All Mermaid diagrams and LaTeX must avoid HTML tags (`<br/>`), custom `classDef` styling, and nested `\text{}` for GitHub compatibility. Use `\mathrm{}` instead.
 - **First review panel** (5 rounds) completed theoretical vetting across all three layers. All accepted fixes executed. Panel signed off. Three residual risks acknowledged (social engineering, hardware supply chain, adaptive proxy gap) as unavoidable physical-world limits.
 - **Second harder review panel** (2026-07-26) evaluated the implementation with grade C-. One genuine bug found (baseline decoupling in benchmarks) and fixed. Full response at `book/responses/response-to-expert-panel-harder-review.md`.
-- OSF preregistration deferred — placeholder DOI was removed from README after the harder panel correctly identified it as misleading before experiments.
+- OSF preregistration prepared — content at `osf-registration.md`. Needs manual upload to https://osf.io/ to mint DOI.
+- **CLA.md** added — standard Individual Contributor License Agreement. External contributors must accept terms (PR = acceptance). CONTRIBUTING.md updated to reference it.
 - Architecture: Capability → Governance → Identity. Deep learning, JEPA world models, and computer vision are Capability Layer technologies; the Governance Layer constrains them.
 
 ## Work State
@@ -16,7 +17,7 @@
 - **Appendix A** — TEE threat model, SGX/SEV/TrustZone, hardware watchdog, constant-time execution, Merkle-tree batch verification, single-enclave architecture with multi-enclave consensus addendum, deadlock breaker cold-boot recovery (§A.9.5).
 - **Response to review panel** — `book/responses/response-to-review-panel.md`. All 5 phases documented. Phase 5.2 concedes all three Chapter 4 Identity Layer attacks: isolation buffer sandbox (§5.2 fix), runtime integrity hashes (§2.1/§6.1 fix), deadlock breaker (§A.9.5 fix).
 - **MVP code** — `src/governance/speaker.py`. Reference implementation with deterministic falsification counter. Runs successfully.
-- **Full modular reference implementation** — 40+ Python files across 10 subpackages (~2100 lines total):
+- **Full modular reference implementation** — 50+ Python files across 10 subpackages (~2800 lines total):
 
   | Module | Files | Key Contents |
   |---|---|---|
@@ -30,7 +31,7 @@
   | Benchmarks | `benchmarks/` (360+ lines) | baselines.py (4 comparison strategies), run_all.py, report.py, **analysis.py** (statistical pipeline + Cohen's d + reward-hacking detection), **figures.py** (4 publication-ready plots) |
   | CLI | `runner.py` (220 lines) | Full argparse: `--baselines`, `--strategies`, `--steps`, `--seeds`, `--csv` export |
   | Ontology | `ontology/` (246 lines) | ABC + MemoryBackend (default) + Neo4jBackend (when .env configured) |
-  | Dashboard | `dashboard/` (550 lines) | Streamlit app with 3 tabs: Formal Model, Parliament Live, Benchmarks |
+  | Dashboard | `dashboard/` (550 lines) | Streamlit app with 4 tabs: Formal Model, Parliament Live, Benchmarks, RL Training |
 
 - **Neo4j integration**: `Neo4jBackend` in `src/governance/ontology/neo4j_backend.py` is fully wired into the Streamlit dashboard. When `NEO4J_URI` is present in `.env`, the dashboard auto-detects and uses Neo4j Aura for persistent ontology storage and decision logging. Falls back to `MemoryBackend` otherwise. Decision logging records each replayed step's scores, vetoes, and metadata as ontology entities. (Issue #21 — Integrated into dashboard per Option A.)
 
@@ -42,15 +43,21 @@
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 
 ### Active
-- *(none)*
+- External contributors engaging (RISO525 on #67). Need watchful review on any PRs.
+- **#63** Pinned deps + Dockerfile + Makefile — done
+- **#64** CI/CD (lint + lean-build + badges) — done
+- **#71** OSF preregistration — content ready, needs manual upload at https://osf.io/
+- **CLA** drafted, CONTRIBUTING.md updated
 
 ### Blocked
 - *(none)*
 
 ## Next Move
-1. Complete OSF preregistration (needs DOI + final abstract)
-2. Write the `prove.py` script that validates the formal predictions from Chapters 2-4 against experiment output
-3. Finalize book appendices B+ (DSL grammar, data types reference, experiment protocol)
+1. OSF: manually upload `osf-registration.md` content to https://osf.io/ — needs a user account
+2. #66: Extend test coverage to experiments, benchmarks, tee, identity
+3. #68: Add Bonferroni correction + Mann-Whitney U to statistical analysis
+4. #72: Activate git-push from Colab notebooks  
+5. Review any incoming external PRs against CLA + code standards
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
