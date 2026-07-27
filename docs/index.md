@@ -2,6 +2,8 @@
 
 **A Formal Framework for Self-Governing AI**
 
+*Created by Carlos Pinto (xcoder-es)*
+
 The Governance Layer is a reference implementation of a formal framework for constraining AI agents through a Neural Parliament, Ulysses Contracts, and an Identity Layer. It ensures that autonomous systems remain safe, aligned, and corrigible — even under optimization pressure.
 
 ## Quick Start
@@ -45,7 +47,7 @@ Provides interactive visualization of:
 
 ```bibtex
 @software{governance_layer,
-  author = {xcoder-es},
+  author = {Carlos Pinto (xcoder-es)},
   title = {The Governance Layer: A Formal Framework for Self-Governing AI},
   year = {2026},
   url = {https://github.com/xcoder-es/governance-layer}

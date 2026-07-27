@@ -3,6 +3,8 @@
 > **An architectural specification and reference implementation for self-governing artificial intelligence.**
 > The Neural Parliament, Ulysses Contracts, and Identity Layer — with a full reference implementation.
 
+**Created by Carlos Pinto (xcoder-es).**
+
 **Maturity: Pre-alpha research prototype.** The theoretical framework has undergone 5 rounds of adversarial review by an independent expert panel (see [`book/responses/`](book/responses/)). The reference implementation is under active construction. Claims about security, formal verification, and production readiness are aspirational.
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
@@ -164,7 +166,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.
 
 ```bibtex
 @software{governance_layer,
-  author    = {xcoder-es},
+  author    = {Carlos Pinto (xcoder-es)},
   title     = {The Governance Layer: An Architectural Specification for Self-Governing AI},
   year      = {2026},
   url       = {https://github.com/xcoder-es/governance-layer},

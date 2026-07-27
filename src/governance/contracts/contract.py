@@ -1,8 +1,43 @@
 """
-contract.py — Ulysses Contract tuple and lifecycle.
+Ulysses Contract tuple, lifecycle state machine, and registry (Chapter 3).
 
-A contract U = <A_restrict, phi, psi, kappa> restricts the action space
-until revoked through a higher procedural bar.
+A Ulysses Contract is a pre-commitment mechanism — the agent voluntarily
+restricts its future action space to prevent itself from taking undesirable
+actions under future optimisation pressure.
+
+Formal tuple:
+
+.. math::
+
+    U = \\langle A_{\\text{restrict}}, \\phi, \\psi, \\kappa \\rangle
+
+=================== ============================================================
+Component           Description
+=================== ============================================================
+:math:`A_{restrict}`  Set of action indices the contract restricts
+:math:`\\phi`         Enactment threshold (default 0.66 supermajority)
+:math:`\\psi`         Revocation threshold (default 1.0 unanimity)
+:math:`\\kappa`       Enforcement mode (procedural inertia, distributed monitors,
+                      timelock)
+=================== ============================================================
+
+Lifecycle:
+
+```mermaid
+flowchart LR
+    PROPOSED -->|enactment vote passes| ENACTED
+    ENACTED -->|timelock expires| ACTIVE
+    ACTIVE -->|revocation vote passes| REVOKED
+    ACTIVE -->|rebind| PROPOSED
+    ENACTED -->|expire| EXPIRED
+    ACTIVE -->|expire| EXPIRED
+```
+
+Real-world analogy:
+    Ulysses tying himself to the mast so he can hear the Sirens' song
+    without wrecking the ship. The contract binds the agent's *future*
+    self to a course of action chosen by the *present* self, when the
+    present self is still rational.
 """
 
 from dataclasses import dataclass, field
@@ -13,6 +48,12 @@ from ..models import GovernanceDecision
 
 
 class ContractState(Enum):
+    """The four states of a contract's lifecycle.
+
+    Transitions follow a strict order: PROPOSED → ENACTED → ACTIVE
+    → REVOKED or EXPIRED. A contract cannot go back to a previous
+    state (except PROPOSED via rebinding after revocation).
+    """
     PROPOSED = auto()
     ENACTED = auto()
     ACTIVE = auto()
@@ -22,6 +63,37 @@ class ContractState(Enum):
 
 @dataclass
 class UlyssesContract:
+    """A pre-commitment restricting the agent's future action space.
+
+    Once enacted, a contract filters the set of allowable actions
+    in every governance cycle. The action mask :math:`M_U` produced
+    by the contract is merged with all other active contracts to
+    produce the final action mask.
+
+    Real-world example:
+        An agent that manages financial portfolios signs a contract
+        that restricts it from trading cryptocurrency before a
+        30-day cooling-off period (timelock). The present self,
+        wary of FOMO, binds the future self from impulsive trades.
+
+    Attributes:
+        contract_id: Human-readable identifier (e.g. ``"ban_loans"``).
+        restricted_indices: Set of action indices this contract forbids.
+        enactment_threshold: Weighted-vote threshold required to enact
+            the contract (default 0.66 — supermajority).
+        revocation_threshold: Threshold to revoke once active (default 1.0
+            — unanimity). Revocation is intentionally harder than enactment.
+        enforcement_mode: One of ``"procedural_inertia"``,
+            ``"distributed_monitors"``, or ``"timelock"`` (see
+            :mod:`governance.contracts.enforcement`).
+        state: Current lifecycle state (see :class:`ContractState`).
+        timelock_blocks: Number of governance cycles before an enacted
+            contract becomes active (for timelock enforcement mode).
+        created_at_cycle: The governance cycle when this contract was
+            first proposed.
+        revoked_at_cycle: The cycle when revoked, if applicable.
+    """
+
     contract_id: str
     restricted_indices: Set[int]
     enactment_threshold: float = 0.66
@@ -33,21 +105,37 @@ class UlyssesContract:
     revoked_at_cycle: Optional[int] = None
 
     def enact(self):
+        """Move contract to ENACTED state (passed vote, waiting for activation)."""
         self.state = ContractState.ENACTED
 
     def activate(self):
+        """Move contract to ACTIVE state (restrictions take effect)."""
         self.state = ContractState.ACTIVE
 
     def revoke(self):
+        """Move contract to REVOKED state (restrictions lifted)."""
         self.state = ContractState.REVOKED
 
     def applies_to(self, action_index: int) -> bool:
+        """Check if this contract restricts a given action.
+
+        Only ENACTED or ACTIVE contracts apply — PROPOSED contracts
+        have not yet taken effect, and REVOKED/EXPIRED ones no
+        longer apply.
+
+        Args:
+            action_index: The action to check.
+
+        Returns:
+            True if the action is restricted by this contract.
+        """
         if self.state not in (ContractState.ENACTED, ContractState.ACTIVE):
             return False
         return action_index in self.restricted_indices
 
     @property
     def is_active(self) -> bool:
+        """True if the contract's restrictions are currently in force."""
         return self.state in (ContractState.ENACTED, ContractState.ACTIVE)
 
     def __repr__(self):
@@ -55,26 +143,65 @@ class UlyssesContract:
 
 
 class ContractRegistry:
+    """Manages all Ulysses Contracts in the system.
+
+    Acts as a central store that the Speaker queries to build the
+    active action mask :math:`M` for each governance cycle.
+
+    Real-world analogy:
+        The statute book or law register — a complete record of all
+        laws (contracts) currently in force, with their enactment and
+        revocation dates.
+    """
+
     def __init__(self):
         self._contracts: List[UlyssesContract] = []
         self._cycle: int = 0
 
     def add(self, contract: UlyssesContract):
+        """Register a new contract.
+
+        Args:
+            contract: The contract to add (usually in PROPOSED state).
+        """
         self._contracts.append(contract)
 
     def get_active(self) -> List[UlyssesContract]:
+        """Return all contracts currently in force (ENACTED or ACTIVE)."""
         return [c for c in self._contracts if c.is_active]
 
     def get_by_id(self, contract_id: str) -> Optional[UlyssesContract]:
+        """Look up a contract by its identifier.
+
+        Args:
+            contract_id: The contract's unique ID.
+
+        Returns:
+            The matching contract, or None if not found.
+        """
         for c in self._contracts:
             if c.contract_id == contract_id:
                 return c
         return None
 
     def tick_cycle(self):
+        """Advance the governance cycle counter.
+
+        Called once per governance cycle to update timelock counters
+        and handle contract activation/expiry.
+        """
         self._cycle += 1
 
     def active_restrictions(self) -> Set[int]:
+        """Compute the union of all active contract restrictions.
+
+        The resulting set is the action mask :math:`M` that the Speaker
+        uses to filter out forbidden actions before voting.
+
+        Returns:
+            Set of all action indices restricted by at least one
+            active contract.
+        """
         restricted = set()
         for c in self.get_active():
             restricted.update(c.restricted_indices)

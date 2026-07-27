@@ -2,6 +2,8 @@
 
 > *"Our second panel tests whether the implementation matches the theory. The first panel asked 'is it right?'. This panel asks 'does it work?'"*
 
+**Author: Carlos Pinto (xcoder-es)**
+
 *Review Date: 2026-07-26 | Response Date: 2026-07-26*
 
 ---
