@@ -1,6 +1,8 @@
-# Why am I Triiyiing this?
+# Why am I Building this?
 
-I am not an academic. I do not hold a PhD.I am not affiliated with a research institution.I work as a software builder.
+**Carlos Pinto (xcoder-es)** — *capintobe@gmail.com*
+
+I am not an academic. I do not hold a PhD. I am not affiliated with a research institution. I work as a solo software builder.
 
  Like many developers, I spend a great deal of time thinking about how intelligence works, how software systems evolve, and why current approaches succeed or fail. This project began from a simple observation.
 

@@ -2,6 +2,10 @@
 
 > Formal rebuttal and acknowledgment of critiques received on Chapters 1-2.
 
+**Author: Carlos Pinto (xcoder-es)**
+
+*All five phases of review accepted. Three residual physical-world risks acknowledged.*
+
 Each critique is addressed below. Where valid, we concede and commit to fixes. Where invalid, we explain why — with mathematical and architectural reasoning, not rhetoric.
 
 ---
