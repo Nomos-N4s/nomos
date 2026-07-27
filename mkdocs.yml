@@ -1,0 +1,86 @@
+site_name: Governance Layer
+site_description: A Formal Framework for Self-Governing AI
+site_url: https://xcoder-es.github.io/governance-layer/
+repo_url: https://github.com/xcoder-es/governance-layer
+repo_name: xcoder-es/governance-layer
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_if_no_docstring: false
+            heading_level: 3
+  - literate-nav
+  - section-index
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - footnotes
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Theory:
+    - Preface: book/00-preface.md
+    - "Chapter 1: Why AI Needs a Governance Layer": book/chapter-01/01-why-ai-needs-a-governance-layer.md
+    - "Chapter 2: The Neural Parliament": book/chapter-02/02-neural-parliament.md
+    - "Chapter 3: Ulysses Contracts": book/chapter-03/03-ulysses-contracts.md
+    - "Chapter 4: The Identity Layer": book/chapter-04/04-identity-layer.md
+  - Architecture: book/architecture-diagrams.md
+  - Appendices:
+    - "Appendix A: TEE Isolation": book/appendix-a/tee-isolation.md
+    - "Appendix B: DSL Grammar": book/appendix-b-dsl-grammar.md
+    - "Appendix C: Data Types": book/appendix-c-data-types.md
+    - "Appendix D: Experiment Protocol": book/appendix-d-experiment-protocol.md
+    - "Appendix E: RL Adversary": book/appendix-e-rl-adversary.md
+  - API Reference: api/index.md
+  - Benchmarks: benchmarks/index.md
+  - Review Responses:
+    - "First Review Panel": book/responses/response-to-review-panel.md
+    - "Harder Review Panel": book/responses/response-to-expert-panel-harder-review.md
