@@ -1,11 +1,24 @@
 """
-runner.py — CLI entry point for formal prediction verification.
+CLI entry point for formal prediction verification.
+
+Runs the 12 executable predictions from :mod:`predictions` and prints
+a formatted summary. Supports chapter-level filtering and JSON export.
 
 Usage:
+
+.. code-block:: bash
+
+    # Run all 12 predictions
     python -m src.governance.prove.runner --all
+
+    # Chapter 2 only
     python -m src.governance.prove.runner --ch2
+
+    # Single prediction
     python -m src.governance.prove.runner --single 5
-    python -m src.governance.prove.runner --json results/prove_results.json
+
+    # Export to JSON
+    python -m src.governance.prove.runner --all --json results/prove_results.json
 """
 
 import argparse
@@ -17,6 +30,14 @@ from .predictions import PredictionResult, ALL_PREDICTIONS
 
 
 def run_all() -> List[PredictionResult]:
+    """Execute every prediction function in :data:`ALL_PREDICTIONS`.
+
+    Catches exceptions and wraps them as failed predictions so one
+    flaky test doesn't crash the entire suite.
+
+    Returns:
+        List of :class:`PredictionResult`, one per prediction.
+    """
     results = []
     for pred_fn in ALL_PREDICTIONS:
         try:
@@ -34,10 +55,28 @@ def run_all() -> List[PredictionResult]:
 
 
 def filter_by_chapter(results: List[PredictionResult], chapter: str) -> List[PredictionResult]:
+    """Filter results to a single chapter.
+
+    Args:
+        results: Full list of prediction results.
+        chapter: Chapter identifier (e.g. ``"Ch2"``, ``"Ch3"``).
+
+    Returns:
+        Filtered list.
+    """
     return [r for r in results if r.chapter == chapter]
 
 
 def print_summary(results: List[PredictionResult]):
+    """Print a formatted test-runner-style summary to stdout.
+
+    Real-world analogy:
+        Like ``pytest -v`` output — each test gets a PASS/FAIL line
+        with its evidence string, followed by a summary count.
+
+    Args:
+        results: The prediction results to display.
+    """
     passed = sum(1 for r in results if r.passed)
     total = len(results)
     print(f"\n{'='*60}")
@@ -46,7 +85,7 @@ def print_summary(results: List[PredictionResult]):
     print(f"{'='*60}\n")
     for r in results:
         status = "PASS" if r.passed else "FAIL"
-        print(f"  [{status}] P{r.id:02d} ({r.chapter} §{r.section}) {r.description}")
+        print(f"  [{status}] P{r.id:02d} ({r.chapter} \u00a7{r.section}) {r.description}")
         print(f"         {r.evidence}")
         print()
     print(f"{'='*60}")
@@ -55,6 +94,15 @@ def print_summary(results: List[PredictionResult]):
 
 
 def export_json(results: List[PredictionResult], path: str):
+    """Export prediction results to a JSON file.
+
+    The JSON structure matches the format used by the Streamlit
+    dashboard for displaying verification status.
+
+    Args:
+        results: The prediction results to export.
+        path: Output file path.
+    """
     data = [
         {"id": r.id, "chapter": r.chapter, "section": r.section,
          "description": r.description, "passed": r.passed, "evidence": r.evidence}
@@ -65,7 +113,8 @@ def export_json(results: List[PredictionResult], path: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Verify formal predictions from the Governance Layer book")
+    """Parse CLI arguments and run the verification."""
+    parser = argparse.ArgumentParser(description="Verify formal predictions from the Nomos book chapters")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--all", action="store_true", help="Run all predictions")
     group.add_argument("--ch2", action="store_true", help="Run Chapter 2 predictions")
