@@ -5,6 +5,8 @@ from src.governance.benchmarks.analysis import (
     StrategyAggregate,
     _bootstrap_ci,
     _cohens_d,
+    _mannwhitney_u,
+    _bonferroni_correct,
     _detect_reward_hacking,
     aggregate_reports,
     compute_effect_sizes,
@@ -80,6 +82,86 @@ class TestCohensD:
     def test_zero_variance(self):
         d = _cohens_d([5.0, 5.0, 5.0], [3.0, 3.0, 3.0])
         assert d == 0.0
+
+
+class TestMannWhitneyU:
+    def test_identical_groups(self):
+        u, p = _mannwhitney_u([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0])
+        assert u == 8.0
+        assert p > 0.9
+
+    def test_separated_groups(self):
+        u, p = _mannwhitney_u([5.0, 6.0, 7.0], [1.0, 2.0, 3.0])
+        assert u == 0.0
+        assert p < 0.05
+
+    def test_reversed_groups_same_u(self):
+        u1, p1 = _mannwhitney_u([5.0, 6.0], [1.0, 2.0])
+        u2, p2 = _mannwhitney_u([1.0, 2.0], [5.0, 6.0])
+        assert u1 == u2
+        assert p1 == p2
+
+    def test_insufficient_samples(self):
+        u, p = _mannwhitney_u([1.0], [2.0])
+        assert u == 0.0
+        assert p == 1.0
+
+    def test_empty_group(self):
+        u, p = _mannwhitney_u([], [1.0, 2.0])
+        assert u == 0.0
+        assert p == 1.0
+
+    def test_ties_reduce_u(self):
+        u, p = _mannwhitney_u([3.0, 3.0, 3.0], [1.0, 2.0, 4.0])
+        assert u >= 0.0
+
+    def test_crossed_distributions(self):
+        u, p = _mannwhitney_u(
+            [1.0, 3.0, 5.0, 7.0],
+            [2.0, 4.0, 6.0, 8.0],
+        )
+        assert u > 0.0
+        assert p > 0.05
+
+
+class TestBonferroniCorrection:
+    def test_single_comparison(self):
+        results = _bonferroni_correct([0.01])
+        assert results[0]["raw_p"] == 0.01
+        assert results[0]["corrected_p"] == 0.01
+        assert results[0]["significant"] is True
+
+    def test_multiple_comparisons_stricter(self):
+        results = _bonferroni_correct([0.01, 0.01], alpha=0.05)
+        assert results[0]["corrected_p"] == 0.02
+        assert results[0]["significant"] is True
+        assert results[1]["corrected_p"] == 0.02
+        assert results[1]["significant"] is True
+
+    def test_multiple_comparisons_insignificant(self):
+        results = _bonferroni_correct([0.03, 0.03], alpha=0.05)
+        assert results[0]["corrected_p"] == 0.06
+        assert results[0]["significant"] is False
+
+    def test_capped_at_one(self):
+        results = _bonferroni_correct([0.6, 0.6], alpha=0.05)
+        assert results[0]["corrected_p"] == 1.0
+        assert results[0]["significant"] is False
+
+    def test_empty(self):
+        assert _bonferroni_correct([]) == []
+
+    def test_custom_alpha(self):
+        results = _bonferroni_correct([0.02, 0.02], alpha=0.01)
+        c = results[0]["corrected_p"]
+        assert c == 0.04
+        assert results[0]["significant"] is False
+
+    def test_mixed_values(self):
+        results = _bonferroni_correct([0.001, 0.04, 0.5], alpha=0.05)
+        assert results[0]["significant"] is True
+        assert results[1]["significant"] is False
+        assert results[2]["significant"] is False
 
 
 class TestDetectRewardHacking:
@@ -161,6 +243,37 @@ class TestComputeEffectSizes:
         d = [e for e in es if e["governance_vs"] == "random"]
         assert len(d) == 1
         assert d[0]["cohens_d"] > 0
+
+    def test_new_fields_present(self):
+        reports = []
+        for strategy in ["governance", "random"]:
+            for i in range(5):
+                r = _make_report(f"{strategy}_n", 40.0 + i)
+                r.metadata["strategy"] = strategy
+                reports.append(r)
+        aggregates = aggregate_reports(reports)
+        es = compute_effect_sizes(aggregates, reports)
+        entry = es[0]
+        assert "mannwhitney_u" in entry
+        assert "p_value_raw" in entry
+        assert "p_value_corrected" in entry
+        assert "significant" in entry
+        assert isinstance(entry["significant"], bool)
+
+    def test_bonferroni_applied(self):
+        reports = []
+        for strategy in ["governance", "random", "monolithic_rl"]:
+            for i in range(20):
+                r = _make_report(f"{strategy}_n", 50.0 + i)
+                r.metadata["strategy"] = strategy
+                r.metadata["scenario"] = "GridWorld"
+                reports.append(r)
+        aggregates = aggregate_reports(reports)
+        es = compute_effect_sizes(aggregates, reports)
+        assert len(es) == 4
+        for entry in es:
+            assert 0.0 <= entry["p_value_raw"] <= 1.0
+            assert entry["p_value_corrected"] >= entry["p_value_raw"]
 
     def test_empty_reports(self):
         es = compute_effect_sizes([], [])
