@@ -1,11 +1,76 @@
 """
-predictions.py — 12 formal predictions from Chapters 2-4, each as an executable test.
+12 formal predictions from Chapters 2-4, each an executable test.
 
 Each prediction function:
-  1. Sets up the required governance layer state
+  1. Sets up the required Nomos state
   2. Executes the scenario
   3. Asserts the predicted outcome
-  4. Returns PredictionResult with evidence string
+  4. Returns :class:`PredictionResult` with an evidence string
+
+The predictions are the bridge between formal theory and empirical
+verification — every invariant stated in the book chapters has a
+corresponding test here. Run them with:
+
+.. code-block:: bash
+
+    python -m src.governance.prove.runner --all
+
+.. list-table:: Prediction Registry
+   :widths: auto
+   :header-rows: 1
+
+   * - ID
+     - Chapter
+     - Section
+     - Description
+   * - 1
+     - Ch2
+     - §3.1
+     - Budget enforces proposal cap (κ₂)
+   * - 2
+     - Ch2
+     - §3.2
+     - Priority ordering (CRITICAL_SAFETY first)
+   * - 3
+     - Ch2
+     - §3.4
+     - Weighted vote matches formal spec
+   * - 4
+     - Ch2
+     - §3.7
+     - Tag compliance halves budget after 3+ falsifications
+   * - 5
+     - Ch3
+     - §2.1
+     - Contract restricts action set
+   * - 6
+     - Ch3
+     - §2.3
+     - Revocation harder than enactment (:math:`\\psi > \\phi`)
+   * - 7
+     - Ch3
+     - §2.4
+     - Timelock blocks early revocation
+   * - 8
+     - Ch3
+     - §3.0
+     - Mask composition
+   * - 9
+     - Ch4
+     - §2.1
+     - Low-coherence triggers integrity veto
+   * - 10
+     - Ch4
+     - §2.5
+     - Constitutional tier requires external multisig
+   * - 11
+     - Ch4
+     - §3.1
+     - Genesis 3-of-5 multisig
+   * - 12
+     - Ch4
+     - §3.6
+     - Deadlock breaker fires after N defaults
 """
 
 import time
@@ -28,6 +93,17 @@ from ..tee.watchdog import DeadlockBreaker
 
 @dataclass
 class PredictionResult:
+    """The outcome of a single formal prediction test.
+
+    Attributes:
+        id: Unique prediction number (1-12).
+        chapter: The book chapter this prediction tests (``"Ch2"``, etc.).
+        section: The section reference (e.g. ``"3.1"``).
+        description: Human-readable summary of what was predicted.
+        passed: Whether the prediction held.
+        evidence: The actual values observed, for debugging.
+    """
+
     id: int
     chapter: str
     section: str
@@ -40,6 +116,10 @@ PredictionFn = Callable[[], PredictionResult]
 
 
 def _build_speaker() -> SpeakerStateMachine:
+    """Create a standard Speaker with 5 members (reward, safety, integrity, planning, curiosity).
+
+    Used by most predictions to avoid repeating setup code.
+    """
     members = {
         "reward": ExampleRewardMember(),
         "safety": ExampleSafetyMember(),
@@ -344,3 +424,4 @@ ALL_PREDICTIONS: List[PredictionFn] = [
     pred_11_genesis_multisig,
     pred_12_deadlock_breaker,
 ]
+"""All 12 prediction functions in order. Used by :mod:`runner` to execute them."""
