@@ -1,0 +1,10 @@
+name = "gov-budget-proof"
+version = "0.1.0"
+defaultTargets = ["gov-budget-proof"]
+
+[[lean_lib]]
+name = "GovBudgetProof"
+
+[[lean_exe]]
+name = "gov-budget-proof"
+root = "Main"
