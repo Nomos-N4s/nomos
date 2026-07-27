@@ -10,10 +10,10 @@ A formal framework for bounded autonomous decision-making.
 
 **Explore**
 
-[Theory](book/00-preface.md) ·
-[API](api/index.md) ·
-[Benchmarks](benchmarks/index.md) ·
-[GitHub](https://github.com/xcoder-es/governance-layer)
+- [Theory](book/00-preface.md)
+- [API](api/index.md)
+- [Benchmarks](benchmarks/index.md)
+- [GitHub](https://github.com/xcoder-es/governance-layer)
 
 ---
 
@@ -50,12 +50,12 @@ python -m src.governance.runner speaker
 
 ---
 
-**Explore More**
+## Explore More
 
-[Theory](book/00-preface.md) ·
-[API](api/index.md) ·
-[Benchmarks](benchmarks/index.md) ·
-[GitHub](https://github.com/xcoder-es/governance-layer)
+- [Theory](book/00-preface.md)
+- [API](api/index.md)
+- [Benchmarks](benchmarks/index.md)
+- [GitHub](https://github.com/xcoder-es/governance-layer)
 
 ## License
 
