@@ -12,21 +12,21 @@ Real-world analogy:
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
+    ExampleIntegrityMember,
     ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
 )
-from ..speaker import SpeakerStateMachine
-from ..experiments.grid_world import GridWorld
-from ..experiments.temptation_bank import TemptationBank
-from ..experiments.drift_lab import DriftLab
 from ..experiments.deadlock_maze import DeadlockMaze
-from ..experiments.metrics import generate_report, ExperimentReport
-from ..tee.watchdog import DeadlockBreaker
-from ..identity.core import IdentityCore, CoreCommitment, CommitmentType, CommitmentThreshold, EnforcementMode
-from .baselines import MonolithicRL, RandomBaseline, StaticMasking, VetoOnly, BaselineGovernance
+from ..experiments.drift_lab import DriftLab
+from ..experiments.grid_world import GridWorld
+from ..experiments.metrics import ExperimentReport, generate_report
+from ..experiments.temptation_bank import TemptationBank
+from ..speaker import SpeakerStateMachine
+from .baselines import MonolithicRL, RandomBaseline, StaticMasking, VetoOnly
 
 
 def build_governance_layer() -> SpeakerStateMachine:
@@ -48,9 +48,9 @@ def build_governance_layer() -> SpeakerStateMachine:
     )
 
 
-def _run_scenario(scenario_class, scenario_kwargs: dict,
-                  strategy_name: str,
-                  steps: int, seed: int, baseline=None) -> ExperimentReport:
+def _run_scenario(
+    scenario_class, scenario_kwargs: dict, strategy_name: str, steps: int, seed: int, baseline=None
+) -> ExperimentReport:
     """Run a single scenario-strategy-seed combination.
 
     Args:
@@ -69,18 +69,28 @@ def _run_scenario(scenario_class, scenario_kwargs: dict,
     speaker = build_governance_layer()
 
     if scenario_class.__name__ == "DriftLab":
-        from ..identity.core import IdentityCore, CoreCommitment, CommitmentType, CommitmentThreshold, EnforcementMode
+        from ..identity.core import (
+            CommitmentThreshold,
+            CommitmentType,
+            CoreCommitment,
+            EnforcementMode,
+            IdentityCore,
+        )
+
         identity = IdentityCore()
-        identity.add_commitment(CoreCommitment(
-            CommitmentType.VALUE_PRINCIPLE,
-            "Always classify honestly",
-            CommitmentThreshold.SUPERMAJORITY,
-            EnforcementMode.INTEGRITY_VETO,
-            affected_action_indices=[0],
-        ))
+        identity.add_commitment(
+            CoreCommitment(
+                CommitmentType.VALUE_PRINCIPLE,
+                "Always classify honestly",
+                CommitmentThreshold.SUPERMAJORITY,
+                EnforcementMode.INTEGRITY_VETO,
+                affected_action_indices=[0],
+            )
+        )
         scenario = scenario_class(speaker, identity, **(scenario_kwargs or {}))
     elif scenario_class.__name__ == "DeadlockMaze":
         from ..tee.watchdog import DeadlockBreaker
+
         breaker = DeadlockBreaker(threshold_cycles=5)
         scenario = scenario_class(speaker, breaker, **(scenario_kwargs or {}))
     else:
@@ -100,16 +110,19 @@ def _run_scenario(scenario_class, scenario_kwargs: dict,
         else:
             scenario.step(state)
 
-        step_records.append({
-            "step": i,
-            "reward": scenario.metrics.total_reward,
-            "violations": scenario.metrics.constraint_violations,
-            "deadlocks": scenario.metrics.deadlock_count,
-            "runtime_ms": (time.time() - t0) * 1000 / max(1, i + 1),
-        })
+        step_records.append(
+            {
+                "step": i,
+                "reward": scenario.metrics.total_reward,
+                "violations": scenario.metrics.constraint_violations,
+                "deadlocks": scenario.metrics.deadlock_count,
+                "runtime_ms": (time.time() - t0) * 1000 / max(1, i + 1),
+            }
+        )
 
-    report = generate_report(f"{strategy_name}_{scenario_class.__name__}",
-                              scenario.metrics, scenario.history)
+    report = generate_report(
+        f"{strategy_name}_{scenario_class.__name__}", scenario.metrics, scenario.history
+    )
     report.metadata["strategy"] = strategy_name
     report.metadata["seed"] = seed
     report.metadata["step_records"] = step_records
@@ -127,9 +140,13 @@ def _get_baseline(strategy: str, seed: int):
     return mapping.get(strategy)
 
 
-def _run_experiment_set(scenario_class, scenario_kwargs: dict,
-                         steps: int, seeds: int,
-                         strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+def _run_experiment_set(
+    scenario_class,
+    scenario_kwargs: dict,
+    steps: int,
+    seeds: int,
+    strategies: list[str] | None = None,
+) -> list[ExperimentReport]:
     """Run all strategy-seed combinations for a single scenario.
 
     Args:
@@ -161,44 +178,60 @@ def _run_experiment_set(scenario_class, scenario_kwargs: dict,
     return reports
 
 
-def run_gridworld_experiments(steps: int = 1000, seeds: int = 1,
-                               strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+def run_gridworld_experiments(
+    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+) -> list[ExperimentReport]:
     """Run GridWorld (poison fruit) experiments across strategies."""
     return _run_experiment_set(
-        GridWorld, {"size": 6, "seed": 42},
-        steps=steps, seeds=seeds, strategies=strategies,
+        GridWorld,
+        {"size": 6, "seed": 42},
+        steps=steps,
+        seeds=seeds,
+        strategies=strategies,
     )
 
 
-def run_temptation_experiments(steps: int = 1000, seeds: int = 1,
-                                strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+def run_temptation_experiments(
+    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+) -> list[ExperimentReport]:
     """Run TemptationBank (voluntary self-binding) experiments."""
     return _run_experiment_set(
-        TemptationBank, {},
-        steps=steps, seeds=seeds, strategies=strategies,
+        TemptationBank,
+        {},
+        steps=steps,
+        seeds=seeds,
+        strategies=strategies,
     )
 
 
-def run_drift_experiments(steps: int = 1000, seeds: int = 1,
-                           strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+def run_drift_experiments(
+    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+) -> list[ExperimentReport]:
     """Run DriftLab (identity drift) experiments."""
     scenario_kwargs = {}
     return _run_experiment_set(
-        DriftLab, scenario_kwargs,
-        steps=steps, seeds=seeds, strategies=strategies,
+        DriftLab,
+        scenario_kwargs,
+        steps=steps,
+        seeds=seeds,
+        strategies=strategies,
     )
 
 
-def run_deadlock_experiments(steps: int = 1000, seeds: int = 1,
-                              strategies: Optional[List[str]] = None) -> List[ExperimentReport]:
+def run_deadlock_experiments(
+    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+) -> list[ExperimentReport]:
     """Run DeadlockMaze (deadlock recovery) experiments."""
     return _run_experiment_set(
-        DeadlockMaze, {},
-        steps=steps, seeds=seeds, strategies=strategies,
+        DeadlockMaze,
+        {},
+        steps=steps,
+        seeds=seeds,
+        strategies=strategies,
     )
 
 
-def run_all(iterations: int = 1) -> Dict[str, Any]:
+def run_all(iterations: int = 1) -> dict[str, Any]:
     """Run all four experiments once each (legacy interface).
 
     Args:
@@ -221,7 +254,9 @@ if __name__ == "__main__":
     for key, reps in results.items():
         print(f"\n=== {key} ===")
         for r in reps:
-            print(f"  {r.name}: {r.total_steps} steps, "
-                  f"reward={r.total_reward:.1f}, "
-                  f"deadlocks={r.deadlock_count}, "
-                  f"violations={r.constraint_violations}")
+            print(
+                f"  {r.name}: {r.total_steps} steps, "
+                f"reward={r.total_reward:.1f}, "
+                f"deadlocks={r.deadlock_count}, "
+                f"violations={r.constraint_violations}"
+            )

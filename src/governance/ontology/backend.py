@@ -17,7 +17,7 @@ Real-world analogy:
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 class OntologyBackend(ABC):
@@ -28,7 +28,7 @@ class OntologyBackend(ABC):
     """
 
     @abstractmethod
-    def add_entity(self, type_: str, properties: Dict[str, Any]) -> str:
+    def add_entity(self, type_: str, properties: dict[str, Any]) -> str:
         """Store a new entity and return its ID."""
 
     @abstractmethod
@@ -36,7 +36,7 @@ class OntologyBackend(ABC):
         """Link two entities with a named relationship."""
 
     @abstractmethod
-    def query_relationships(self, entity_id: str) -> List[Tuple[str, str, str]]:
+    def query_relationships(self, entity_id: str) -> list[tuple[str, str, str]]:
         """Return all relationships for an entity (incoming and outgoing).
 
         Returns:
@@ -44,19 +44,19 @@ class OntologyBackend(ABC):
         """
 
     @abstractmethod
-    def get_entity(self, entity_id: str) -> Optional[Dict[str, Any]]:
+    def get_entity(self, entity_id: str) -> dict[str, Any] | None:
         """Retrieve an entity by its ID, or None if not found."""
 
     @abstractmethod
-    def get_entities_by_type(self, type_: str) -> List[Dict[str, Any]]:
+    def get_entities_by_type(self, type_: str) -> list[dict[str, Any]]:
         """Retrieve all entities of a given type."""
 
     @abstractmethod
-    def get_identity_vector(self) -> List[float]:
+    def get_identity_vector(self) -> list[float]:
         """Retrieve the stored identity vector."""
 
     @abstractmethod
-    def set_identity_vector(self, vector: List[float]):
+    def set_identity_vector(self, vector: list[float]):
         """Persist the identity vector."""
 
     @abstractmethod

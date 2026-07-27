@@ -22,22 +22,27 @@ Real-world analogy:
 import math
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-from ..models import Proposal, PriorityTag
-from ..speaker import SpeakerStateMachine
 from ..committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExamplePlanningMember, ExampleCuriosityMember, ExampleSocialMember,
+    ExampleCuriosityMember,
+    ExampleIntegrityMember,
     ExampleMemoryMember,
+    ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
+    ExampleSocialMember,
 )
+from ..models import PriorityTag, Proposal
+from ..speaker import SpeakerStateMachine
 
 _gymnasium_available = False
 try:
     import gymnasium as gym
     from gymnasium import spaces
+
     _gymnasium_available = True
 except ImportError:
     pass
@@ -77,7 +82,7 @@ class SafetyGridWorld(*BASES):
 
     def __init__(
         self,
-        parliament: Optional[SpeakerStateMachine] = None,
+        parliament: SpeakerStateMachine | None = None,
         size: float = 10.0,
         num_hazards: int = 5,
         hazard_radius: float = 0.8,
@@ -97,18 +102,23 @@ class SafetyGridWorld(*BASES):
         self.hazard_cost = hazard_cost
         self.rng = random.Random(seed)
 
-        if parliament is None:
-            self.parliament = _default_parliament()
-        elif isinstance(parliament, str):
+        if parliament is None or isinstance(parliament, str):
             self.parliament = _default_parliament()
         else:
             self.parliament = parliament
 
         # Observation: agent (2) + goal (2) + goal_dist (1) + hazards (n*3)
         self._obs_dim = 2 + 2 + 1 + num_hazards * 3
-        self.observation_space = spaces.Box(
-            low=0.0, high=1.0, shape=(self._obs_dim,), dtype=np.float32,
-        ) if _gymnasium_available else None
+        self.observation_space = (
+            spaces.Box(
+                low=0.0,
+                high=1.0,
+                shape=(self._obs_dim,),
+                dtype=np.float32,
+            )
+            if _gymnasium_available
+            else None
+        )
         self.action_space = spaces.Discrete(4) if _gymnasium_available else None
 
         self._reset_state()
@@ -116,13 +126,13 @@ class SafetyGridWorld(*BASES):
     def _reset_state(self):
         self._agent_pos = np.array([1.0, 1.0], dtype=np.float32)
         self._goal_pos = np.array([self.size - 1, self.size - 1], dtype=np.float32)
-        self._hazards: List[np.ndarray] = []
+        self._hazards: list[np.ndarray] = []
         self._step_count = 0
         self._total_reward = 0.0
         self._total_cost = 0.0
         self._violations = 0
         self._veto_count = 0
-        self._last_obs: Optional[np.ndarray] = None
+        self._last_obs: np.ndarray | None = None
 
     def _place_hazards(self):
         self._hazards = []
@@ -130,8 +140,8 @@ class SafetyGridWorld(*BASES):
             x = self.rng.uniform(0.0, self.size)
             y = self.rng.uniform(0.0, self.size)
             # Don't place on agent start or goal
-            dist_to_agent = math.sqrt((x - 1.0)**2 + (y - 1.0)**2)
-            dist_to_goal = math.sqrt((x - self.size + 1)**2 + (y - self.size + 1)**2)
+            dist_to_agent = math.sqrt((x - 1.0) ** 2 + (y - 1.0) ** 2)
+            dist_to_goal = math.sqrt((x - self.size + 1) ** 2 + (y - self.size + 1) ** 2)
             if dist_to_agent < 2.0 or dist_to_goal < 2.0:
                 continue
             self._hazards.append(np.array([x, y], dtype=np.float32))
@@ -147,10 +157,14 @@ class SafetyGridWorld(*BASES):
             hazard_features.extend([0.0, 0.0, 1.0])
 
         return np.array(
-            [self._agent_pos[0] / self.size, self._agent_pos[1] / self.size,
-             self._goal_pos[0] / self.size, self._goal_pos[1] / self.size,
-             goal_dist / self.size]
-            + hazard_features[:self.num_hazards * 3],
+            [
+                self._agent_pos[0] / self.size,
+                self._agent_pos[1] / self.size,
+                self._goal_pos[0] / self.size,
+                self._goal_pos[1] / self.size,
+                goal_dist / self.size,
+            ]
+            + hazard_features[: self.num_hazards * 3],
             dtype=np.float32,
         )
 
@@ -166,11 +180,13 @@ class SafetyGridWorld(*BASES):
 
     def _target_is_hazard(self, nx: float, ny: float) -> bool:
         for h in self._hazards:
-            if math.sqrt((nx - h[0])**2 + (ny - h[1])**2) < self.hazard_radius:
+            if math.sqrt((nx - h[0]) ** 2 + (ny - h[1]) ** 2) < self.hazard_radius:
                 return True
         return False
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(
+        self, *, seed: int | None = None, options: dict | None = None
+    ) -> tuple[np.ndarray, dict]:
         if seed is not None:
             self.rng = random.Random(seed)
         self._reset_state()
@@ -180,25 +196,49 @@ class SafetyGridWorld(*BASES):
 
     def _make_proposal(self, action: int) -> Proposal:
         dx, dy = DIRECTION_VECTORS[action]
-        nx, ny = self._agent_pos[0] + dx * self.agent_step, self._agent_pos[1] + dy * self.agent_step
+        nx, ny = (
+            self._agent_pos[0] + dx * self.agent_step,
+            self._agent_pos[1] + dy * self.agent_step,
+        )
         nx = np.clip(nx, 0, self.size)
         ny = np.clip(ny, 0, self.size)
 
         is_hazard_target = self._target_is_hazard(nx, ny)
-        is_goal = math.sqrt((nx - self._goal_pos[0])**2 + (ny - self._goal_pos[1])**2) < self.goal_radius
+        is_goal = (
+            math.sqrt((nx - self._goal_pos[0]) ** 2 + (ny - self._goal_pos[1]) ** 2)
+            < self.goal_radius
+        )
 
         if is_hazard_target:
-            meta = {"expected_reward": 0.0, "risk": 0.95, "identity_coherence": 0.1,
-                    "long_term_value": -0.5, "novelty": 0.5, "social_acceptability": 0.2,
-                    "historical_consistency": 0.1}
+            meta = {
+                "expected_reward": 0.0,
+                "risk": 0.95,
+                "identity_coherence": 0.1,
+                "long_term_value": -0.5,
+                "novelty": 0.5,
+                "social_acceptability": 0.2,
+                "historical_consistency": 0.1,
+            }
         elif is_goal:
-            meta = {"expected_reward": 1.0, "risk": 0.0, "identity_coherence": 1.0,
-                    "long_term_value": 1.0, "novelty": 0.3, "social_acceptability": 1.0,
-                    "historical_consistency": 1.0}
+            meta = {
+                "expected_reward": 1.0,
+                "risk": 0.0,
+                "identity_coherence": 1.0,
+                "long_term_value": 1.0,
+                "novelty": 0.3,
+                "social_acceptability": 1.0,
+                "historical_consistency": 1.0,
+            }
         else:
-            meta = {"expected_reward": 0.0, "risk": 0.1, "identity_coherence": 0.9,
-                    "long_term_value": 0.5, "novelty": 0.2, "social_acceptability": 0.8,
-                    "historical_consistency": 0.8}
+            meta = {
+                "expected_reward": 0.0,
+                "risk": 0.1,
+                "identity_coherence": 0.9,
+                "long_term_value": 0.5,
+                "novelty": 0.2,
+                "social_acceptability": 0.8,
+                "historical_consistency": 0.8,
+            }
 
         return Proposal(
             member_id="safety",
@@ -208,7 +248,7 @@ class SafetyGridWorld(*BASES):
             metadata=meta,
         )
 
-    def _execute_action(self, action: int) -> Tuple[float, float]:
+    def _execute_action(self, action: int) -> tuple[float, float]:
         dx, dy = DIRECTION_VECTORS[action]
         nx = np.clip(self._agent_pos[0] + dx * self.agent_step, 0, self.size)
         ny = np.clip(self._agent_pos[1] + dy * self.agent_step, 0, self.size)
@@ -222,7 +262,7 @@ class SafetyGridWorld(*BASES):
             return 1.0, cost
         return 0.0, cost
 
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
         self._step_count += 1
         if isinstance(action, np.ndarray):
             action = int(action.item()) if action.ndim == 0 else int(action[0])
@@ -232,7 +272,9 @@ class SafetyGridWorld(*BASES):
         if self.parliament is not None:
             proposal = self._make_proposal(action)
             decision = self.parliament.run_governance_cycle(
-                state="normal", raw_proposals=[proposal], decision_class="routine",
+                state="normal",
+                raw_proposals=[proposal],
+                decision_class="routine",
             )
             action_blocked = decision.is_default
         else:
@@ -253,16 +295,23 @@ class SafetyGridWorld(*BASES):
         truncated = self._step_count >= self.max_steps
 
         info = {
-            "step": self._step_count, "action": int(action), "reward": reward, "cost": cost,
-            "total_reward": self._total_reward, "total_cost": self._total_cost,
-            "violations": self._violations, "veto_count": self._veto_count,
-            "blocked": action_blocked, "at_goal": terminated,
-            "scores": decision.scores, "vetoed_by": decision.vetoed_by,
+            "step": self._step_count,
+            "action": int(action),
+            "reward": reward,
+            "cost": cost,
+            "total_reward": self._total_reward,
+            "total_cost": self._total_cost,
+            "violations": self._violations,
+            "veto_count": self._veto_count,
+            "blocked": action_blocked,
+            "at_goal": terminated,
+            "scores": decision.scores,
+            "vetoed_by": decision.vetoed_by,
         }
         return self._last_obs, reward, terminated, truncated, info
 
     @property
-    def metrics(self) -> Dict[str, Any]:
+    def metrics(self) -> dict[str, Any]:
         return {
             "total_reward": self._total_reward,
             "total_cost": self._total_cost,

@@ -14,28 +14,34 @@ Real-world analogy:
 """
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-from ..models import Proposal, PriorityTag
-from ..speaker import SpeakerStateMachine
 from ..committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExamplePlanningMember, ExampleCuriosityMember, ExampleSocialMember,
+    ExampleCuriosityMember,
+    ExampleIntegrityMember,
     ExampleMemoryMember,
+    ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
+    ExampleSocialMember,
 )
+from ..models import PriorityTag, Proposal
+from ..speaker import SpeakerStateMachine
 
 try:
     import gymnasium as gym
-    from gymnasium import spaces
+    from gymnasium import spaces  # noqa: F401
+
     _gymnasium_available = True
 except ImportError:
     _gymnasium_available = False
 
 try:
-    import minigrid
-    from minigrid.core.constants import OBJECT_TO_IDX, TILE_PIXELS
+    import minigrid  # noqa: F401
+    from minigrid.core.constants import OBJECT_TO_IDX, TILE_PIXELS  # noqa: F401
+
     _minigrid_available = True
 except ImportError:
     _minigrid_available = False
@@ -43,18 +49,98 @@ except ImportError:
 
 # Risk/coherence mapping by cell type
 CELL_METADATA = {
-    "empty":     {"expected_reward": 0.0, "risk": 0.1, "identity_coherence": 0.9, "long_term_value": 0.5, "novelty": 0.2, "social_acceptability": 0.8, "historical_consistency": 0.8},
-    "wall":      {"expected_reward": 0.0, "risk": 0.5, "identity_coherence": 0.3, "long_term_value": 0.0, "novelty": 0.1, "social_acceptability": 0.4, "historical_consistency": 0.5},
-    "lava":      {"expected_reward": 0.0, "risk": 1.0, "identity_coherence": 0.0, "long_term_value": -1.0, "novelty": 0.6, "social_acceptability": 0.1, "historical_consistency": 0.0},
-    "goal":      {"expected_reward": 1.0, "risk": 0.0, "identity_coherence": 1.0, "long_term_value": 1.0, "novelty": 0.3, "social_acceptability": 1.0, "historical_consistency": 1.0},
-    "key":       {"expected_reward": 0.3, "risk": 0.2, "identity_coherence": 0.7, "long_term_value": 1.0, "novelty": 0.6, "social_acceptability": 0.8, "historical_consistency": 0.6},
-    "door":      {"expected_reward": 0.0, "risk": 0.3, "identity_coherence": 0.6, "long_term_value": 0.8, "novelty": 0.4, "social_acceptability": 0.7, "historical_consistency": 0.7},
-    "locked":    {"expected_reward": 0.0, "risk": 0.5, "identity_coherence": 0.4, "long_term_value": 0.3, "novelty": 0.3, "social_acceptability": 0.5, "historical_consistency": 0.5},
-    "ball":      {"expected_reward": 0.2, "risk": 0.2, "identity_coherence": 0.7, "long_term_value": 0.2, "novelty": 0.7, "social_acceptability": 0.6, "historical_consistency": 0.5},
-    "box":       {"expected_reward": 0.0, "risk": 0.3, "identity_coherence": 0.5, "long_term_value": 0.4, "novelty": 0.5, "social_acceptability": 0.6, "historical_consistency": 0.6},
+    "empty": {
+        "expected_reward": 0.0,
+        "risk": 0.1,
+        "identity_coherence": 0.9,
+        "long_term_value": 0.5,
+        "novelty": 0.2,
+        "social_acceptability": 0.8,
+        "historical_consistency": 0.8,
+    },
+    "wall": {
+        "expected_reward": 0.0,
+        "risk": 0.5,
+        "identity_coherence": 0.3,
+        "long_term_value": 0.0,
+        "novelty": 0.1,
+        "social_acceptability": 0.4,
+        "historical_consistency": 0.5,
+    },
+    "lava": {
+        "expected_reward": 0.0,
+        "risk": 1.0,
+        "identity_coherence": 0.0,
+        "long_term_value": -1.0,
+        "novelty": 0.6,
+        "social_acceptability": 0.1,
+        "historical_consistency": 0.0,
+    },
+    "goal": {
+        "expected_reward": 1.0,
+        "risk": 0.0,
+        "identity_coherence": 1.0,
+        "long_term_value": 1.0,
+        "novelty": 0.3,
+        "social_acceptability": 1.0,
+        "historical_consistency": 1.0,
+    },
+    "key": {
+        "expected_reward": 0.3,
+        "risk": 0.2,
+        "identity_coherence": 0.7,
+        "long_term_value": 1.0,
+        "novelty": 0.6,
+        "social_acceptability": 0.8,
+        "historical_consistency": 0.6,
+    },
+    "door": {
+        "expected_reward": 0.0,
+        "risk": 0.3,
+        "identity_coherence": 0.6,
+        "long_term_value": 0.8,
+        "novelty": 0.4,
+        "social_acceptability": 0.7,
+        "historical_consistency": 0.7,
+    },
+    "locked": {
+        "expected_reward": 0.0,
+        "risk": 0.5,
+        "identity_coherence": 0.4,
+        "long_term_value": 0.3,
+        "novelty": 0.3,
+        "social_acceptability": 0.5,
+        "historical_consistency": 0.5,
+    },
+    "ball": {
+        "expected_reward": 0.2,
+        "risk": 0.2,
+        "identity_coherence": 0.7,
+        "long_term_value": 0.2,
+        "novelty": 0.7,
+        "social_acceptability": 0.6,
+        "historical_consistency": 0.5,
+    },
+    "box": {
+        "expected_reward": 0.0,
+        "risk": 0.3,
+        "identity_coherence": 0.5,
+        "long_term_value": 0.4,
+        "novelty": 0.5,
+        "social_acceptability": 0.6,
+        "historical_consistency": 0.6,
+    },
 }
 
-SAFE_METADATA = {"expected_reward": 0.0, "risk": 0.0, "identity_coherence": 1.0, "long_term_value": 0.5, "novelty": 0.3, "social_acceptability": 1.0, "historical_consistency": 1.0}
+SAFE_METADATA = {
+    "expected_reward": 0.0,
+    "risk": 0.0,
+    "identity_coherence": 1.0,
+    "long_term_value": 0.5,
+    "novelty": 0.3,
+    "social_acceptability": 1.0,
+    "historical_consistency": 1.0,
+}
 DEFAULT_METADATA = CELL_METADATA["empty"]
 
 ROTATION_ACTIONS = {0, 1}  # left, right
@@ -90,19 +176,17 @@ class GovernedMinigridWrapper(gym.Wrapper):
     def __init__(
         self,
         env: gym.Env,
-        parliament: Optional[SpeakerStateMachine] = None,
-        live_log_path: Optional[str] = None,
+        parliament: SpeakerStateMachine | None = None,
+        live_log_path: str | None = None,
     ):
         super().__init__(env)
-        if parliament is None:
-            self.parliament = _default_parliament()
-        elif isinstance(parliament, str):
+        if parliament is None or isinstance(parliament, str):
             self.parliament = _default_parliament()
         else:
             self.parliament = parliament
 
         self.live_log_path = live_log_path
-        self._last_obs: Optional[np.ndarray] = None
+        self._last_obs: np.ndarray | None = None
         self._reset_metrics()
 
     def _reset_metrics(self):
@@ -111,9 +195,9 @@ class GovernedMinigridWrapper(gym.Wrapper):
         self._violations = 0
         self._veto_count = 0
         self._action_blocked_count = 0
-        self._decision_history: List[Dict] = []
+        self._decision_history: list[dict] = []
 
-    def reset(self, **kwargs) -> Tuple[np.ndarray, Dict]:
+    def reset(self, **kwargs) -> tuple[np.ndarray, dict]:
         obs, info = self.env.reset(**kwargs)
         self._last_obs = obs
         self._reset_metrics()
@@ -167,7 +251,7 @@ class GovernedMinigridWrapper(gym.Wrapper):
             metadata=meta,
         )
 
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
         self._step_count += 1
         # Ensure action is a Python int (SB3 may pass np.int64)
         if isinstance(action, np.ndarray):
@@ -218,13 +302,14 @@ class GovernedMinigridWrapper(gym.Wrapper):
 
         if self.live_log_path:
             import json
+
             with open(self.live_log_path, "a") as f:
                 f.write(json.dumps(step_data) + "\n")
 
         return obs, reward, terminated, truncated, info
 
     @property
-    def metrics(self) -> Dict[str, Any]:
+    def metrics(self) -> dict[str, Any]:
         return {
             "total_reward": self._total_reward,
             "steps": self._step_count,

@@ -17,64 +17,65 @@ Real-world analogy:
     pit-stop overrides (vetoes).
 """
 
-import csv
+import contextlib
 import os
-from typing import Any, Dict, List, Optional
+
+import altair as alt
+import pandas as pd
+import streamlit as st
 
 from ..ontology.backend import OntologyBackend
 
-import streamlit as st
-import altair as alt
-import pandas as pd
-
-RL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(__file__)))), "results", "rl")
+RL_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "results", "rl"
+)
 
 
 def _csv_path(*parts: str) -> str:
     return os.path.join(RL_DIR, *parts)
 
 
-def _load_csv(*parts: str) -> Optional[pd.DataFrame]:
+def _load_csv(*parts: str) -> pd.DataFrame | None:
     path = _csv_path(*parts)
     if not os.path.exists(path):
         return None
     return pd.read_csv(path)
 
 
-def _load_metrics(label: str) -> Optional[pd.DataFrame]:
+def _load_metrics(label: str) -> pd.DataFrame | None:
     return _load_csv(f"{label}_metrics.csv")
 
 
-def _load_summary() -> Optional[pd.DataFrame]:
+def _load_summary() -> pd.DataFrame | None:
     return _load_csv("comparison_summary.csv")
 
 
-def _load_minigrid_summary() -> Optional[pd.DataFrame]:
+def _load_minigrid_summary() -> pd.DataFrame | None:
     return _load_csv("minigrid", "comparison_summary.csv")
 
 
-def _load_safety_summary() -> Optional[pd.DataFrame]:
+def _load_safety_summary() -> pd.DataFrame | None:
     return _load_csv("safety_grid", "comparison_summary.csv")
 
 
-def _log_rl_to_backend(backend: Optional[OntologyBackend], label: str, row: Dict):
+def _log_rl_to_backend(backend: OntologyBackend | None, label: str, row: dict):
     if backend is None:
         return
-    try:
-        backend.add_entity("rl_run", {
-            "label": label,
-            "seed": row.get("seed", -1),
-            "mean_reward": float(row.get("mean_reward", 0)),
-            "std_reward": float(row.get("std_reward", 0)),
-            "eval_violations": int(row.get("eval_violations", 0)),
-            "eval_vetoes": int(row.get("eval_vetoes", 0)),
-        })
-    except Exception:
-        pass
+    with contextlib.suppress(Exception):
+        backend.add_entity(
+            "rl_run",
+            {
+                "label": label,
+                "seed": row.get("seed", -1),
+                "mean_reward": float(row.get("mean_reward", 0)),
+                "std_reward": float(row.get("std_reward", 0)),
+                "eval_violations": int(row.get("eval_violations", 0)),
+                "eval_vetoes": int(row.get("eval_vetoes", 0)),
+            },
+        )
 
 
-def _render_top_level(backend: Optional[OntologyBackend]):
+def _render_top_level(backend: OntologyBackend | None):
     summary = _load_summary()
     gov_metrics = _load_metrics("governed")
     ung_metrics = _load_metrics("ungoverned")
@@ -86,7 +87,8 @@ def _render_top_level(backend: Optional[OntologyBackend]):
             _log_rl_to_backend(backend, row["label"], row)
 
         pivot = summary.pivot_table(
-            index="label", aggfunc="mean",
+            index="label",
+            aggfunc="mean",
             values=["mean_reward", "std_reward", "eval_violations", "eval_apples", "eval_vetoes"],
         ).round(2)
         st.dataframe(pivot, use_container_width=True)
@@ -95,12 +97,17 @@ def _render_top_level(backend: Optional[OntologyBackend]):
         st.subheader("Per-Seed Comparison")
         bar_data = summary.copy()
         bar_data["seed_label"] = bar_data["label"] + " seed " + bar_data["seed"].astype(str)
-        bar_chart = alt.Chart(bar_data).mark_bar().encode(
-            x=alt.X("seed_label:N", title="Condition", sort=None),
-            y=alt.Y("mean_reward:Q", title="Mean Reward"),
-            color=alt.Color("label:N", title=""),
-            tooltip=["label", "seed", "mean_reward", "std_reward"],
-        ).properties(height=250)
+        bar_chart = (
+            alt.Chart(bar_data)
+            .mark_bar()
+            .encode(
+                x=alt.X("seed_label:N", title="Condition", sort=None),
+                y=alt.Y("mean_reward:Q", title="Mean Reward"),
+                color=alt.Color("label:N", title=""),
+                tooltip=["label", "seed", "mean_reward", "std_reward"],
+            )
+            .properties(height=250)
+        )
         st.altair_chart(bar_chart, use_container_width=True)
 
     if gov_metrics is not None and ung_metrics is not None:
@@ -114,34 +121,51 @@ def _render_top_level(backend: Optional[OntologyBackend]):
         min_len = min(len(gov_metrics), len(ung_metrics))
         combined_trimmed = combined.groupby("condition").head(min_len).reset_index(drop=True)
 
-        reward_chart = alt.Chart(combined_trimmed).mark_line(opacity=0.8).encode(
-            x=alt.X("step:Q", title="Training Step"),
-            y=alt.Y("total_reward:Q", title="Cumulative Reward"),
-            color=alt.Color("condition:N", title=""),
-        ).properties(height=200)
+        reward_chart = (
+            alt.Chart(combined_trimmed)
+            .mark_line(opacity=0.8)
+            .encode(
+                x=alt.X("step:Q", title="Training Step"),
+                y=alt.Y("total_reward:Q", title="Cumulative Reward"),
+                color=alt.Color("condition:N", title=""),
+            )
+            .properties(height=200)
+        )
         st.altair_chart(reward_chart, use_container_width=True)
 
         if "violations" in combined_trimmed.columns:
-            viol_chart = alt.Chart(combined_trimmed).mark_line(opacity=0.8).encode(
-                x=alt.X("step:Q", title="Training Step"),
-                y=alt.Y("violations:Q", title="Constraint Violations"),
-                color=alt.Color("condition:N", title=""),
-            ).properties(height=200)
+            viol_chart = (
+                alt.Chart(combined_trimmed)
+                .mark_line(opacity=0.8)
+                .encode(
+                    x=alt.X("step:Q", title="Training Step"),
+                    y=alt.Y("violations:Q", title="Constraint Violations"),
+                    color=alt.Color("condition:N", title=""),
+                )
+                .properties(height=200)
+            )
             st.altair_chart(viol_chart, use_container_width=True)
 
         gov_only = gov_metrics.copy()
         if "veto_count" in gov_only.columns:
-            veto_chart = alt.Chart(gov_only).mark_line(color="purple", opacity=0.8).encode(
-                x=alt.X("step:Q", title="Training Step"),
-                y=alt.Y("veto_count:Q", title="Veto Count"),
-            ).properties(height=200)
+            veto_chart = (
+                alt.Chart(gov_only)
+                .mark_line(color="purple", opacity=0.8)
+                .encode(
+                    x=alt.X("step:Q", title="Training Step"),
+                    y=alt.Y("veto_count:Q", title="Veto Count"),
+                )
+                .properties(height=200)
+            )
             st.altair_chart(veto_chart, use_container_width=True)
 
     if summary is None and gov_metrics is None:
-        st.info("No RL results found in `results/rl/`. Run `python scripts/train_governed_agent.py` first.")
+        st.info(
+            "No RL results found in `results/rl/`. Run `python scripts/train_governed_agent.py` first."
+        )
 
 
-def _render_minigrid(backend: Optional[OntologyBackend]):
+def _render_minigrid(backend: OntologyBackend | None):
     summary = _load_minigrid_summary()
     if summary is None or summary.empty:
         st.info("No Minigrid results found in `results/rl/minigrid/`.")
@@ -154,20 +178,30 @@ def _render_minigrid(backend: Optional[OntologyBackend]):
         with st.expander(env_name, expanded=True):
             st.dataframe(env_data, use_container_width=True, hide_index=True)
 
-            bar_chart = alt.Chart(env_data).mark_bar().encode(
-                x=alt.X("label:N", title="Condition"),
-                y=alt.Y("mean_reward:Q", title="Mean Reward"),
-                color=alt.Color("label:N", title=""),
-                column=alt.Column("seed:N", title="Seed"),
-            ).properties(height=200)
+            bar_chart = (
+                alt.Chart(env_data)
+                .mark_bar()
+                .encode(
+                    x=alt.X("label:N", title="Condition"),
+                    y=alt.Y("mean_reward:Q", title="Mean Reward"),
+                    color=alt.Color("label:N", title=""),
+                    column=alt.Column("seed:N", title="Seed"),
+                )
+                .properties(height=200)
+            )
             st.altair_chart(bar_chart, use_container_width=True)
 
             if "eval_vetoes" in env_data.columns:
-                veto_chart = alt.Chart(env_data).mark_bar(color="purple").encode(
-                    x=alt.X("label:N", title="Condition"),
-                    y=alt.Y("eval_vetoes:Q", title="Vetoes"),
-                    column=alt.Column("seed:N", title="Seed"),
-                ).properties(height=150)
+                veto_chart = (
+                    alt.Chart(env_data)
+                    .mark_bar(color="purple")
+                    .encode(
+                        x=alt.X("label:N", title="Condition"),
+                        y=alt.Y("eval_vetoes:Q", title="Vetoes"),
+                        column=alt.Column("seed:N", title="Seed"),
+                    )
+                    .properties(height=150)
+                )
                 st.altair_chart(veto_chart, use_container_width=True)
 
             for _, row in env_data.iterrows():
@@ -176,14 +210,19 @@ def _render_minigrid(backend: Optional[OntologyBackend]):
             seed_csv = _load_csv("minigrid", f"governed_{env_name}_seed0.csv")
             if seed_csv is not None and not seed_csv.empty:
                 st.caption("Training curve (governed, seed 0)")
-                curve_chart = alt.Chart(seed_csv).mark_line(opacity=0.7).encode(
-                    x=alt.X("step:Q", title="Episode"),
-                    y=alt.Y("total_reward:Q", title="Reward"),
-                ).properties(height=150)
+                curve_chart = (
+                    alt.Chart(seed_csv)
+                    .mark_line(opacity=0.7)
+                    .encode(
+                        x=alt.X("step:Q", title="Episode"),
+                        y=alt.Y("total_reward:Q", title="Reward"),
+                    )
+                    .properties(height=150)
+                )
                 st.altair_chart(curve_chart, use_container_width=True)
 
 
-def _render_safety(backend: Optional[OntologyBackend]):
+def _render_safety(backend: OntologyBackend | None):
     summary = _load_safety_summary()
     if summary is None or summary.empty:
         st.info("No SafetyGrid results found in `results/rl/safety_grid/`.")
@@ -197,26 +236,36 @@ def _render_safety(backend: Optional[OntologyBackend]):
         _log_rl_to_backend(backend, "safety_grid", row)
 
     if "mean_reward" in summary.columns:
-        bar_chart = alt.Chart(summary).mark_bar().encode(
-            x=alt.X("label:N", title="Condition"),
-            y=alt.Y("mean_reward:Q", title="Mean Reward"),
-            color=alt.Color("label:N", title=""),
-            column=alt.Column("seed:N", title="Seed"),
-        ).properties(height=200)
+        bar_chart = (
+            alt.Chart(summary)
+            .mark_bar()
+            .encode(
+                x=alt.X("label:N", title="Condition"),
+                y=alt.Y("mean_reward:Q", title="Mean Reward"),
+                color=alt.Color("label:N", title=""),
+                column=alt.Column("seed:N", title="Seed"),
+            )
+            .properties(height=200)
+        )
         st.altair_chart(bar_chart, use_container_width=True)
 
     seed_csv = _load_csv("safety_grid", "governed_seed0.csv")
     if seed_csv is not None and not seed_csv.empty:
         st.caption("Training curve (governed, seed 0)")
         cost_col = "total_cost" if "total_cost" in seed_csv.columns else "total_reward"
-        curve_chart = alt.Chart(seed_csv).mark_line(opacity=0.7).encode(
-            x=alt.X("step:Q", title="Step"),
-            y=alt.Y(f"{cost_col}:Q", title=cost_col),
-        ).properties(height=150)
+        curve_chart = (
+            alt.Chart(seed_csv)
+            .mark_line(opacity=0.7)
+            .encode(
+                x=alt.X("step:Q", title="Step"),
+                y=alt.Y(f"{cost_col}:Q", title=cost_col),
+            )
+            .properties(height=150)
+        )
         st.altair_chart(curve_chart, use_container_width=True)
 
 
-def render_rl_tab(backend: Optional[OntologyBackend] = None):
+def render_rl_tab(backend: OntologyBackend | None = None):
     st.header("🤖 RL Training Results")
     st.caption("Comparison between governed (Neural Parliament) and ungoverned (raw PPO) agents.")
 

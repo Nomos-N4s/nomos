@@ -40,11 +40,8 @@ Real-world analogy:
     present self is still rational.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Callable, List, Optional, Set
-
-from ..models import GovernanceDecision
 
 
 class ContractState(Enum):
@@ -54,6 +51,7 @@ class ContractState(Enum):
     → REVOKED or EXPIRED. A contract cannot go back to a previous
     state (except PROPOSED via rebinding after revocation).
     """
+
     PROPOSED = auto()
     ENACTED = auto()
     ACTIVE = auto()
@@ -95,14 +93,14 @@ class UlyssesContract:
     """
 
     contract_id: str
-    restricted_indices: Set[int]
+    restricted_indices: set[int]
     enactment_threshold: float = 0.66
     revocation_threshold: float = 1.0
     enforcement_mode: str = "procedural_inertia"
     state: ContractState = ContractState.PROPOSED
     timelock_blocks: int = 0
     created_at_cycle: int = 0
-    revoked_at_cycle: Optional[int] = None
+    revoked_at_cycle: int | None = None
 
     def enact(self):
         """Move contract to ENACTED state (passed vote, waiting for activation)."""
@@ -155,7 +153,7 @@ class ContractRegistry:
     """
 
     def __init__(self):
-        self._contracts: List[UlyssesContract] = []
+        self._contracts: list[UlyssesContract] = []
         self._cycle: int = 0
 
     def add(self, contract: UlyssesContract):
@@ -166,11 +164,11 @@ class ContractRegistry:
         """
         self._contracts.append(contract)
 
-    def get_active(self) -> List[UlyssesContract]:
+    def get_active(self) -> list[UlyssesContract]:
         """Return all contracts currently in force (ENACTED or ACTIVE)."""
         return [c for c in self._contracts if c.is_active]
 
-    def get_by_id(self, contract_id: str) -> Optional[UlyssesContract]:
+    def get_by_id(self, contract_id: str) -> UlyssesContract | None:
         """Look up a contract by its identifier.
 
         Args:
@@ -192,7 +190,7 @@ class ContractRegistry:
         """
         self._cycle += 1
 
-    def active_restrictions(self) -> Set[int]:
+    def active_restrictions(self) -> set[int]:
         """Compute the union of all active contract restrictions.
 
         The resulting set is the action mask :math:`M` that the Speaker

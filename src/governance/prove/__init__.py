@@ -5,7 +5,7 @@ Each prediction maps a claim from Chapters 2-4 to an executable test.
 Run with: python -m src.governance.prove.runner
 """
 
-from .predictions import PredictionResult, ALL_PREDICTIONS
+from .predictions import ALL_PREDICTIONS, PredictionResult
 from .runner import run_all
 
 __all__ = [

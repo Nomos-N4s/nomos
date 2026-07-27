@@ -11,7 +11,7 @@ Real-world analogy:
 
 import hashlib
 import secrets
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .backend import OntologyBackend
 
@@ -24,15 +24,15 @@ class MemoryBackend(OntologyBackend):
     """
 
     def __init__(self):
-        self._entities: Dict[str, Dict[str, Any]] = {}
-        self._relationships: List[Tuple[str, str, str]] = []
-        self._identity_vector: List[float] = []
+        self._entities: dict[str, dict[str, Any]] = {}
+        self._relationships: list[tuple[str, str, str]] = []
+        self._identity_vector: list[float] = []
 
     def _generate_id(self) -> str:
         """Generate a random 12-character hex entity ID."""
         return hashlib.sha256(secrets.token_bytes(16)).hexdigest()[:12]
 
-    def add_entity(self, type_: str, properties: Dict[str, Any]) -> str:
+    def add_entity(self, type_: str, properties: dict[str, Any]) -> str:
         """Store a new entity. ``type_`` and ``properties`` are merged."""
         eid = self._generate_id()
         self._entities[eid] = {"id": eid, "type": type_, **properties}
@@ -45,7 +45,7 @@ class MemoryBackend(OntologyBackend):
         self._relationships.append((from_id, to_id, relation))
         return True
 
-    def query_relationships(self, entity_id: str) -> List[Tuple[str, str, str]]:
+    def query_relationships(self, entity_id: str) -> list[tuple[str, str, str]]:
         """Return all relationships (outgoing and incoming) for an entity."""
         results = []
         for f, t, r in self._relationships:
@@ -55,19 +55,19 @@ class MemoryBackend(OntologyBackend):
                 results.append((f, r, "incoming"))
         return results
 
-    def get_entity(self, entity_id: str) -> Optional[Dict[str, Any]]:
+    def get_entity(self, entity_id: str) -> dict[str, Any] | None:
         """Retrieve entity by ID, or None."""
         return self._entities.get(entity_id)
 
-    def get_entities_by_type(self, type_: str) -> List[Dict[str, Any]]:
+    def get_entities_by_type(self, type_: str) -> list[dict[str, Any]]:
         """Filter all entities by their ``type`` field."""
         return [e for e in self._entities.values() if e.get("type") == type_]
 
-    def get_identity_vector(self) -> List[float]:
+    def get_identity_vector(self) -> list[float]:
         """Return a copy of the identity vector."""
         return list(self._identity_vector)
 
-    def set_identity_vector(self, vector: List[float]):
+    def set_identity_vector(self, vector: list[float]):
         """Store a copy of the identity vector."""
         self._identity_vector = list(vector)
 

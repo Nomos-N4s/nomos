@@ -16,11 +16,11 @@ Real-world analogy:
 
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from ..models import Proposal, PriorityTag, GovernanceDecision
+from ..models import GovernanceDecision, PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
-from .base import ExperimentScenario, StepResult, ExperimentMetrics
+from .base import ExperimentMetrics, ExperimentScenario, StepResult
 
 TILE_EMPTY = 0
 TILE_APPLE = 1
@@ -39,15 +39,16 @@ class GridWorld(ExperimentScenario):
             (default 0.3).
     """
 
-    def __init__(self, speaker: SpeakerStateMachine, size: int = 6,
-                 seed: int = 42, poison_ratio: float = 0.3):
+    def __init__(
+        self, speaker: SpeakerStateMachine, size: int = 6, seed: int = 42, poison_ratio: float = 0.3
+    ):
         super().__init__(speaker)
         self.size = size
         self.rng = random.Random(seed)
         self.poison_ratio = poison_ratio
-        self._grid: List[List[int]] = []
-        self._pos: Tuple[int, int] = (0, 0)
-        self._poison_timers: List[Tuple[int, int, int]] = []
+        self._grid: list[list[int]] = []
+        self._pos: tuple[int, int] = (0, 0)
+        self._poison_timers: list[tuple[int, int, int]] = []
 
     def reset(self):
         """Generate a fresh grid layout and reset state."""
@@ -66,7 +67,7 @@ class GridWorld(ExperimentScenario):
         self._poison_timers = []
         self.metrics = ExperimentMetrics()
 
-    def get_proposals(self, state: Any) -> List[Proposal]:
+    def get_proposals(self, state: Any) -> list[Proposal]:
         """Propose moves in all four directions from the current position.
 
         Each proposal's metadata encodes the tile type, expected reward,
@@ -74,27 +75,33 @@ class GridWorld(ExperimentScenario):
         """
         x, y = self._pos
         proposals = []
-        for dx, dy, action_name in [(0, 1, "move_down"), (0, -1, "move_up"),
-                                     (1, 0, "move_right"), (-1, 0, "move_left")]:
+        for dx, dy, action_name in [
+            (0, 1, "move_down"),
+            (0, -1, "move_up"),
+            (1, 0, "move_right"),
+            (-1, 0, "move_left"),
+        ]:
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.size and 0 <= ny < self.size:
                 tile = self._grid[nx][ny]
                 risk = 0.9 if tile == TILE_POISON else 0.1
                 reward = 5.0 if tile == TILE_POISON else (1.0 if tile == TILE_APPLE else 0.0)
-                proposals.append(Proposal(
-                    member_id="reward",
-                    action=action_name,
-                    tag=PriorityTag.ROUTINE,
-                    timestamp=time.time(),
-                    metadata={
-                        "expected_reward": reward,
-                        "risk": risk,
-                        "identity_coherence": 1.0 - risk,
-                        "long_term_value": 1.0 - risk,
-                        "target": (nx, ny),
-                        "tile": tile,
-                    },
-                ))
+                proposals.append(
+                    Proposal(
+                        member_id="reward",
+                        action=action_name,
+                        tag=PriorityTag.ROUTINE,
+                        timestamp=time.time(),
+                        metadata={
+                            "expected_reward": reward,
+                            "risk": risk,
+                            "identity_coherence": 1.0 - risk,
+                            "long_term_value": 1.0 - risk,
+                            "target": (nx, ny),
+                            "tile": tile,
+                        },
+                    )
+                )
         return proposals
 
     def compute_reward(self, state, decision: GovernanceDecision) -> float:

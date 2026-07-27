@@ -18,7 +18,6 @@ Real-world analogy:
 import hashlib
 import secrets
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 
 @dataclass
@@ -49,7 +48,7 @@ class GenesisMultisig:
 
     def __init__(self, threshold: int = 3, total_holders: int = 5):
         self.threshold = threshold
-        self.holders: List[KeyHolder] = []
+        self.holders: list[KeyHolder] = []
 
     def add_holder(self, name: str) -> str:
         """Register a new key holder and generate their public key.

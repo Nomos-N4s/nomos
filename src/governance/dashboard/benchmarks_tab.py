@@ -15,20 +15,19 @@ Real-world analogy:
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+import pandas as pd
+import streamlit as st
 
 from ..ontology.backend import OntologyBackend
 
-import streamlit as st
-import altair as alt
-import pandas as pd
-import numpy as np
-
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(__file__)))), "results")
+RESULTS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "results"
+)
 
 
-def _load_benchmark() -> Optional[Dict[str, Any]]:
+def _load_benchmark() -> dict[str, Any] | None:
     path = os.path.join(RESULTS_DIR, "benchmark_results.json")
     if not os.path.exists(path):
         return None
@@ -36,7 +35,7 @@ def _load_benchmark() -> Optional[Dict[str, Any]]:
         return json.load(f)
 
 
-def _load_prove_results() -> Optional[List[Dict]]:
+def _load_prove_results() -> list[dict] | None:
     path = os.path.join(RESULTS_DIR, "prove_results.json")
     if not os.path.exists(path):
         return None
@@ -44,7 +43,7 @@ def _load_prove_results() -> Optional[List[Dict]]:
         return json.load(f).get("predictions", [])
 
 
-def _load_all_results() -> Dict[str, List[Any]]:
+def _load_all_results() -> dict[str, list[Any]]:
     results_dir = RESULTS_DIR
     data = {}
     if not os.path.isdir(results_dir):
@@ -58,24 +57,27 @@ def _load_all_results() -> Dict[str, List[Any]]:
     return data
 
 
-def _log_benchmark_to_backend(backend: Optional[OntologyBackend], benchmarks: Dict):
+def _log_benchmark_to_backend(backend: OntologyBackend | None, benchmarks: dict):
     if backend is None or not benchmarks:
         return
     try:
         for item in benchmarks.get("aggregates", []):
-            backend.add_entity("benchmark", {
-                "strategy": item.get("strategy"),
-                "scenario": item.get("scenario"),
-                "mean_reward": item.get("mean_reward", 0),
-                "std_reward": item.get("std_reward", 0),
-                "mean_violations": item.get("mean_violations", 0),
-                "num_seeds": item.get("num_seeds", 0),
-            })
+            backend.add_entity(
+                "benchmark",
+                {
+                    "strategy": item.get("strategy"),
+                    "scenario": item.get("scenario"),
+                    "mean_reward": item.get("mean_reward", 0),
+                    "std_reward": item.get("std_reward", 0),
+                    "mean_violations": item.get("mean_violations", 0),
+                    "num_seeds": item.get("num_seeds", 0),
+                },
+            )
     except Exception:
         pass
 
 
-def render_benchmarks_tab(backend: Optional[OntologyBackend] = None):
+def render_benchmarks_tab(backend: OntologyBackend | None = None):
     st.header("📊 Benchmark Results")
     st.caption("Statistical comparison between governance and baselines.")
 
@@ -101,7 +103,9 @@ def render_benchmarks_tab(backend: Optional[OntologyBackend] = None):
                 pass_df = prove_df[prove_df["passed"]]
                 st.success(f"✅ {len(pass_df)} PASS")
                 for _, r in pass_df.iterrows():
-                    st.caption(f"**P{r['id']:02d}** ({r['chapter']} §{r['section']}): {r['description']}")
+                    st.caption(
+                        f"**P{r['id']:02d}** ({r['chapter']} §{r['section']}): {r['description']}"
+                    )
             with col2:
                 fail_df = prove_df[~prove_df["passed"]]
                 if len(fail_df) > 0:
@@ -131,18 +135,25 @@ def render_benchmarks_tab(backend: Optional[OntologyBackend] = None):
     for scenario in agg_df["scenario"].unique():
         sub = agg_df[agg_df["scenario"] == scenario]
         with st.expander(scenario, expanded=True):
-            display = sub.rename(columns={
-                "strategy": "Strategy", "mean_reward": "Reward",
-                "std_reward": "σ", "mean_violations": "Violations",
-                "mean_deadlocks": "Deadlocks", "num_seeds": "Seeds",
-            })
+            display = sub.rename(
+                columns={
+                    "strategy": "Strategy",
+                    "mean_reward": "Reward",
+                    "std_reward": "σ",
+                    "mean_violations": "Violations",
+                    "mean_deadlocks": "Deadlocks",
+                    "num_seeds": "Seeds",
+                }
+            )
             st.dataframe(display, use_container_width=True, hide_index=True)
 
     st.divider()
     st.subheader("Aggregate Comparison")
     pivot = agg_df.pivot_table(
-        index="strategy", columns="scenario",
-        values="mean_reward", aggfunc="first",
+        index="strategy",
+        columns="scenario",
+        values="mean_reward",
+        aggfunc="first",
     )
     st.dataframe(pivot, use_container_width=True)
 

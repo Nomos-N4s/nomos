@@ -20,7 +20,6 @@ import json
 import os
 import sys
 import time
-from typing import Any, Dict, List, Optional
 
 from ..ontology.backend import OntologyBackend
 
@@ -28,16 +27,17 @@ _src = os.path.join(os.path.dirname(__file__), "..", "..")
 if _src not in sys.path:
     sys.path.insert(0, os.path.abspath(_src))
 
-import streamlit as st
 import altair as alt
-import pandas as pd
 import numpy as np
+import pandas as pd
+import streamlit as st
 
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(__file__)))), "results")
+RESULTS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "results"
+)
 
 
-def _find_log_files() -> List[str]:
+def _find_log_files() -> list[str]:
     if not os.path.isdir(RESULTS_DIR):
         return []
     files = []
@@ -47,7 +47,7 @@ def _find_log_files() -> List[str]:
     return sorted(files)
 
 
-def _load_log(filepath: str) -> List[Dict]:
+def _load_log(filepath: str) -> list[dict]:
     full_path = os.path.join(RESULTS_DIR, filepath)
     if not os.path.exists(full_path):
         return []
@@ -60,7 +60,7 @@ def _load_log(filepath: str) -> List[Dict]:
     return steps
 
 
-def _render_grid(step_data: Dict, size: int = 10):
+def _render_grid(step_data: dict, size: int = 10):
     grid = step_data.get("grid", [])
     pos = step_data.get("agent_pos", [0, 0])
     grid_size = max(len(grid), 1)
@@ -84,9 +84,8 @@ def _render_grid(step_data: Dict, size: int = 10):
     st.image(grid_display.astype(np.uint8), width=300, caption=f"Step {step_data.get('step', '?')}")
 
 
-def _render_scores(step_data: Dict):
+def _render_scores(step_data: dict):
     scores = step_data.get("scores", {})
-    vetoed_by = step_data.get("vetoed_by", [])
     is_default = step_data.get("is_default", False)
     falsification_counts = step_data.get("falsification_counts", {})
     veto_count = step_data.get("veto_count", 0)
@@ -103,47 +102,60 @@ def _render_scores(step_data: Dict):
         st.caption("No scores recorded")
         return
 
-    score_df = pd.DataFrame({
-        "member": list(scores.keys()),
-        "score": list(scores.values()),
-    })
-    chart = alt.Chart(score_df).mark_bar().encode(
-        x="member:N",
-        y="score:Q",
-        color=alt.condition(
-            alt.datum.score > 0.5,
-            alt.value("#2ecc71"),
-            alt.value("#e74c3c"),
-        ),
-    ).properties(height=200, title="Parliament Member Scores")
+    score_df = pd.DataFrame(
+        {
+            "member": list(scores.keys()),
+            "score": list(scores.values()),
+        }
+    )
+    chart = (
+        alt.Chart(score_df)
+        .mark_bar()
+        .encode(
+            x="member:N",
+            y="score:Q",
+            color=alt.condition(
+                alt.datum.score > 0.5,
+                alt.value("#2ecc71"),
+                alt.value("#e74c3c"),
+            ),
+        )
+        .properties(height=200, title="Parliament Member Scores")
+    )
     st.altair_chart(chart, use_container_width=True)
 
 
-def _log_step_to_backend(backend: Optional[OntologyBackend], step: Dict):
+def _log_step_to_backend(backend: OntologyBackend | None, step: dict):
     if backend is None:
         return
     try:
-        eid = backend.add_entity("decision", {
-            "step": step.get("step", 0),
-            "action": step.get("action", -1),
-            "reward": step.get("reward", 0.0),
-            "violations": step.get("violations", 0),
-            "is_default": step.get("is_default", False),
-            "apples_collected": step.get("apples_collected", 0),
-            "total_reward": step.get("total_reward", 0.0),
-        })
+        eid = backend.add_entity(
+            "decision",
+            {
+                "step": step.get("step", 0),
+                "action": step.get("action", -1),
+                "reward": step.get("reward", 0.0),
+                "violations": step.get("violations", 0),
+                "is_default": step.get("is_default", False),
+                "apples_collected": step.get("apples_collected", 0),
+                "total_reward": step.get("total_reward", 0.0),
+            },
+        )
         scores = step.get("scores", {})
         for member_id, score in scores.items():
-            backend.add_entity("member_score", {
-                "decision_id": eid,
-                "member": member_id,
-                "score": score,
-            })
+            backend.add_entity(
+                "member_score",
+                {
+                    "decision_id": eid,
+                    "member": member_id,
+                    "score": score,
+                },
+            )
     except Exception:
         pass
 
 
-def render_parliament_tab(backend: Optional[OntologyBackend] = None):
+def render_parliament_tab(backend: OntologyBackend | None = None):
     st.header("🏛️ Parliament Live")
     st.caption("Replay an experiment episode step-by-step. Load a JSONL log file from `results/`.")
 
@@ -162,6 +174,7 @@ def render_parliament_tab(backend: Optional[OntologyBackend] = None):
         st.subheader("Or: Run a quick local demo")
 
         from governance.experiments.gym_env import GovernanceGridWorld
+
         env = GovernanceGridWorld(size=6, seed=42)
         obs, _ = env.reset()
 
@@ -169,7 +182,7 @@ def render_parliament_tab(backend: Optional[OntologyBackend] = None):
         if st.button("Run demo"):
             for i in range(steps_to_run):
                 action = (env._pos[0] + env._pos[1]) % 4
-                obs, reward, terminated, truncated, info =                 env.step(action)
+                obs, reward, terminated, truncated, info = env.step(action)
                 if terminated:
                     break
             st.session_state.parliament_steps = env.decision_history
@@ -229,7 +242,6 @@ def render_parliament_tab(backend: Optional[OntologyBackend] = None):
     reward = step_data.get("reward", 0.0)
     total = step_data.get("total_reward", 0.0)
     violations = step_data.get("violations", 0)
-    veto_count = step_data.get("veto_count", 0)
     apples = step_data.get("apples_collected", 0)
 
     meta_cols = st.columns(5)
@@ -242,39 +254,53 @@ def render_parliament_tab(backend: Optional[OntologyBackend] = None):
     st.divider()
     st.caption("Reward / Violations Timeline")
 
-    timeline_df = pd.DataFrame(steps[:idx + 1])
+    timeline_df = pd.DataFrame(steps[: idx + 1])
     if "total_reward" in timeline_df.columns and "violations" in timeline_df.columns:
         tl = timeline_df[["step", "total_reward", "violations"]].melt(
             id_vars="step", var_name="metric", value_name="value"
         )
-        chart = alt.Chart(tl).mark_line().encode(
-            x="step:Q",
-            y="value:Q",
-            color="metric:N",
-        ).properties(height=150)
+        chart = (
+            alt.Chart(tl)
+            .mark_line()
+            .encode(
+                x="step:Q",
+                y="value:Q",
+                color="metric:N",
+            )
+            .properties(height=150)
+        )
         st.altair_chart(chart, use_container_width=True)
 
 
-def _generate_demo_steps() -> List[Dict]:
+def _generate_demo_steps() -> list[dict]:
     steps = []
     pos = [0, 0]
     for i in range(20):
         pos = [(pos[0] + 1) % 6, (pos[1] + i) % 6]
-        steps.append({
-            "step": i + 1,
-            "agent_pos": pos,
-            "action": i % 4,
-            "action_name": ["up", "down", "left", "right"][i % 4],
-            "reward": 1.0 if i % 3 == 0 else 0.0,
-            "total_reward": sum(1.0 for j in range(i + 1) if j % 3 == 0),
-            "violations": sum(1 for j in range(i + 1) if j % 5 == 0),
-            "veto_count": sum(1 for j in range(i + 1) if j % 4 == 0),
-            "is_default": i % 4 == 0,
-            "apples_collected": sum(1 for j in range(i + 1) if j % 3 == 0),
-            "scores": {"reward": 0.7, "safety": 0.9, "integrity": 0.8,
-                       "planning": 0.6, "curiosity": 0.3, "social": 0.7, "memory": 0.8},
-            "vetoed_by": [],
-            "falsification_counts": {},
-            "grid": [[0] * 6 for _ in range(6)],
-        })
+        steps.append(
+            {
+                "step": i + 1,
+                "agent_pos": pos,
+                "action": i % 4,
+                "action_name": ["up", "down", "left", "right"][i % 4],
+                "reward": 1.0 if i % 3 == 0 else 0.0,
+                "total_reward": sum(1.0 for j in range(i + 1) if j % 3 == 0),
+                "violations": sum(1 for j in range(i + 1) if j % 5 == 0),
+                "veto_count": sum(1 for j in range(i + 1) if j % 4 == 0),
+                "is_default": i % 4 == 0,
+                "apples_collected": sum(1 for j in range(i + 1) if j % 3 == 0),
+                "scores": {
+                    "reward": 0.7,
+                    "safety": 0.9,
+                    "integrity": 0.8,
+                    "planning": 0.6,
+                    "curiosity": 0.3,
+                    "social": 0.7,
+                    "memory": 0.8,
+                },
+                "vetoed_by": [],
+                "falsification_counts": {},
+                "grid": [[0] * 6 for _ in range(6)],
+            }
+        )
     return steps

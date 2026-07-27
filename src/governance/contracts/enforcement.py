@@ -19,9 +19,9 @@ Real-world analogy:
     anyone from opening the safe before a specific date.
 """
 
-import time
-from dataclasses import dataclass, field
-from typing import Any, Callable, List
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from .contract import UlyssesContract
 
@@ -34,11 +34,14 @@ class EnforcementResult:
         compliant: True if the action is compliant with this enforcement mode.
         reason: Human-readable explanation of the result.
     """
+
     compliant: bool
     reason: str = ""
 
 
-def enforce_procedural_inertia(contract: UlyssesContract, parliament_vote: float) -> EnforcementResult:
+def enforce_procedural_inertia(
+    contract: UlyssesContract, parliament_vote: float
+) -> EnforcementResult:
     """:math:`\\kappa_{\\text{proc}}` — a contract stands unless revoked.
 
     A contract remains active by default. Only a vote meeting the
@@ -54,7 +57,6 @@ def enforce_procedural_inertia(contract: UlyssesContract, parliament_vote: float
         ``compliant=True`` if the contract remains in force (vote did
         not reach the revocation threshold).
     """
-    default_is_active = True
     if parliament_vote >= contract.revocation_threshold:
         return EnforcementResult(compliant=False, reason="Revocation threshold met")
     return EnforcementResult(compliant=True, reason="Procedural inertia maintains contract")
@@ -92,7 +94,7 @@ class DistributedMonitor:
 
 
 def enforce_distributed_monitors(
-    monitors: List[DistributedMonitor],
+    monitors: list[DistributedMonitor],
     action_index: int,
     context: Any,
 ) -> EnforcementResult:
@@ -160,7 +162,7 @@ def enforce_timelock(contract: UlyssesContract, current_block: int) -> Enforceme
 def stacked_enforcement(
     contract: UlyssesContract,
     parliament_vote: float,
-    monitors: List[DistributedMonitor],
+    monitors: list[DistributedMonitor],
     action_index: int,
     context: Any,
     current_block: int,

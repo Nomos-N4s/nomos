@@ -13,36 +13,36 @@ State machine:
 ```mermaid
 stateDiagram-v2
     [*] --> Agenda: raw_proposals
-    
+
     state Agenda {
         [*] --> BudgetFilter: κ₂ enforcement
         BudgetFilter --> PrioritySort: per-member cap
         PrioritySort --> [*]: by tag, then timestamp
     }
-    
+
     Agenda --> Scoring
-    
+
     state Scoring {
         [*] --> MemberScore: V_i(s, a)
         MemberScore --> IntegrityCheck: all members
         IntegrityCheck --> FiscalRecord: tag compliance
         FiscalRecord --> [*]: falsification counter
     }
-    
+
     Scoring --> VetoPhase
     VetoPhase --> NextProposal: any veto
     VetoPhase --> Voting: no vetoes
-    
+
     state Voting {
         [*] --> WeightedAverage: ∑ w_i · V_i / ∑ w_i
         WeightedAverage --> ThresholdCheck: compare to class threshold
         ThresholdCheck --> [*]: pass if ≥ threshold
     }
-    
+
     Voting --> Decision: consensus
     Voting --> NextProposal: rejected
     NextProposal --> Scoring: next in agenda
-    
+
     Decision --> [*]: GovernanceDecision
     Agenda --> DefaultFallback: no consensus after max_rounds
     DefaultFallback --> [*]: GovernanceDecision(is_default=True)
@@ -66,11 +66,11 @@ Real-world analogy:
     and when to call a vote. They also enforce procedural rules.
 """
 
-from typing import Any, Dict, List
 from collections import defaultdict
+from typing import Any
 
-from .models import PriorityTag, Proposal, GovernanceDecision
 from .committee.base import ParliamentMember
+from .models import GovernanceDecision, PriorityTag, Proposal
 
 
 class SpeakerStateMachine:
@@ -108,7 +108,7 @@ class SpeakerStateMachine:
 
     def __init__(
         self,
-        members: Dict[str, ParliamentMember],
+        members: dict[str, ParliamentMember],
         default_action: Any,
         majority_threshold: float = 0.5,
         supermajority_threshold: float = 0.66,
@@ -119,14 +119,18 @@ class SpeakerStateMachine:
         self.majority_threshold = majority_threshold
         self.supermajority_threshold = supermajority_threshold
         self.max_rounds = max_rounds
-        self._falsification_counts: Dict[str, int] = {}
+        self._falsification_counts: dict[str, int] = {}
         self.immutable_procedures = [
-            "agenda_budget_enforcement", "agenda_priority_sorting",
-            "scoring_phase", "tag_compliance_check",
-            "veto_phase", "voting_phase", "default_fallback",
+            "agenda_budget_enforcement",
+            "agenda_priority_sorting",
+            "scoring_phase",
+            "tag_compliance_check",
+            "veto_phase",
+            "voting_phase",
+            "default_fallback",
         ]
 
-    def _apply_budgets(self, proposals: List[Proposal]) -> List[Proposal]:
+    def _apply_budgets(self, proposals: list[Proposal]) -> list[Proposal]:
         """Enforce per-member proposal budgets (κ₂).
 
         Filters proposals so that no member exceeds their ``budget``
@@ -150,7 +154,7 @@ class SpeakerStateMachine:
                 budgets[p.member_id] += 1
         return filtered
 
-    def _sort_agenda(self, proposals: List[Proposal]) -> List[Proposal]:
+    def _sort_agenda(self, proposals: list[Proposal]) -> list[Proposal]:
         """Sort proposals by priority tag, then by submission time.
 
         Lower tag values (higher urgency) appear first. Within the same
@@ -165,7 +169,7 @@ class SpeakerStateMachine:
         """
         return sorted(proposals, key=lambda p: (p.tag, p.timestamp))
 
-    def set_agenda(self, proposals: List[Proposal]) -> List[Proposal]:
+    def set_agenda(self, proposals: list[Proposal]) -> list[Proposal]:
         """Build the ordered agenda: apply budgets, then sort.
 
         This is the public entry point for agenda creation, called
@@ -179,7 +183,7 @@ class SpeakerStateMachine:
         """
         return self._sort_agenda(self._apply_budgets(proposals))
 
-    def _score_proposal(self, state: Any, proposal: Proposal) -> Dict[str, float]:
+    def _score_proposal(self, state: Any, proposal: Proposal) -> dict[str, float]:
         """Score a single proposal against every member's value function.
 
         Real-world analogy:
@@ -199,8 +203,9 @@ class SpeakerStateMachine:
             scores[member_id] = member.evaluate_proposal(state, proposal)
         return scores
 
-    def _check_tag_compliance(self, proposals: List[Proposal],
-                              integrity_scores: Dict[str, float]) -> Dict[str, int]:
+    def _check_tag_compliance(
+        self, proposals: list[Proposal], integrity_scores: dict[str, float]
+    ) -> dict[str, int]:
         """Detect tag falsification and penalise repeat offenders.
 
         If a member's Integrity score falls below
@@ -232,7 +237,7 @@ class SpeakerStateMachine:
                     member.budget = max(1, member.budget // 2)
         return dict(self._falsification_counts)
 
-    def _check_vetoes(self, scores: Dict[str, float]) -> List[str]:
+    def _check_vetoes(self, scores: dict[str, float]) -> list[str]:
         """Check which members would veto a proposal.
 
         A member vetoes when the proposal's score from that member
@@ -256,8 +261,7 @@ class SpeakerStateMachine:
                 vetoers.append(member_id)
         return vetoers
 
-    def _resolve_vote(self, scores: Dict[str, float],
-                      decision_class: str) -> bool:
+    def _resolve_vote(self, scores: dict[str, float], decision_class: str) -> bool:
         """Perform weighted range voting.
 
         The weighted average is computed as:
@@ -305,7 +309,7 @@ class SpeakerStateMachine:
     def run_governance_cycle(
         self,
         state: Any,
-        raw_proposals: List[Proposal],
+        raw_proposals: list[Proposal],
         decision_class: str = "routine",
     ) -> GovernanceDecision:
         """Run one complete governance cycle from proposals to decision.
@@ -379,8 +383,11 @@ class SpeakerStateMachine:
 
 def _run_speaker_quick_test():
     import time
+
     from .committee.members import (
-        ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
+        ExampleIntegrityMember,
+        ExampleRewardMember,
+        ExampleSafetyMember,
     )
 
     members = {

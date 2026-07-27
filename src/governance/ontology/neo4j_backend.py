@@ -18,17 +18,18 @@ Real-world analogy:
 
 import json
 import os
-import ssl
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 try:
-    from neo4j import GraphDatabase, Driver, Session
+    from neo4j import Driver, GraphDatabase, Session  # noqa: F401
+
     NEO4J_AVAILABLE = True
 except ImportError:
     NEO4J_AVAILABLE = False
 
 try:
     import certifi
+
     CERTIFI_AVAILABLE = True
 except ImportError:
     CERTIFI_AVAILABLE = False
@@ -36,10 +37,11 @@ except ImportError:
 from .backend import OntologyBackend
 
 
-def _load_env() -> Dict[str, str]:
+def _load_env() -> dict[str, str]:
     """Load Neo4j credentials from ``.env`` or environment variables."""
-    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-        os.path.dirname(__file__)))), ".env")
+    env_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"
+    )
     result = {
         "NEO4J_URI": os.environ.get("NEO4J_URI", ""),
         "NEO4J_USER": os.environ.get("NEO4J_USER", os.environ.get("NEO4J_USERNAME", "")),
@@ -88,9 +90,7 @@ class Neo4jBackend(OntologyBackend):
         self._password = password or env["NEO4J_PASSWORD"]
 
         if not self._uri:
-            raise ValueError(
-                "Neo4j URI not configured. Set NEO4J_URI in .env or environment."
-            )
+            raise ValueError("Neo4j URI not configured. Set NEO4J_URI in .env or environment.")
 
         if CERTIFI_AVAILABLE:
             os.environ.setdefault("SSL_CERT_FILE", certifi.where())
@@ -100,19 +100,16 @@ class Neo4jBackend(OntologyBackend):
             auth=(self._user, self._password),
         )
 
-    def _run(self, query: str, params: Dict = None) -> List[Dict]:
+    def _run(self, query: str, params: dict = None) -> list[dict]:
         """Execute a Cypher query and return results as a list of dicts."""
         with self._driver.session() as session:
             result = session.run(query, params or {})
             return [dict(r) for r in result]
 
-    def add_entity(self, type_: str, properties: Dict[str, Any]) -> str:
+    def add_entity(self, type_: str, properties: dict[str, Any]) -> str:
         """Create a new ```:Entity`` node and return its element ID."""
         props_json = json.dumps(properties)
-        query = (
-            "CREATE (e:Entity {type: $type, properties: $props}) "
-            "RETURN elementId(e) AS id"
-        )
+        query = "CREATE (e:Entity {type: $type, properties: $props}) RETURN elementId(e) AS id"
         result = self._run(query, {"type": type_, "props": props_json})
         return result[0]["id"] if result else ""
 
@@ -126,7 +123,7 @@ class Neo4jBackend(OntologyBackend):
         result = self._run(query, {"from_id": from_id, "to_id": to_id, "relation": relation})
         return result[0]["cnt"] > 0 if result else False
 
-    def query_relationships(self, entity_id: str) -> List[Tuple[str, str, str]]:
+    def query_relationships(self, entity_id: str) -> list[tuple[str, str, str]]:
         """Return all relationships (outgoing + incoming) for a node."""
         query = (
             "MATCH (a)-[r]->(b) WHERE elementId(a) = $eid "
@@ -138,7 +135,7 @@ class Neo4jBackend(OntologyBackend):
         result = self._run(query, {"eid": entity_id})
         return [(r["target"], r["relation"], r["direction"]) for r in result]
 
-    def get_entity(self, entity_id: str) -> Optional[Dict[str, Any]]:
+    def get_entity(self, entity_id: str) -> dict[str, Any] | None:
         """Retrieve a single entity node by element ID."""
         query = (
             "MATCH (e) WHERE elementId(e) = $eid "
@@ -153,7 +150,7 @@ class Neo4jBackend(OntologyBackend):
             entity.update(json.loads(r["props"]))
         return entity
 
-    def get_entities_by_type(self, type_: str) -> List[Dict[str, Any]]:
+    def get_entities_by_type(self, type_: str) -> list[dict[str, Any]]:
         """Retrieve all entities of a given type."""
         query = (
             "MATCH (e:Entity) WHERE e.type = $type "
@@ -168,7 +165,7 @@ class Neo4jBackend(OntologyBackend):
             entities.append(entity)
         return entities
 
-    def get_identity_vector(self) -> List[float]:
+    def get_identity_vector(self) -> list[float]:
         """Retrieve the latest identity vector from the ``:Identity`` node."""
         query = (
             "MATCH (v:Identity) WHERE v.name = 'vector' "
@@ -179,12 +176,11 @@ class Neo4jBackend(OntologyBackend):
             return json.loads(result[0]["values"])
         return []
 
-    def set_identity_vector(self, vector: List[float]):
+    def set_identity_vector(self, vector: list[float]):
         """Upsert the identity vector on the ``:Identity`` node."""
         vec_json = json.dumps(vector)
         query = (
-            "MERGE (v:Identity {name: 'vector'}) "
-            "SET v.values = $values, v.updated_at = timestamp()"
+            "MERGE (v:Identity {name: 'vector'}) SET v.values = $values, v.updated_at = timestamp()"
         )
         self._run(query, {"values": vec_json})
 

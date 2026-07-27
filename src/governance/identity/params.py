@@ -12,8 +12,8 @@ Real-world analogy:
     can never go outside them, even with a unanimous vote.
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -31,7 +31,7 @@ class BoundedParameter:
 
     name: str
     default: Any
-    bounds: Tuple[Any, Any]
+    bounds: tuple[Any, Any]
     current: Any = None
 
     def __post_init__(self):
@@ -70,10 +70,9 @@ class ParameterEnvelope:
     """
 
     def __init__(self):
-        self._params: Dict[str, BoundedParameter] = {}
+        self._params: dict[str, BoundedParameter] = {}
 
-    def register(self, name: str, default: Any,
-                 bounds: Tuple[Any, Any]):
+    def register(self, name: str, default: Any, bounds: tuple[Any, Any]):
         """Add a parameter to the envelope.
 
         Args:
@@ -82,10 +81,12 @@ class ParameterEnvelope:
             bounds: ``(min, max)`` range.
         """
         self._params[name] = BoundedParameter(
-            name=name, default=default, bounds=bounds,
+            name=name,
+            default=default,
+            bounds=bounds,
         )
 
-    def get(self, name: str) -> Optional[Any]:
+    def get(self, name: str) -> Any | None:
         """Get a parameter's current value.
 
         Args:
@@ -117,7 +118,7 @@ class ParameterEnvelope:
         for p in self._params.values():
             p.current = p.default
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         """Return a copy of all current parameter values.
 
         Used by the Identity Layer's coherence checks and for

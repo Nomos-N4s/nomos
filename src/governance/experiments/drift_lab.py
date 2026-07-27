@@ -19,12 +19,14 @@ Real-world analogy:
 import math
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from ..models import Proposal, PriorityTag, GovernanceDecision
+from ..identity.core import (
+    IdentityCore,
+)
+from ..models import GovernanceDecision, PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
-from ..identity.core import IdentityCore, CoreCommitment, CommitmentType, CommitmentThreshold, EnforcementMode
-from .base import ExperimentScenario, StepResult, ExperimentMetrics
+from .base import ExperimentMetrics, ExperimentScenario, StepResult
 
 
 class DriftLab(ExperimentScenario):
@@ -40,8 +42,7 @@ class DriftLab(ExperimentScenario):
         seed: Random seed for reproducibility.
     """
 
-    def __init__(self, speaker: SpeakerStateMachine,
-                 identity: IdentityCore, seed: int = 42):
+    def __init__(self, speaker: SpeakerStateMachine, identity: IdentityCore, seed: int = 42):
         super().__init__(speaker)
         self.identity = identity
         self.rng = random.Random(seed)
@@ -54,7 +55,7 @@ class DriftLab(ExperimentScenario):
         self._original_vector = list(self.identity.identity_vector)
         self.metrics = ExperimentMetrics()
 
-    def get_proposals(self, state: Any) -> List[Proposal]:
+    def get_proposals(self, state: Any) -> list[Proposal]:
         """Offer two actions: honest classification and dishonest.
 
         The dishonest action's expected reward grows with drift, while its
@@ -122,7 +123,7 @@ class DriftLab(ExperimentScenario):
         return result
 
     @staticmethod
-    def _cosine_distance(a: List[float], b: List[float]) -> float:
+    def _cosine_distance(a: list[float], b: list[float]) -> float:
         """Cosine distance between two vectors (1.0 - cosine similarity).
 
         Returns a value in [0, 2] where 0 = identical direction and

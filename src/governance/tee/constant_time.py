@@ -18,7 +18,8 @@ Real-world analogy:
     infer the outcome from the judge's reading speed.
 """
 
-from typing import Any, Callable, List, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -65,8 +66,9 @@ def constant_time_compare(a: bytes, b: bytes) -> bool:
     return result == 0
 
 
-def fixed_iteration_map(items: List[T], fn: Callable[[T], Any],
-                        max_size: int, sentinel: T) -> List[Any]:
+def fixed_iteration_map(
+    items: list[T], fn: Callable[[T], Any], max_size: int, sentinel: T
+) -> list[Any]:
     """Apply a function over exactly ``max_size`` iterations.
 
     If the list is shorter than ``max_size``, the remaining iterations
@@ -89,8 +91,7 @@ def fixed_iteration_map(items: List[T], fn: Callable[[T], Any],
     return results
 
 
-def oblivious_access(data: List[T], index: int,
-                     default: T) -> T:
+def oblivious_access(data: list[T], index: int, default: T) -> T:
     """Data-oblivious array access.
 
     Every element of the array is always read, preventing cache-based

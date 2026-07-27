@@ -57,6 +57,7 @@ def get_ontology_backend():
     if _neo4j_available():
         try:
             from governance.ontology.neo4j_backend import Neo4jBackend
+
             backend = Neo4jBackend()
             backend.get_identity_vector()
             return backend
@@ -84,18 +85,22 @@ def main():
 
     with tab_model:
         from governance.dashboard.model_tab import render_model_tab
+
         render_model_tab(backend)
 
     with tab_parliament:
         from governance.dashboard.parliament_tab import render_parliament_tab
+
         render_parliament_tab(backend)
 
     with tab_benchmarks:
         from governance.dashboard.benchmarks_tab import render_benchmarks_tab
+
         render_benchmarks_tab(backend)
 
     with tab_rl:
         from governance.dashboard.rl_tab import render_rl_tab
+
         render_rl_tab(backend)
 
 

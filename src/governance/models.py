@@ -12,12 +12,12 @@ Real-world analogy:
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 # ──────────────────────────────────────────────
 # Priority Tags
 # ──────────────────────────────────────────────
+
 
 class PriorityTag:
     """Urgency classification for proposals, modelled on triage systems.
@@ -72,6 +72,7 @@ class PriorityTag:
 # Action
 # ──────────────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class Action:
     """A discrete, governable unit of agent behaviour.
@@ -96,8 +97,8 @@ class Action:
     """
 
     index: int
-    properties: Dict[str, float] = field(default_factory=dict)
-    runtime_hash: Optional[str] = None
+    properties: dict[str, float] = field(default_factory=dict)
+    runtime_hash: str | None = None
 
     def __repr__(self):
         return f"<Action {self.index}>"
@@ -106,6 +107,7 @@ class Action:
 # ──────────────────────────────────────────────
 # Proposal
 # ──────────────────────────────────────────────
+
 
 @dataclass
 class Proposal:
@@ -141,7 +143,7 @@ class Proposal:
     action: Any
     tag: int = PriorityTag.ROUTINE
     timestamp: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __repr__(self):
         return f"<Proposal by {self.member_id} tag={PriorityTag.name(self.tag)}>"
@@ -150,6 +152,7 @@ class Proposal:
 # ──────────────────────────────────────────────
 # Governance Decision
 # ──────────────────────────────────────────────
+
 
 @dataclass
 class GovernanceDecision:
@@ -176,9 +179,9 @@ class GovernanceDecision:
     """
 
     action: Any
-    scores: Dict[str, float] = field(default_factory=dict)
-    vetoed_by: List[str] = field(default_factory=list)
-    governance_meta: Dict[str, Any] = field(default_factory=dict)
+    scores: dict[str, float] = field(default_factory=dict)
+    vetoed_by: list[str] = field(default_factory=list)
+    governance_meta: dict[str, Any] = field(default_factory=dict)
 
     @property
     def is_default(self) -> bool:
@@ -193,6 +196,7 @@ class GovernanceDecision:
 # ──────────────────────────────────────────────
 # Governance Context
 # ──────────────────────────────────────────────
+
 
 @dataclass
 class GovernanceContext:
@@ -221,8 +225,8 @@ class GovernanceContext:
             bindings, runtime hashes, and extension candidates.
     """
 
-    active_contracts: List[Any] = field(default_factory=list)
-    recent_history: List[GovernanceDecision] = field(default_factory=list)
-    member_statuses: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    identity_vector: Optional[List[float]] = None
-    ontology: Optional[Any] = None
+    active_contracts: list[Any] = field(default_factory=list)
+    recent_history: list[GovernanceDecision] = field(default_factory=list)
+    member_statuses: dict[str, dict[str, Any]] = field(default_factory=dict)
+    identity_vector: list[float] | None = None
+    ontology: Any | None = None

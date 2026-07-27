@@ -16,8 +16,7 @@ Real-world analogy:
 """
 
 import hashlib
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -36,7 +35,7 @@ class ActionBinding:
     index: int
     operation: str
     runtime_hash: str
-    properties: Dict[str, float]
+    properties: dict[str, float]
 
 
 def compute_hash(implementation_bytes: bytes) -> str:
@@ -64,12 +63,12 @@ class Ontology:
     """
 
     def __init__(self):
-        self._bindings: Dict[int, ActionBinding] = {}
-        self._append_only_log: List[ActionBinding] = []
+        self._bindings: dict[int, ActionBinding] = {}
+        self._append_only_log: list[ActionBinding] = []
 
-    def register(self, index: int, operation: str,
-                 implementation_bytes: bytes,
-                 properties: Dict[str, float]) -> ActionBinding:
+    def register(
+        self, index: int, operation: str, implementation_bytes: bytes, properties: dict[str, float]
+    ) -> ActionBinding:
         """Bind an action index to its implementation and properties.
 
         Args:
@@ -97,8 +96,7 @@ class Ontology:
         self._append_only_log.append(binding)
         return binding
 
-    def verify_binding(self, index: int,
-                       runtime_implementation: bytes) -> bool:
+    def verify_binding(self, index: int, runtime_implementation: bytes) -> bool:
         """Verify that a runtime implementation matches the registered hash.
 
         If this returns False, the implementation has drifted from what
@@ -117,7 +115,7 @@ class Ontology:
         actual = compute_hash(runtime_implementation)
         return actual == expected
 
-    def get_properties(self, index: int) -> Optional[Dict[str, float]]:
+    def get_properties(self, index: int) -> dict[str, float] | None:
         """Get the registered properties for an action.
 
         Args:

@@ -18,7 +18,7 @@ Real-world analogy:
 
 import hashlib
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 
 @dataclass
@@ -34,13 +34,13 @@ class BatchProposal:
         batch_metadata: Arbitrary metadata for tracing and debugging.
     """
 
-    action_indices: List[int]
+    action_indices: list[int]
     aggregate_risk: float = 0.0
     diversity_score: float = 1.0
-    batch_metadata: Dict[str, Any] = field(default_factory=dict)
+    batch_metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def merkle_root(items: List[bytes]) -> str:
+def merkle_root(items: list[bytes]) -> str:
     """Compute the Merkle root of a list of byte items.
 
     Uses SHA-256 as the hash function. For an empty list, returns the
@@ -64,7 +64,7 @@ def merkle_root(items: List[bytes]) -> str:
     return hashlib.sha256(combined).hexdigest()
 
 
-def compute_diversity(action_indices: List[int]) -> float:
+def compute_diversity(action_indices: list[int]) -> float:
     """Compute the diversity score of a list of action indices.
 
     Returns the ratio of unique indices to total count.
@@ -95,12 +95,11 @@ class BatchVerifier:
         diversity_min: Minimum acceptable diversity ratio (default 0.3).
     """
 
-    def __init__(self, risk_threshold: float = 0.7,
-                 diversity_min: float = 0.3):
+    def __init__(self, risk_threshold: float = 0.7, diversity_min: float = 0.3):
         self.risk_threshold = risk_threshold
         self.diversity_min = diversity_min
 
-    def validate_batch(self, proposal: BatchProposal) -> Tuple[bool, str]:
+    def validate_batch(self, proposal: BatchProposal) -> tuple[bool, str]:
         """Validate a batch proposal.
 
         Checks risk and diversity constraints, then computes the Merkle root.
@@ -118,14 +117,11 @@ class BatchVerifier:
             )
         div = compute_diversity(proposal.action_indices)
         if div < self.diversity_min:
-            return False, (
-                f"Diversity {div:.2f} below minimum {self.diversity_min}"
-            )
+            return False, (f"Diversity {div:.2f} below minimum {self.diversity_min}")
         root = merkle_root([str(i).encode() for i in proposal.action_indices])
         return True, f"Batch valid. Root: {root[:16]}..."
 
-    def verify_proof(self, action_index: int, proof: List[str],
-                     root: str) -> bool:
+    def verify_proof(self, action_index: int, proof: list[str], root: str) -> bool:
         """Verify a Merkle proof for a single action within a batch.
 
         Args:

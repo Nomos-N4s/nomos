@@ -26,7 +26,7 @@ Real-world analogy:
 import time
 from typing import Any
 
-from ..models import Proposal, PriorityTag
+from ..models import PriorityTag, Proposal
 from .base import ParliamentMember
 
 

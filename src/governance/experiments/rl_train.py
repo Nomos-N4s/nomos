@@ -13,7 +13,7 @@ Exports trained model + evaluation logs for the Streamlit dashboard.
 import json
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -27,7 +27,7 @@ def make_env(
     poison_ratio: float = 0.2,
     apple_count: int = 8,
     max_steps: int = 200,
-    live_log_path: Optional[str] = None,
+    live_log_path: str | None = None,
 ) -> GovernanceGridWorld:
     """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
 
@@ -43,10 +43,7 @@ def make_env(
     Returns:
         A configured :class:`~.gym_env.GovernanceGridWorld`.
     """
-    if mode == "no_governance":
-        parliament = None
-    else:
-        parliament = "default"  # sentinel: __init__ resolves it
+    parliament = None if mode == "no_governance" else "default"  # sentinel: __init__ resolves it
     return GovernanceGridWorld(
         parliament=parliament,
         size=size,
@@ -63,7 +60,7 @@ def evaluate(
     model,
     episodes: int = 5,
     deterministic: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Evaluate a trained PPO model for a number of episodes.
 
     Args:
@@ -98,13 +95,15 @@ def evaluate(
             if terminated or truncated:
                 break
 
-        metrics_list.append({
-            "episode": ep,
-            "reward": ep_reward,
-            "steps": ep_steps,
-            "violations": ep_violations,
-            "apples": ep_apples,
-        })
+        metrics_list.append(
+            {
+                "episode": ep,
+                "reward": ep_reward,
+                "steps": ep_steps,
+                "violations": ep_violations,
+                "apples": ep_apples,
+            }
+        )
         all_histories.extend(env.decision_history)
 
     avg_reward = np.mean([m["reward"] for m in metrics_list])
@@ -131,7 +130,7 @@ def train_ppo(
     log_dir: str = "results",
     live_log: bool = True,
     eval_episodes: int = 10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Train a PPO agent on GovernanceGridWorld.
 
     Saves the trained model and evaluation results to ``log_dir``.
@@ -153,10 +152,7 @@ def train_ppo(
         from stable_baselines3 import PPO
         from stable_baselines3.common.callbacks import BaseCallback
     except ImportError:
-        raise ImportError(
-            "stable-baselines3 not installed. "
-            "Install with: uv sync --extra rl"
-        )
+        raise ImportError("stable-baselines3 not installed. Install with: uv sync --extra rl")
 
     class LogCallback(BaseCallback):
         def __init__(self, log_path: str):
@@ -230,10 +226,10 @@ def train_ppo(
 def benchmark(
     total_timesteps: int = 100_000,
     size: int = 10,
-    seeds: List[int] = None,
+    seeds: list[int] = None,
     log_dir: str = "results",
     eval_episodes: int = 10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     seeds = seeds or [42]
     all_results = {}
 

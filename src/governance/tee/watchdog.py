@@ -18,9 +18,8 @@ Real-world analogy:
 """
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, List, Optional
 
 
 class WatchdogState(Enum):
@@ -68,7 +67,7 @@ class WatchdogTimer:
         self.heartbeat_timeout = heartbeat_timeout_ms / 1000.0
         self._last_heartbeat: float = time.time()
         self._state = WatchdogState.NORMAL
-        self._events: List[WatchdogEvent] = []
+        self._events: list[WatchdogEvent] = []
 
     def heartbeat(self):
         """Send a heartbeat signal. Reset the timer and restore normal state."""
@@ -89,11 +88,9 @@ class WatchdogTimer:
         if self._state == WatchdogState.COLD_BOOT:
             return self._state
         elapsed = time.time() - self._last_heartbeat
-        if elapsed > self.heartbeat_timeout:
-            if self._state != WatchdogState.HEARTBEAT_MISSED:
-                self._state = WatchdogState.HEARTBEAT_MISSED
-                self._log("heartbeat_missed",
-                          f"Last heartbeat {elapsed:.2f}s ago")
+        if elapsed > self.heartbeat_timeout and self._state != WatchdogState.HEARTBEAT_MISSED:
+            self._state = WatchdogState.HEARTBEAT_MISSED
+            self._log("heartbeat_missed", f"Last heartbeat {elapsed:.2f}s ago")
         return self._state
 
     @property
@@ -102,13 +99,15 @@ class WatchdogTimer:
         return self._state
 
     def _log(self, event_type: str, details: str = ""):
-        self._events.append(WatchdogEvent(
-            event_type=event_type,
-            timestamp=time.time(),
-            details=details,
-        ))
+        self._events.append(
+            WatchdogEvent(
+                event_type=event_type,
+                timestamp=time.time(),
+                details=details,
+            )
+        )
 
-    def get_events(self) -> List[WatchdogEvent]:
+    def get_events(self) -> list[WatchdogEvent]:
         """Return the full event log (immutable copy)."""
         return list(self._events)
 

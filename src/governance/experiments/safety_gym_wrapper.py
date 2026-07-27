@@ -19,27 +19,33 @@ Real-world analogy:
 """
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-from ..models import Proposal, PriorityTag
-from ..speaker import SpeakerStateMachine
 from ..committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExamplePlanningMember, ExampleCuriosityMember, ExampleSocialMember,
+    ExampleCuriosityMember,
+    ExampleIntegrityMember,
     ExampleMemoryMember,
+    ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
+    ExampleSocialMember,
 )
+from ..models import PriorityTag, Proposal
+from ..speaker import SpeakerStateMachine
 
 try:
     import gymnasium as gym
+
     _gymnasium_available = True
 except ImportError:
     _gymnasium_available = False
 
 _safety_available = False
 try:
-    import safety_gymnasium
+    import safety_gymnasium  # noqa: F401
+
     _safety_available = True
 except ImportError:
     pass
@@ -47,21 +53,45 @@ except ImportError:
 ROTATION_ACTIONS = {0, 1}
 
 
-SAFE_METADATA = {"expected_reward": 0.0, "risk": 0.0, "identity_coherence": 1.0,
-                  "long_term_value": 0.5, "novelty": 0.3, "social_acceptability": 1.0,
-                  "historical_consistency": 1.0}
+SAFE_METADATA = {
+    "expected_reward": 0.0,
+    "risk": 0.0,
+    "identity_coherence": 1.0,
+    "long_term_value": 0.5,
+    "novelty": 0.3,
+    "social_acceptability": 1.0,
+    "historical_consistency": 1.0,
+}
 
-DEFAULT_METADATA = {"expected_reward": 0.0, "risk": 0.3, "identity_coherence": 0.7,
-                     "long_term_value": 0.5, "novelty": 0.3, "social_acceptability": 0.7,
-                     "historical_consistency": 0.7}
+DEFAULT_METADATA = {
+    "expected_reward": 0.0,
+    "risk": 0.3,
+    "identity_coherence": 0.7,
+    "long_term_value": 0.5,
+    "novelty": 0.3,
+    "social_acceptability": 0.7,
+    "historical_consistency": 0.7,
+}
 
-HAZARD_METADATA = {"expected_reward": 0.0, "risk": 0.9, "identity_coherence": 0.2,
-                    "long_term_value": -0.5, "novelty": 0.5, "social_acceptability": 0.2,
-                    "historical_consistency": 0.1}
+HAZARD_METADATA = {
+    "expected_reward": 0.0,
+    "risk": 0.9,
+    "identity_coherence": 0.2,
+    "long_term_value": -0.5,
+    "novelty": 0.5,
+    "social_acceptability": 0.2,
+    "historical_consistency": 0.1,
+}
 
-GOAL_METADATA = {"expected_reward": 1.0, "risk": 0.0, "identity_coherence": 1.0,
-                  "long_term_value": 1.0, "novelty": 0.3, "social_acceptability": 1.0,
-                  "historical_consistency": 1.0}
+GOAL_METADATA = {
+    "expected_reward": 1.0,
+    "risk": 0.0,
+    "identity_coherence": 1.0,
+    "long_term_value": 1.0,
+    "novelty": 0.3,
+    "social_acceptability": 1.0,
+    "historical_consistency": 1.0,
+}
 
 
 def _default_parliament() -> SpeakerStateMachine:
@@ -89,18 +119,16 @@ class SafetyGymWrapper(gym.Wrapper):
     def __init__(
         self,
         env: gym.Env,
-        parliament: Optional[SpeakerStateMachine] = None,
-        live_log_path: Optional[str] = None,
+        parliament: SpeakerStateMachine | None = None,
+        live_log_path: str | None = None,
     ):
         super().__init__(env)
-        if parliament is None:
-            self.parliament = _default_parliament()
-        elif isinstance(parliament, str):
+        if parliament is None or isinstance(parliament, str):
             self.parliament = _default_parliament()
         else:
             self.parliament = parliament
         self.live_log_path = live_log_path
-        self._last_obs: Optional[np.ndarray] = None
+        self._last_obs: np.ndarray | None = None
         self._reset_metrics()
 
     def _reset_metrics(self):
@@ -111,9 +139,9 @@ class SafetyGymWrapper(gym.Wrapper):
         self._violations = 0
         self._veto_count = 0
         self._action_blocked_count = 0
-        self._decision_history: List[Dict] = []
+        self._decision_history: list[dict] = []
 
-    def reset(self, **kwargs) -> Tuple[np.ndarray, Dict]:
+    def reset(self, **kwargs) -> tuple[np.ndarray, dict]:
         """Reset the wrapped Safety-Gymnasium environment. Gymnasium API."""
         obs, info = self.env.reset(**kwargs)
         self._last_obs = obs
@@ -127,8 +155,9 @@ class SafetyGymWrapper(gym.Wrapper):
 
         if hasattr(self.env.unwrapped, "obs_achieved_goal"):
             meta["achieved_goal_dist"] = float(
-                np.linalg.norm(self.env.unwrapped.obs_achieved_goal
-                               - self.env.unwrapped.obs_desired_goal)
+                np.linalg.norm(
+                    self.env.unwrapped.obs_achieved_goal - self.env.unwrapped.obs_desired_goal
+                )
             )
 
         if isinstance(obs, dict):
@@ -166,7 +195,7 @@ class SafetyGymWrapper(gym.Wrapper):
             metadata=meta,
         )
 
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
         self._step_count += 1
         if isinstance(action, np.ndarray):
             action = int(action.item()) if action.ndim == 0 else int(action[0])
@@ -175,7 +204,9 @@ class SafetyGymWrapper(gym.Wrapper):
 
         proposal = self._make_proposal(action)
         decision = self.parliament.run_governance_cycle(
-            state="normal", raw_proposals=[proposal], decision_class="routine",
+            state="normal",
+            raw_proposals=[proposal],
+            decision_class="routine",
         )
         action_blocked = decision.is_default
 
@@ -199,26 +230,33 @@ class SafetyGymWrapper(gym.Wrapper):
         self._total_cost += cost
 
         step_data = {
-            "step": self._step_count, "action": int(action),
+            "step": self._step_count,
+            "action": int(action),
             "action_name": proposal.action,
-            "reward": reward, "cost": cost,
-            "total_reward": self._total_reward, "total_cost": self._total_cost,
-            "violations": self._violations, "veto_count": self._veto_count,
+            "reward": reward,
+            "cost": cost,
+            "total_reward": self._total_reward,
+            "total_cost": self._total_cost,
+            "violations": self._violations,
+            "veto_count": self._veto_count,
             "blocked": action_blocked,
-            "scores": decision.scores, "vetoed_by": decision.vetoed_by,
-            "terminated": terminated, "truncated": truncated,
+            "scores": decision.scores,
+            "vetoed_by": decision.vetoed_by,
+            "terminated": terminated,
+            "truncated": truncated,
         }
         self._decision_history.append(step_data)
 
         if self.live_log_path:
             import json
+
             with open(self.live_log_path, "a") as f:
                 f.write(json.dumps(step_data) + "\n")
 
         return obs, reward, terminated, truncated, info
 
     @property
-    def metrics(self) -> Dict[str, Any]:
+    def metrics(self) -> dict[str, Any]:
         return {
             "total_reward": self._total_reward,
             "total_cost": self._total_cost,

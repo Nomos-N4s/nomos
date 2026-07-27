@@ -24,12 +24,11 @@ Usage:
 import argparse
 import json
 import sys
-from typing import List
 
-from .predictions import PredictionResult, ALL_PREDICTIONS
+from .predictions import ALL_PREDICTIONS, PredictionResult
 
 
-def run_all() -> List[PredictionResult]:
+def run_all() -> list[PredictionResult]:
     """Execute every prediction function in :data:`ALL_PREDICTIONS`.
 
     Catches exceptions and wraps them as failed predictions so one
@@ -45,7 +44,8 @@ def run_all() -> List[PredictionResult]:
         except Exception as e:
             result = PredictionResult(
                 id=ALL_PREDICTIONS.index(pred_fn) + 1,
-                chapter="ERR", section="0",
+                chapter="ERR",
+                section="0",
                 description=pred_fn.__name__,
                 passed=False,
                 evidence=f"Exception: {e}",
@@ -54,7 +54,7 @@ def run_all() -> List[PredictionResult]:
     return results
 
 
-def filter_by_chapter(results: List[PredictionResult], chapter: str) -> List[PredictionResult]:
+def filter_by_chapter(results: list[PredictionResult], chapter: str) -> list[PredictionResult]:
     """Filter results to a single chapter.
 
     Args:
@@ -67,7 +67,7 @@ def filter_by_chapter(results: List[PredictionResult], chapter: str) -> List[Pre
     return [r for r in results if r.chapter == chapter]
 
 
-def print_summary(results: List[PredictionResult]):
+def print_summary(results: list[PredictionResult]):
     """Print a formatted test-runner-style summary to stdout.
 
     Real-world analogy:
@@ -79,21 +79,21 @@ def print_summary(results: List[PredictionResult]):
     """
     passed = sum(1 for r in results if r.passed)
     total = len(results)
-    print(f"\n{'='*60}")
-    print(f"  Formal Prediction Verification")
+    print(f"\n{'=' * 60}")
+    print("  Formal Prediction Verification")
     print(f"  {passed}/{total} PASS")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
     for r in results:
         status = "PASS" if r.passed else "FAIL"
         print(f"  [{status}] P{r.id:02d} ({r.chapter} \u00a7{r.section}) {r.description}")
         print(f"         {r.evidence}")
         print()
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"  Summary: {passed}/{total} predictions verified")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
-def export_json(results: List[PredictionResult], path: str):
+def export_json(results: list[PredictionResult], path: str):
     """Export prediction results to a JSON file.
 
     The JSON structure matches the format used by the Streamlit
@@ -104,17 +104,33 @@ def export_json(results: List[PredictionResult], path: str):
         path: Output file path.
     """
     data = [
-        {"id": r.id, "chapter": r.chapter, "section": r.section,
-         "description": r.description, "passed": r.passed, "evidence": r.evidence}
+        {
+            "id": r.id,
+            "chapter": r.chapter,
+            "section": r.section,
+            "description": r.description,
+            "passed": r.passed,
+            "evidence": r.evidence,
+        }
         for r in results
     ]
     with open(path, "w") as f:
-        json.dump({"predictions": data, "passed": sum(1 for r in results if r.passed), "total": len(results)}, f, indent=2)
+        json.dump(
+            {
+                "predictions": data,
+                "passed": sum(1 for r in results if r.passed),
+                "total": len(results),
+            },
+            f,
+            indent=2,
+        )
 
 
 def main():
     """Parse CLI arguments and run the verification."""
-    parser = argparse.ArgumentParser(description="Verify formal predictions from the Nomos book chapters")
+    parser = argparse.ArgumentParser(
+        description="Verify formal predictions from the Nomos book chapters"
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--all", action="store_true", help="Run all predictions")
     group.add_argument("--ch2", action="store_true", help="Run Chapter 2 predictions")

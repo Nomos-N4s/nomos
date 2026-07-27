@@ -17,14 +17,13 @@ Real-world analogy:
     the drug is rejected by the regulator.
 """
 
-import hashlib
 import secrets
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from .keys import GenesisMultisig
-from .ontology import Ontology, ActionBinding
+from .ontology import ActionBinding, Ontology
 
 
 class ExtensionPhase(Enum):
@@ -60,12 +59,12 @@ class ExtensionCandidate:
 
     index: int
     operation: str
-    candidate_properties: Dict[str, float]
-    empirical_properties: Optional[Dict[str, float]] = None
+    candidate_properties: dict[str, float]
+    empirical_properties: dict[str, float] | None = None
     phase: ExtensionPhase = ExtensionPhase.PROPOSAL
-    monitor_reports: List[Dict[str, Any]] = field(default_factory=list)
+    monitor_reports: list[dict[str, Any]] = field(default_factory=list)
     multisig_approved: bool = False
-    runtime_hash: Optional[str] = None
+    runtime_hash: str | None = None
 
     @property
     def is_sandboxed(self) -> bool:
@@ -94,10 +93,11 @@ class ExtensionSandbox:
     def __init__(self, ontology: Ontology, multisig: GenesisMultisig):
         self.ontology = ontology
         self.multisig = multisig
-        self._candidates: Dict[int, ExtensionCandidate] = {}
+        self._candidates: dict[int, ExtensionCandidate] = {}
 
-    def propose(self, index: int, operation: str,
-                candidate_properties: Dict[str, float]) -> ExtensionCandidate:
+    def propose(
+        self, index: int, operation: str, candidate_properties: dict[str, float]
+    ) -> ExtensionCandidate:
         """Propose a new action for the ontology.
 
         Args:
@@ -143,10 +143,12 @@ class ExtensionSandbox:
             for key in empirical:
                 noise = (secrets.randbelow(11) - 5) / 100.0
                 empirical[key] = round(max(0.0, min(1.0, empirical[key] + noise)), 3)
-            candidate.monitor_reports.append({
-                "round": r + 1,
-                "observed": dict(empirical),
-            })
+            candidate.monitor_reports.append(
+                {
+                    "round": r + 1,
+                    "observed": dict(empirical),
+                }
+            )
         candidate.empirical_properties = empirical
 
     def audit(self, index: int, tolerance: float = 0.1) -> bool:
@@ -172,8 +174,7 @@ class ExtensionSandbox:
                 return False
         return True
 
-    def finalize(self, index: int,
-                 implementation_bytes: bytes) -> Optional[ActionBinding]:
+    def finalize(self, index: int, implementation_bytes: bytes) -> ActionBinding | None:
         """Finalise a candidate, registering it in the ontology.
 
         Requires both multisig authorisation **and** a passing audit.
@@ -206,6 +207,6 @@ class ExtensionSandbox:
         candidate.runtime_hash = binding.runtime_hash
         return binding
 
-    def get_candidate(self, index: int) -> Optional[ExtensionCandidate]:
+    def get_candidate(self, index: int) -> ExtensionCandidate | None:
         """Look up a candidate by its action index."""
         return self._candidates.get(index)

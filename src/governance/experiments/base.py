@@ -18,7 +18,7 @@ Real-world analogy:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..models import GovernanceDecision, Proposal
 from ..speaker import SpeakerStateMachine
@@ -62,8 +62,8 @@ class ExperimentMetrics:
     contract_revocations: int = 0
     veto_count: int = 0
     falsification_count: int = 0
-    identity_drift: List[float] = field(default_factory=list)
-    governance_latencies: List[float] = field(default_factory=list)
+    identity_drift: list[float] = field(default_factory=list)
+    governance_latencies: list[float] = field(default_factory=list)
 
 
 class ExperimentScenario(ABC):
@@ -81,14 +81,14 @@ class ExperimentScenario(ABC):
     def __init__(self, speaker: SpeakerStateMachine):
         self.speaker = speaker
         self.metrics = ExperimentMetrics()
-        self._history: List[StepResult] = []
+        self._history: list[StepResult] = []
 
     @abstractmethod
     def reset(self):
         """Reset the scenario to its initial state."""
 
     @abstractmethod
-    def get_proposals(self, state: Any) -> List[Proposal]:
+    def get_proposals(self, state: Any) -> list[Proposal]:
         """Generate proposals based on the current world state.
 
         Args:
@@ -123,8 +123,12 @@ class ExperimentScenario(ABC):
             The next world state.
         """
 
-    def step(self, state: Any, decision_class: str = "routine",
-             external_decision: Optional[GovernanceDecision] = None) -> StepResult:
+    def step(
+        self,
+        state: Any,
+        decision_class: str = "routine",
+        external_decision: GovernanceDecision | None = None,
+    ) -> StepResult:
         """Run a single governance experiment step.
 
         Args:
@@ -162,6 +166,6 @@ class ExperimentScenario(ABC):
         return result
 
     @property
-    def history(self) -> List[StepResult]:
+    def history(self) -> list[StepResult]:
         """The full step history as an immutable list."""
         return list(self._history)

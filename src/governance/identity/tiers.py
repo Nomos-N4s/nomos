@@ -22,7 +22,7 @@ Real-world analogy:
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Optional
+from typing import Any
 
 
 class MutabilityTier(Enum):
@@ -33,6 +33,7 @@ class MutabilityTier(Enum):
     through governance; CONSTITUTIONAL requires unanimity + external keys;
     OPERATIONAL needs supermajority; DYNAMIC only needs a simple majority).
     """
+
     IMMUTABLE = auto()
     CONSTITUTIONAL = auto()
     OPERATIONAL = auto()
@@ -120,8 +121,7 @@ class TieredMutability:
         self._parameter_tiers: dict = {}
         self._values: dict = {}
 
-    def register_parameter(self, name: str, initial_value: Any,
-                            tier: MutabilityTier):
+    def register_parameter(self, name: str, initial_value: Any, tier: MutabilityTier):
         """Register a parameter with its initial value and mutability tier.
 
         Args:
@@ -132,7 +132,7 @@ class TieredMutability:
         self._parameter_tiers[name] = tier
         self._values[name] = initial_value
 
-    def get_tier(self, name: str) -> Optional[MutabilityTier]:
+    def get_tier(self, name: str) -> MutabilityTier | None:
         """Get the mutability tier for a named parameter.
 
         Args:
@@ -143,7 +143,7 @@ class TieredMutability:
         """
         return self._parameter_tiers.get(name)
 
-    def get_value(self, name: str) -> Optional[Any]:
+    def get_value(self, name: str) -> Any | None:
         """Get the current value of a parameter.
 
         Args:

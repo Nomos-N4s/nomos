@@ -20,26 +20,29 @@ Episode ends when all apples collected or ``max_steps`` reached.
 """
 
 import json
-import math
-import os
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
-from ..models import Proposal, PriorityTag
-from ..speaker import SpeakerStateMachine
 from ..committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExamplePlanningMember, ExampleCuriosityMember, ExampleSocialMember,
+    ExampleCuriosityMember,
+    ExampleIntegrityMember,
     ExampleMemoryMember,
+    ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
+    ExampleSocialMember,
 )
+from ..models import PriorityTag, Proposal
+from ..speaker import SpeakerStateMachine
 
 _gymnasium_available = False
 try:
     import gymnasium as _gymnasium_mod
     from gymnasium import spaces
+
     _gymnasium_available = True
 except ImportError:
     pass
@@ -47,6 +50,7 @@ except ImportError:
 _old_gym_available = False
 try:
     import gym as _old_gym_mod
+
     _old_gym_available = True
 except ImportError:
     pass
@@ -61,6 +65,7 @@ if _gymnasium_available:
     GYM_AVAILABLE = True
 elif _old_gym_available:
     from gym import spaces
+
     BASES = [_old_gym_mod.Env]
     GYM_AVAILABLE = True
 
@@ -96,13 +101,13 @@ class GovernanceGridWorld(*BASES):
 
     def __init__(
         self,
-        parliament: Optional[SpeakerStateMachine] = None,
+        parliament: SpeakerStateMachine | None = None,
         size: int = 10,
         seed: int = 42,
         poison_ratio: float = 0.2,
         apple_count: int = 8,
         max_steps: int = 200,
-        live_log_path: Optional[str] = None,
+        live_log_path: str | None = None,
     ):
         super().__init__()
         self.size = size
@@ -120,23 +125,28 @@ class GovernanceGridWorld(*BASES):
             self.parliament = parliament
 
         self._observation_dim = size * size * 4 + 2
-        self.observation_space = spaces.Box(
-            low=0.0, high=1.0,
-            shape=(self._observation_dim,),
-            dtype=np.float32,
-        ) if GYM_AVAILABLE else None
+        self.observation_space = (
+            spaces.Box(
+                low=0.0,
+                high=1.0,
+                shape=(self._observation_dim,),
+                dtype=np.float32,
+            )
+            if GYM_AVAILABLE
+            else None
+        )
         self.action_space = spaces.Discrete(4) if GYM_AVAILABLE else None
 
-        self._grid: List[List[int]] = []
-        self._pos: Tuple[int, int] = (0, 0)
-        self._poison_timers: List[Tuple[int, int, int]] = []
+        self._grid: list[list[int]] = []
+        self._pos: tuple[int, int] = (0, 0)
+        self._poison_timers: list[tuple[int, int, int]] = []
         self._apples_collected = 0
         self._total_poison_eaten = 0
         self._step_count = 0
         self._total_reward = 0.0
         self._violations = 0
         self._veto_count = 0
-        self._decision_history: List[Dict] = []
+        self._decision_history: list[dict] = []
         self._original_apples = apple_count
         self._seed = seed
 
@@ -157,7 +167,9 @@ class GovernanceGridWorld(*BASES):
             default_action="none",
         )
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(
+        self, *, seed: int | None = None, options: dict | None = None
+    ) -> tuple[np.ndarray, dict]:
         """Reset the environment. Gymnasium API."""
         if seed is not None:
             self._seed = seed
@@ -219,8 +231,10 @@ class GovernanceGridWorld(*BASES):
         nx, ny = self._pos[0] + dx, self._pos[1] + dy
         if not (0 <= nx < self.size and 0 <= ny < self.size):
             return Proposal(
-                member_id="reward", action="none",
-                tag=PriorityTag.ROUTINE, timestamp=time.time(),
+                member_id="reward",
+                action="none",
+                tag=PriorityTag.ROUTINE,
+                timestamp=time.time(),
                 metadata={"expected_reward": 0.0, "risk": 1.0, "identity_coherence": 0.0},
             )
         tile = self._grid[nx][ny]
@@ -312,7 +326,7 @@ class GovernanceGridWorld(*BASES):
 
         return reward
 
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict]:
+    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
         self._step_count += 1
 
         if self.parliament is not None:
@@ -373,14 +387,14 @@ class GovernanceGridWorld(*BASES):
 
         return self._get_obs(), reward, terminated, truncated, info
 
-    def _append_live_log(self, step_data: Dict):
+    def _append_live_log(self, step_data: dict):
         step_data["grid"] = [row[:] for row in self._grid]
         step_data["poison_timers"] = list(self._poison_timers)
         line = json.dumps(step_data)
         with open(self.live_log_path, "a") as f:
             f.write(line + "\n")
 
-    def get_action_mask(self) -> List[int]:
+    def get_action_mask(self) -> list[int]:
         """Return list of valid action indices (not blocked by walls)."""
         valid = []
         for i, (dx, dy) in enumerate(DIRECTION_VECTORS):
@@ -398,11 +412,11 @@ class GovernanceGridWorld(*BASES):
         return self._step_count
 
     @property
-    def decision_history(self) -> List[Dict]:
+    def decision_history(self) -> list[dict]:
         return list(self._decision_history)
 
     @property
-    def metrics(self) -> Dict[str, Any]:
+    def metrics(self) -> dict[str, Any]:
         return {
             "total_reward": self._total_reward,
             "steps": self._step_count,

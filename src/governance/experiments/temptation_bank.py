@@ -16,12 +16,12 @@ Real-world analogy:
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from ..models import Proposal, PriorityTag, GovernanceDecision
+from ..contracts.contract import ContractRegistry, UlyssesContract
+from ..models import GovernanceDecision, PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
-from ..contracts.contract import UlyssesContract, ContractRegistry
-from .base import ExperimentScenario, StepResult, ExperimentMetrics
+from .base import ExperimentMetrics, ExperimentScenario, StepResult
 
 
 class TemptationBank(ExperimentScenario):
@@ -36,12 +36,11 @@ class TemptationBank(ExperimentScenario):
         initial_balance: Starting resource balance (default 10.0).
     """
 
-    def __init__(self, speaker: SpeakerStateMachine,
-                 initial_balance: float = 10.0):
+    def __init__(self, speaker: SpeakerStateMachine, initial_balance: float = 10.0):
         super().__init__(speaker)
         self.balance = initial_balance
         self.contracts = ContractRegistry()
-        self._loan_timers: List[int] = []
+        self._loan_timers: list[int] = []
         self._ban_proposed = False
 
     def reset(self):
@@ -52,39 +51,57 @@ class TemptationBank(ExperimentScenario):
         self._ban_proposed = False
         self.metrics = ExperimentMetrics()
 
-    def get_proposals(self, state: Any) -> List[Proposal]:
+    def get_proposals(self, state: Any) -> list[Proposal]:
         """Generate work, loan, and ban-proposal actions.
 
         Loans are only offered while action index 7 is not already restricted
         by an active Ulysses Contract. The ban proposal is offered only once.
         """
         proposals = []
-        proposals.append(Proposal(
-            member_id="reward",
-            action="work",
-            tag=PriorityTag.ROUTINE,
-            timestamp=time.time(),
-            metadata={"expected_reward": 2.0, "risk": 0.0, "identity_coherence": 1.0,
-                      "long_term_value": 0.5},
-        ))
-        if 7 not in self.contracts.active_restrictions():
-            proposals.append(Proposal(
+        proposals.append(
+            Proposal(
                 member_id="reward",
-                action="take_loan",
+                action="work",
                 tag=PriorityTag.ROUTINE,
                 timestamp=time.time(),
-                metadata={"expected_reward": 10.0, "risk": 0.7, "identity_coherence": 0.3,
-                          "long_term_value": -0.5},
-            ))
+                metadata={
+                    "expected_reward": 2.0,
+                    "risk": 0.0,
+                    "identity_coherence": 1.0,
+                    "long_term_value": 0.5,
+                },
+            )
+        )
+        if 7 not in self.contracts.active_restrictions():
+            proposals.append(
+                Proposal(
+                    member_id="reward",
+                    action="take_loan",
+                    tag=PriorityTag.ROUTINE,
+                    timestamp=time.time(),
+                    metadata={
+                        "expected_reward": 10.0,
+                        "risk": 0.7,
+                        "identity_coherence": 0.3,
+                        "long_term_value": -0.5,
+                    },
+                )
+            )
         if not self._ban_proposed:
-            proposals.append(Proposal(
-                member_id="planning",
-                action="propose_ban_loans",
-                tag=PriorityTag.HIGH_IMPACT,
-                timestamp=time.time(),
-                metadata={"expected_reward": 0.0, "risk": 0.0, "identity_coherence": 1.0,
-                          "long_term_value": 0.9},
-            ))
+            proposals.append(
+                Proposal(
+                    member_id="planning",
+                    action="propose_ban_loans",
+                    tag=PriorityTag.HIGH_IMPACT,
+                    timestamp=time.time(),
+                    metadata={
+                        "expected_reward": 0.0,
+                        "risk": 0.0,
+                        "identity_coherence": 1.0,
+                        "long_term_value": 0.9,
+                    },
+                )
+            )
         return proposals
 
     def compute_reward(self, state, decision: GovernanceDecision) -> float:

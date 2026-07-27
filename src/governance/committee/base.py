@@ -48,8 +48,7 @@ class ParliamentMember(ABC):
             per governance cycle (the κ₂ budget enforcement parameter).
     """
 
-    def __init__(self, member_id: str, veto_threshold: float,
-                 weight: float, budget: int):
+    def __init__(self, member_id: str, veto_threshold: float, weight: float, budget: int):
         self.member_id = member_id
         self.veto_threshold = veto_threshold
         self.weight = weight

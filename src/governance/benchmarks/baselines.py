@@ -18,25 +18,21 @@ Real-world analogy:
 """
 
 import random
-import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
-from ..models import Proposal, GovernanceDecision
+from ..models import GovernanceDecision, Proposal
 
 
 class BaselineGovernance(ABC):
     """Abstract baseline: replace the Speaker with a simpler decision rule."""
 
     @abstractmethod
-    def decide(self, state: Any, proposals: List[Proposal]) -> GovernanceDecision:
-        ...
+    def decide(self, state: Any, proposals: list[Proposal]) -> GovernanceDecision: ...
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
 
 class MonolithicRL(BaselineGovernance):

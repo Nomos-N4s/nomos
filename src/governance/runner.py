@@ -19,13 +19,14 @@ import os
 import sys
 import time
 from datetime import datetime
-from typing import List
 
+from .benchmarks.report import print_all_reports
 from .benchmarks.run_all import (
-    run_gridworld_experiments, run_temptation_experiments,
-    run_drift_experiments, run_deadlock_experiments,
+    run_deadlock_experiments,
+    run_drift_experiments,
+    run_gridworld_experiments,
+    run_temptation_experiments,
 )
-from .benchmarks.report import print_all_reports, format_report
 from .experiments.metrics import ExperimentReport
 
 ALL_STRATEGIES = ["governance", "monolithic_rl", "random", "static_masking", "veto_only"]
@@ -40,23 +41,39 @@ def _resolve_csv_path(csv_arg):
     return csv_arg
 
 
-def _export_csv(reports: List[ExperimentReport], path: str):
+def _export_csv(reports: list[ExperimentReport], path: str):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["timestamp", "scenario", "strategy", "seed", "step",
-                     "reward", "violations", "deadlocks", "runtime_ms"])
+        w.writerow(
+            [
+                "timestamp",
+                "scenario",
+                "strategy",
+                "seed",
+                "step",
+                "reward",
+                "violations",
+                "deadlocks",
+                "runtime_ms",
+            ]
+        )
         for r in reports:
             ts = datetime.now().isoformat()
             for row in r.metadata.get("step_records", []):
-                w.writerow([ts, r.metadata.get("scenario", ""),
-                            r.metadata.get("strategy", ""),
-                            r.metadata.get("seed", ""),
-                            row.get("step", ""),
-                            row.get("reward", ""),
-                            row.get("violations", ""),
-                            row.get("deadlocks", ""),
-                            row.get("runtime_ms", "")])
+                w.writerow(
+                    [
+                        ts,
+                        r.metadata.get("scenario", ""),
+                        r.metadata.get("strategy", ""),
+                        r.metadata.get("seed", ""),
+                        row.get("step", ""),
+                        row.get("reward", ""),
+                        row.get("violations", ""),
+                        row.get("deadlocks", ""),
+                        row.get("runtime_ms", ""),
+                    ]
+                )
 
 
 def _build_baseline_flags(args) -> dict:
@@ -70,7 +87,7 @@ def _build_baseline_flags(args) -> dict:
     return flags
 
 
-def _run_all_scenarios(flags: dict) -> List[ExperimentReport]:
+def _run_all_scenarios(flags: dict) -> list[ExperimentReport]:
     all_reports = []
     for runner, scenario in [
         (run_gridworld_experiments, "GridWorld"),
@@ -88,6 +105,7 @@ def _run_all_scenarios(flags: dict) -> List[ExperimentReport]:
 
 def cmd_speaker(args):
     from .speaker import _run_speaker_quick_test
+
     _run_speaker_quick_test()
 
 
@@ -142,10 +160,12 @@ def cmd_all(args):
         for r in reps:
             strat = r.metadata.get("strategy", "governance")
             seed = r.metadata.get("seed", 0)
-            print(f"    [{strat} seed={seed}] {r.name}: steps={r.total_steps} "
-                  f"reward={r.total_reward:.1f} "
-                  f"deadlocks={r.deadlock_count} "
-                  f"violations={r.constraint_violations}")
+            print(
+                f"    [{strat} seed={seed}] {r.name}: steps={r.total_steps} "
+                f"reward={r.total_reward:.1f} "
+                f"deadlocks={r.deadlock_count} "
+                f"violations={r.constraint_violations}"
+            )
     print(f"\nTotal time: {elapsed:.2f}s")
     print(f"Total reports: {len(reports)}")
 
@@ -155,16 +175,19 @@ def cmd_all(args):
         try:
             from .benchmarks.analysis import run_analysis
             from .benchmarks.figures import generate_all_figures
+
             result = run_analysis(reports, "results")
-            print(f"Analysis: {len(result['effect_sizes'])} effect sizes, "
-                  f"{len(result['hacking_episodes'])} hacking episodes")
+            print(
+                f"Analysis: {len(result['effect_sizes'])} effect sizes, "
+                f"{len(result['hacking_episodes'])} hacking episodes"
+            )
             generate_all_figures(reports, "results/figures")
         except Exception as e:
             print(f"Post-benchmark analysis skipped: {e}")
 
 
 def cmd_prove(args):
-    from .prove.runner import run_all, print_summary, export_json, filter_by_chapter
+    from .prove.runner import export_json, filter_by_chapter, print_summary, run_all
 
     results = run_all()
 
@@ -189,6 +212,7 @@ def cmd_prove(args):
     csv_path = _resolve_csv_path(getattr(args, "csv", None))
     if csv_path:
         import csv as _csv
+
         os.makedirs(os.path.dirname(csv_path) or ".", exist_ok=True)
         with open(csv_path, "w", newline="") as f:
             w = _csv.writer(f)
@@ -200,34 +224,46 @@ def cmd_prove(args):
 
 def cmd_adversary(args):
     from .experiments.rl_adversary import main as adversary_main
+
     sys.argv = ["rl_adversary"] + args.forward_args
     adversary_main()
 
 
 def _add_shared_args(parser):
-    parser.add_argument("--steps", type=int, default=1000,
-                        help="Number of steps per run (default: 1000)")
-    parser.add_argument("--seeds", type=int, default=1,
-                        help="Number of random seeds per strategy-scenario (default: 1)")
-    parser.add_argument("--baselines", action="store_true",
-                        help="Run all baseline strategies alongside governance")
-    parser.add_argument("--strategies", type=str,
-                        help="Comma-separated sub-list for selective benchmarking")
-    parser.add_argument("--csv", nargs="?", const="", default=None,
-                        help="Export results to CSV (default: results/run_<timestamp>.csv)")
+    parser.add_argument(
+        "--steps", type=int, default=1000, help="Number of steps per run (default: 1000)"
+    )
+    parser.add_argument(
+        "--seeds",
+        type=int,
+        default=1,
+        help="Number of random seeds per strategy-scenario (default: 1)",
+    )
+    parser.add_argument(
+        "--baselines", action="store_true", help="Run all baseline strategies alongside governance"
+    )
+    parser.add_argument(
+        "--strategies", type=str, help="Comma-separated sub-list for selective benchmarking"
+    )
+    parser.add_argument(
+        "--csv",
+        nargs="?",
+        const="",
+        default=None,
+        help="Export results to CSV (default: results/run_<timestamp>.csv)",
+    )
 
     def _validate_positive(parser, ns):
         if ns.steps is not None and ns.steps < 1:
             parser.error("--steps must be > 0")
         if ns.seeds is not None and ns.seeds < 1:
             parser.error("--seeds must be > 0")
+
     parser.set_defaults(_validate=_validate_positive)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Governance Layer Reference Implementation"
-    )
+    parser = argparse.ArgumentParser(description="Governance Layer Reference Implementation")
     sub = parser.add_subparsers(dest="command")
 
     p_speaker = sub.add_parser("speaker", help="Run quick speaker sanity test")
@@ -236,12 +272,14 @@ def main():
     for name in ("gridworld", "temptation", "drift", "deadlock"):
         p = sub.add_parser(name, help=f"Run {name} experiment")
         _add_shared_args(p)
-        p.set_defaults(func=lambda ns, _n=name: {
-            "gridworld": cmd_gridworld,
-            "temptation": cmd_temptation,
-            "drift": cmd_drift,
-            "deadlock": cmd_deadlock,
-        }[name](ns))
+        p.set_defaults(
+            func=lambda ns, _n=name: {
+                "gridworld": cmd_gridworld,
+                "temptation": cmd_temptation,
+                "drift": cmd_drift,
+                "deadlock": cmd_deadlock,
+            }[name](ns)
+        )
 
     p_all = sub.add_parser("all", help="Run all experiments")
     _add_shared_args(p_all)
@@ -254,8 +292,13 @@ def main():
     p_prove.add_argument("--ch4", action="store_true", help="Chapter 4 predictions")
     p_prove.add_argument("--single", type=int, metavar="N", help="Single prediction N (1-12)")
     p_prove.add_argument("--json", type=str, help="Export to JSON")
-    p_prove.add_argument("--csv", nargs="?", const="", default=None,
-                         help="Export to CSV (default: results/run_<timestamp>.csv)")
+    p_prove.add_argument(
+        "--csv",
+        nargs="?",
+        const="",
+        default=None,
+        help="Export to CSV (default: results/run_<timestamp>.csv)",
+    )
     p_prove.set_defaults(func=cmd_prove)
 
     p_adv = sub.add_parser("adversary", help="RL adversary experiment (needs torch+sb3)")
@@ -266,9 +309,9 @@ def main():
     if args.command is None:
         parser.print_help()
         sys.exit(1)
-    if hasattr(args, 'steps') and args.steps is not None and args.steps < 1:
+    if hasattr(args, "steps") and args.steps is not None and args.steps < 1:
         parser.error("--steps must be > 0")
-    if hasattr(args, 'seeds') and args.seeds is not None and args.seeds < 1:
+    if hasattr(args, "seeds") and args.seeds is not None and args.seeds < 1:
         parser.error("--seeds must be > 0")
     args.func(args)
 

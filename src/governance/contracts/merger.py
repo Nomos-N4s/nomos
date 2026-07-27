@@ -18,14 +18,11 @@ Real-world analogy:
     to take effect.
 """
 
-from typing import List, Set
-
 from ..models import GovernanceDecision
 from .contract import ContractRegistry
 
 
-def merge_masks(decision: GovernanceDecision,
-                registry: ContractRegistry) -> GovernanceDecision:
+def merge_masks(decision: GovernanceDecision, registry: ContractRegistry) -> GovernanceDecision:
     """Apply all active contract restrictions to a governance decision.
 
     Takes the Parliament's decision (which includes an action mask in
@@ -51,7 +48,7 @@ def merge_masks(decision: GovernanceDecision,
     return decision
 
 
-def _extract_mask(decision: GovernanceDecision) -> Set[int]:
+def _extract_mask(decision: GovernanceDecision) -> set[int]:
     """Extract the action mask from a governance decision's metadata.
 
     Args:
@@ -67,8 +64,7 @@ def _extract_mask(decision: GovernanceDecision) -> Set[int]:
     return set()
 
 
-def apply_restrictions(allowed_indices: Set[int],
-                       restricted: Set[int]) -> Set[int]:
+def apply_restrictions(allowed_indices: set[int], restricted: set[int]) -> set[int]:
     """Subtract restricted actions from an allowed set.
 
     Pure set arithmetic — the fundamental operation of contract

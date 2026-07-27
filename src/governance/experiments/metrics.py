@@ -13,8 +13,8 @@ Real-world analogy:
 
 import json
 import statistics
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -46,9 +46,9 @@ class ExperimentReport:
     veto_count: int
     final_identity_drift: float
     governance_latency_avg: float
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to a plain dict for JSON serialisation."""
         return asdict(self)
 
@@ -79,11 +79,13 @@ def generate_report(name: str, metrics, history) -> ExperimentReport:
         constraint_violations=metrics.constraint_violations,
         veto_count=metrics.veto_count,
         final_identity_drift=metrics.identity_drift[-1] if metrics.identity_drift else 0.0,
-        governance_latency_avg=statistics.mean(metrics.governance_latencies) if metrics.governance_latencies else 0.0,
+        governance_latency_avg=statistics.mean(metrics.governance_latencies)
+        if metrics.governance_latencies
+        else 0.0,
     )
 
 
-def compare_reports(reports: List[ExperimentReport]) -> Dict[str, Any]:
+def compare_reports(reports: list[ExperimentReport]) -> dict[str, Any]:
     """Compare multiple reports against the first (baseline).
 
     Computes percentage changes in reward, absolute changes in deadlock
@@ -101,7 +103,10 @@ def compare_reports(reports: List[ExperimentReport]) -> Dict[str, Any]:
         improvement = {}
         if baseline.avg_reward_per_step > 0:
             improvement["reward_change"] = round(
-                (r.avg_reward_per_step - baseline.avg_reward_per_step) / baseline.avg_reward_per_step * 100, 1
+                (r.avg_reward_per_step - baseline.avg_reward_per_step)
+                / baseline.avg_reward_per_step
+                * 100,
+                1,
             )
         improvement["deadlock_rate_change"] = round(
             (r.deadlock_rate - baseline.deadlock_rate) * 100, 2

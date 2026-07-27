@@ -10,7 +10,7 @@ Real-world analogy:
     (violations).
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from ..experiments.metrics import ExperimentReport, compare_reports
 
@@ -37,7 +37,7 @@ def format_report(report: ExperimentReport) -> str:
     return "\n".join(lines)
 
 
-def format_comparison(baseline_name: str, comparisons: Dict[str, Any]) -> str:
+def format_comparison(baseline_name: str, comparisons: dict[str, Any]) -> str:
     """Format strategy comparisons against a baseline.
 
     Args:
@@ -57,7 +57,7 @@ def format_comparison(baseline_name: str, comparisons: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def print_all_reports(reports: List[ExperimentReport]):
+def print_all_reports(reports: list[ExperimentReport]):
     """Print all reports to stdout with an optional comparison section.
 
     Args:
@@ -69,6 +69,8 @@ def print_all_reports(reports: List[ExperimentReport]):
     if len(reports) > 1:
         comparison = compare_reports(reports)
         if len(comparison) > 1:
-            print(format_comparison(reports[0].name, {
-                k: v for k, v in comparison.items() if k != "baseline"
-            }))
+            print(
+                format_comparison(
+                    reports[0].name, {k: v for k, v in comparison.items() if k != "baseline"}
+                )
+            )

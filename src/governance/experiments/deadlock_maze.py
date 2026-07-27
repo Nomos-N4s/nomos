@@ -12,13 +12,13 @@ Real-world analogy:
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from ..models import Proposal, PriorityTag, GovernanceDecision
+from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
+from ..models import GovernanceDecision, PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from ..tee.watchdog import DeadlockBreaker
-from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
-from .base import ExperimentScenario, StepResult, ExperimentMetrics
+from .base import ExperimentMetrics, ExperimentScenario, StepResult
 
 PHASE_NORMAL = 0
 PHASE_DEADLOCK = 1
@@ -41,9 +41,9 @@ class DeadlockMaze(ExperimentScenario):
             :const:`~..identity.params.DEFAULT_PARAMETER_ENVELOPE`).
     """
 
-    def __init__(self, speaker: SpeakerStateMachine,
-                 deadlock_breaker: DeadlockBreaker,
-                 params_envelope=None):
+    def __init__(
+        self, speaker: SpeakerStateMachine, deadlock_breaker: DeadlockBreaker, params_envelope=None
+    ):
         super().__init__(speaker)
         self.breaker = deadlock_breaker
         self.params = params_envelope or DEFAULT_PARAMETER_ENVELOPE
@@ -56,7 +56,7 @@ class DeadlockMaze(ExperimentScenario):
         self._phase = PHASE_NORMAL
         self.metrics = ExperimentMetrics()
 
-    def get_proposals(self, state: Any) -> List[Proposal]:
+    def get_proposals(self, state: Any) -> list[Proposal]:
         """During normal phase, propose tightening the quorum threshold."""
         return [
             Proposal(
@@ -64,8 +64,12 @@ class DeadlockMaze(ExperimentScenario):
                 action="tighten_quorum",
                 tag=PriorityTag.CRITICAL_SAFETY,
                 timestamp=time.time(),
-                metadata={"expected_reward": 0.0, "risk": 0.0, "identity_coherence": 1.0,
-                          "long_term_value": 0.6},
+                metadata={
+                    "expected_reward": 0.0,
+                    "risk": 0.0,
+                    "identity_coherence": 1.0,
+                    "long_term_value": 0.6,
+                },
             ),
         ]
 
@@ -87,9 +91,7 @@ class DeadlockMaze(ExperimentScenario):
             if external_decision is not None:
                 decision = external_decision
             else:
-                decision = self.speaker.run_governance_cycle(
-                    state, proposals, decision_class
-                )
+                decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
             if decision.action == "tighten_quorum" and not decision.is_default:
                 self.params.set("quorum_threshold", 0.9)
                 self._phase = PHASE_DEADLOCK
@@ -104,9 +106,7 @@ class DeadlockMaze(ExperimentScenario):
         if external_decision is not None:
             decision = external_decision
         else:
-            decision = self.speaker.run_governance_cycle(
-                state, proposals, decision_class
-            )
+            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
         self.breaker.record_cycle(not decision.is_default)
         result = StepResult(decision=decision, state=self._phase, reward=0.0)
         self.metrics.total_steps += 1

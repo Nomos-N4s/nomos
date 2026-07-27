@@ -16,10 +16,9 @@ Usage:
 """
 
 import argparse
-import json
 import sys
 
-from .rl_train import train_ppo, benchmark, evaluate, make_env
+from .rl_train import benchmark, evaluate, make_env, train_ppo
 
 
 def cmd_train(args):

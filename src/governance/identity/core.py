@@ -22,7 +22,6 @@ Real-world analogy:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List
 
 
 class CommitmentType(Enum):
@@ -39,6 +38,7 @@ class CommitmentType(Enum):
                            "always identify as AI to humans").
     ====================== =====================================================
     """
+
     VALUE_PRINCIPLE = "value_principle"
     BOUNDARY_CONDITION = "boundary_condition"
     RELATIONSHIP = "relationship"
@@ -61,6 +61,7 @@ class CommitmentThreshold(Enum):
     ``MAJORITY``           Requires simple majority (same as routine decisions).
     ====================== =====================================================
     """
+
     UNANIMITY_MULTISIG = "unanimity + external_multisig"
     SUPERMAJORITY = "supermajority"
     MAJORITY = "majority"
@@ -80,6 +81,7 @@ class EnforcementMode(Enum):
                            (cannot be overridden by ordinary contracts).
     ====================== =====================================================
     """
+
     INTEGRITY_VETO = "integrity_committee_veto"
     EXTERNAL_AUDIT = "external_audit"
     CONSTITUTIONAL_CONTRACT = "constitutional_contract"
@@ -117,7 +119,7 @@ class CoreCommitment:
     statement: str
     threshold: CommitmentThreshold
     enforcement: EnforcementMode
-    affected_action_indices: List[int] = field(default_factory=list)
+    affected_action_indices: list[int] = field(default_factory=list)
 
     def __repr__(self):
         return f"<Commitment {self.type.value}: {self.statement[:40]}>"
@@ -137,8 +139,8 @@ class IdentityCore:
     """
 
     def __init__(self):
-        self._commitments: List[CoreCommitment] = []
-        self._identity_vector: List[float] = []
+        self._commitments: list[CoreCommitment] = []
+        self._identity_vector: list[float] = []
 
     def add_commitment(self, commitment: CoreCommitment):
         """Register a new core commitment and rebuild the identity vector.
@@ -164,7 +166,7 @@ class IdentityCore:
         self._identity_vector = vec
 
     @property
-    def identity_vector(self) -> List[float]:
+    def identity_vector(self) -> list[float]:
         """The canonical identity embedding.
 
         The Integrity member uses this vector to evaluate proposal
@@ -174,7 +176,7 @@ class IdentityCore:
         return list(self._identity_vector)
 
     @property
-    def commitments(self) -> List[CoreCommitment]:
+    def commitments(self) -> list[CoreCommitment]:
         """All registered core commitments (read-only copy)."""
         return list(self._commitments)
 

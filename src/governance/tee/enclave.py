@@ -20,8 +20,8 @@ Real-world analogy:
 
 import hashlib
 import secrets
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from ..identity.keys import GenesisManifest
 
@@ -55,9 +55,9 @@ class SimulatedEnclave:
             initialise the enclave with the genesis root of trust.
     """
 
-    def __init__(self, genesis: Optional[GenesisManifest] = None):
+    def __init__(self, genesis: GenesisManifest | None = None):
         self._genesis = genesis
-        self._sealed_storage: Dict[str, Any] = {}
+        self._sealed_storage: dict[str, Any] = {}
         self._measurement = hashlib.sha256(secrets.token_bytes(32)).hexdigest()
         self._attested = False
 
@@ -72,9 +72,7 @@ class SimulatedEnclave:
             An :class:`AttestationReport` with the current measurement.
         """
         self._attested = True
-        sealed_hash = hashlib.sha256(
-            str(self._sealed_storage).encode()
-        ).hexdigest()
+        sealed_hash = hashlib.sha256(str(self._sealed_storage).encode()).hexdigest()
         return AttestationReport(
             enclave_hash=self._measurement,
             is_debug=False,
@@ -93,7 +91,7 @@ class SimulatedEnclave:
         """
         self._sealed_storage[key] = value
 
-    def unseal(self, key: str) -> Optional[Any]:
+    def unseal(self, key: str) -> Any | None:
         """Retrieve data from sealed storage.
 
         Args:
