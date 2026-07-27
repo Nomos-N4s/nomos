@@ -56,7 +56,7 @@ class TestAllPredictions:
         failed = [r for r in results if not r.passed]
         assert len(failed) == 0, (
             f"{len(failed)} predictions failed:\n" +
-            "\n".join(f"  P{r.id:02d} ({r.chapter} ??{r.section}): {r.evidence}" for r in failed)
+            "\n".join(f"  P{r.id:02d} ({r.chapter} §{r.section}): {r.evidence}" for r in failed)
         )
 
     def test_all_predictions_list_length(self):
