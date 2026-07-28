@@ -34,7 +34,7 @@ def _ensure_dir(path: str):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
 
 
-def _ci_to_error(values: list[float]) -> tuple[list[float], list[float]]:
+def _ci_to_error(values: list[float], n_resamples: int = 100) -> tuple[list[float], list[float]]:
     """Convert bootstrap CI bounds to matplotlib-compatible asymmetric error.
 
     For a bar plot, matplotlib ``yerr`` expects ``(2, N)`` or ``(N,)``.
@@ -43,6 +43,8 @@ def _ci_to_error(values: list[float]) -> tuple[list[float], list[float]]:
 
     Args:
         values: Observed values.
+        n_resamples: Bootstrap resamples (default 100 — sufficient for
+            visualization; increase for publication-grade precision).
 
     Returns:
         ``(lower_errors, upper_errors)`` — each a list of length 1
@@ -51,7 +53,7 @@ def _ci_to_error(values: list[float]) -> tuple[list[float], list[float]]:
     if not values:
         return ([0.0], [0.0])
     mean = statistics.mean(values)
-    lo, hi = _bootstrap_ci(values)
+    lo, hi = _bootstrap_ci(values, n_resamples=n_resamples)
     return ([mean - lo], [hi - mean])
 
 
@@ -110,7 +112,7 @@ def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "resul
             cis = []
             for i in range(min_len):
                 step_vals = [c[i] for c in aligned]
-                lo, hi = _bootstrap_ci(step_vals)
+                lo, hi = _bootstrap_ci(step_vals, n_resamples=100)
                 cis.append((lo, hi))
 
             x = list(range(min_len))
