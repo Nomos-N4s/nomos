@@ -172,8 +172,8 @@ $$
 
 They address different dimensions:
 - **Procedural inertia** makes revocation *hard* (high bar)
-- **Distributed monitors** makes bypassing *expensive* (scaling cost)
-- **Timelocks** makes violation *slow* (detectable delay)
+- **Distributed monitors** make bypassing *expensive* (scaling cost)
+- **Timelocks** make violation *slow* (detectable delay)
 
 No single mechanism guarantees inviolability. Together, they create a defense-in-depth where breaking a contract requires simultaneously overcoming a procedural supermajority, corrupting $N$ independent architectures, and waiting through a timelock window.
 
