@@ -77,9 +77,7 @@ def _cohens_d(control: list[float], treatment: list[float]) -> float:
     return (m1 - m2) / pooled
 
 
-def _cohens_d_ci(
-    control: list[float], treatment: list[float], ci: float = 0.95
-) -> dict:
+def _cohens_d_ci(control: list[float], treatment: list[float], ci: float = 0.95) -> dict:
     """Confidence interval for Cohen's d using the Delta-method approximation.
 
     Args:
@@ -110,9 +108,7 @@ def _cohens_d_ci(
     }
 
 
-def _mannwhitney_u_exact(
-    x: list[float], y: list[float]
-) -> tuple[float, float]:
+def _mannwhitney_u_exact(x: list[float], y: list[float]) -> tuple[float, float]:
     """Exact two-tailed p-value for Mann-Whitney U via combinatorial enumeration.
 
     Only valid when max(n1, n2) <= 8.  Falls back to normal approximation
@@ -310,13 +306,57 @@ def _normal_cdf(x: float) -> float:
 
 
 _SHAPIRO_WILK_CRITICAL = [
-    0, 0, 0,  # 0, 1, 2 — not used
-    0.787, 0.748, 0.762, 0.788, 0.803, 0.818, 0.829, 0.842,  # 3-10
-    0.850, 0.859, 0.866, 0.874, 0.881, 0.887, 0.892, 0.897,  # 11-18
-    0.901, 0.905, 0.908, 0.911, 0.914, 0.916, 0.918, 0.920,  # 19-26
-    0.923, 0.924, 0.926, 0.927, 0.929, 0.930, 0.931, 0.933,  # 27-34
-    0.934, 0.935, 0.936, 0.937, 0.938, 0.939, 0.940, 0.941,  # 35-42
-    0.942, 0.943, 0.944, 0.945, 0.945, 0.946, 0.947, 0.947,  # 43-50
+    0,
+    0,
+    0,  # 0, 1, 2 — not used
+    0.787,
+    0.748,
+    0.762,
+    0.788,
+    0.803,
+    0.818,
+    0.829,
+    0.842,  # 3-10
+    0.850,
+    0.859,
+    0.866,
+    0.874,
+    0.881,
+    0.887,
+    0.892,
+    0.897,  # 11-18
+    0.901,
+    0.905,
+    0.908,
+    0.911,
+    0.914,
+    0.916,
+    0.918,
+    0.920,  # 19-26
+    0.923,
+    0.924,
+    0.926,
+    0.927,
+    0.929,
+    0.930,
+    0.931,
+    0.933,  # 27-34
+    0.934,
+    0.935,
+    0.936,
+    0.937,
+    0.938,
+    0.939,
+    0.940,
+    0.941,  # 35-42
+    0.942,
+    0.943,
+    0.944,
+    0.945,
+    0.945,
+    0.946,
+    0.947,
+    0.947,  # 43-50
 ]
 
 
@@ -546,9 +586,7 @@ def compute_effect_sizes(
 
             normality = _shapiro_wilk(control_rewards + treatment_rewards, alpha)
             normality_warning = (
-                "data non-normal; Cohen's d CI is approximate"
-                if not normality["normal"]
-                else None
+                "data non-normal; Cohen's d CI is approximate" if not normality["normal"] else None
             )
 
             if max(len(control_rewards), len(treatment_rewards)) <= 8:
