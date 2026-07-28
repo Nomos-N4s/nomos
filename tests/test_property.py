@@ -1,10 +1,16 @@
-from hypothesis import given, strategies as st
-from src.governance.models import Proposal, PriorityTag
+from hypothesis import given
+from hypothesis import strategies as st
+
 from src.governance.committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExampleCuriosityMember, ExamplePlanningMember, ExampleSocialMember,
+    ExampleCuriosityMember,
+    ExampleIntegrityMember,
     ExampleMemoryMember,
+    ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
+    ExampleSocialMember,
 )
+from src.governance.models import PriorityTag, Proposal
 from src.governance.speaker import SpeakerStateMachine
 
 ALL_MEMBERS = {

@@ -107,7 +107,7 @@ def plot_comparison():
     print(f"Saved: {out_path}")
 
     # Print aggregate table
-    print(f"\n=== Minigrid Comparison Summary ===")
+    print("\n=== Minigrid Comparison Summary ===")
     print(f"  {'Env':20s} {'Seed':>5s} {'Gov Reward':>12s} {'Ungov Reward':>13s} {'Gov Vetoes':>10s}")
     print(f"  {'-'*62}")
     for env_name in envs:

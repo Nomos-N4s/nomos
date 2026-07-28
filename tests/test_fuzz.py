@@ -1,13 +1,13 @@
 import math
 import time
-import pytest
-from src.governance.models import Proposal, PriorityTag, GovernanceDecision
+
 from src.governance.committee.base import ParliamentMember
 from src.governance.committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExampleCuriosityMember, ExamplePlanningMember, ExampleSocialMember,
-    ExampleMemoryMember,
+    ExampleIntegrityMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
 )
+from src.governance.models import GovernanceDecision, PriorityTag, Proposal
 from src.governance.speaker import SpeakerStateMachine
 
 

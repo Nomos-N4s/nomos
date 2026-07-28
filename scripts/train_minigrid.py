@@ -16,14 +16,13 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import gymnasium as gym
 import numpy as np
-
-from governance.experiments.minigrid_wrapper import GovernedMinigridWrapper
+from gymnasium import spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 
-import gymnasium as gym
-from gymnasium import spaces
+from governance.experiments.minigrid_wrapper import GovernedMinigridWrapper
 
 
 class _MinigridObsWrapper(gym.ObservationWrapper):
@@ -131,10 +130,7 @@ def main():
             base_env = gym.make(args.env)
             # Strip mission (string, not embeddable) and flatten to 1D Box
             base_env = _MinigridObsWrapper(base_env)
-            if label == "governed":
-                env = GovernedMinigridWrapper(base_env)
-            else:
-                env = base_env
+            env = GovernedMinigridWrapper(base_env) if label == "governed" else base_env
 
             # Wrap for SB3 (capture env by value using default arg)
             from stable_baselines3.common.env_util import make_vec_env

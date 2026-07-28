@@ -1,27 +1,27 @@
 import os
 import tempfile
-import pytest
+
 from src.governance.benchmarks.analysis import (
     StrategyAggregate,
+    _bonferroni_correct,
     _bootstrap_ci,
     _cohens_d,
     _cohens_d_ci,
+    _detect_reward_hacking,
+    _holm_bonferroni_correct,
+    _is_paired,
     _mannwhitney_u,
     _mannwhitney_u_exact,
-    _bonferroni_correct,
-    _holm_bonferroni_correct,
     _shapiro_wilk,
-    _is_paired,
-    _detect_reward_hacking,
     aggregate_reports,
     compute_effect_sizes,
     detect_hacking_episodes,
-    export_summary_csv,
     export_results_json,
+    export_summary_csv,
     run_analysis,
 )
-from src.governance.experiments.metrics import ExperimentReport
 from src.governance.experiments.base import ExperimentMetrics
+from src.governance.experiments.metrics import ExperimentReport
 
 
 def _make_report(name, reward, deadlocks=0, violations=0, steps=100, drift=0.0, step_records=None):

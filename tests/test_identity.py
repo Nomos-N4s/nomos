@@ -1,10 +1,14 @@
-import pytest
-from src.governance.identity.tiers import (
-    MutabilityTier, TierRule, TIER_RULES, TieredMutability,
-)
 from src.governance.identity.core import (
-    IdentityCore, CoreCommitment, CommitmentType,
-    CommitmentThreshold, EnforcementMode,
+    CommitmentThreshold,
+    CommitmentType,
+    CoreCommitment,
+    EnforcementMode,
+    IdentityCore,
+)
+from src.governance.identity.tiers import (
+    TIER_RULES,
+    MutabilityTier,
+    TieredMutability,
 )
 
 

@@ -68,8 +68,8 @@ def evaluate(env_fn, model, episodes: int = 10) -> dict:
 
 def train_agent(governed: bool, timesteps: int, seed: int) -> dict:
     from stable_baselines3 import PPO
-    from stable_baselines3.common.vec_env import DummyVecEnv
     from stable_baselines3.common.callbacks import BaseCallback
+    from stable_baselines3.common.vec_env import DummyVecEnv
 
     label = "governed" if governed else "ungoverned"
     print(f"  Training {label} agent (seed={seed}, timesteps={timesteps})...")
