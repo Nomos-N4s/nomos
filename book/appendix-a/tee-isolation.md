@@ -106,7 +106,7 @@ No other entry points. The enclave has no mechanism to read files, access the ne
 **Governance.** The optimization layer serializes the current state $s$ and all member proposals, sends them into the enclave, and receives the governance decision $g$ as output. The enclave:
 1. Deserializes the input
 2. Loads the active contract set from sealed storage
-3. Runs the full deliberation protocol (agenda setting, scoring, vetos, voting)
+3. Runs the full deliberation protocol (agenda setting, scoring, vetoes, voting)
 4. Applies active contract restrictions to produce $\mathcal{A}_{\mathrm{final}}$
 5. Returns the governance decision
 
