@@ -1,0 +1,100 @@
+name: Bug Report
+description: File a bug report to help us improve the framework
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill out the sections below so we can reproduce and fix it quickly.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have searched existing issues and this bug has not been reported.
+          required: true
+        - label: I am running the latest version of the framework (`main` branch).
+          required: true
+        - label: I have read the [CONTRIBUTING.md](../CONTRIBUTING.md) guidelines.
+          required: false
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly. What did you expect to happen vs. what actually happened?
+      placeholder: |
+        Expected: The Speaker should apply budget caps before agenda sorting.
+        Actual: Budget caps are ignored when a member submits a CRITICAL_SAFETY tag.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Provide a minimal, self-contained code snippet or CLI command that triggers the bug.
+      placeholder: |
+        1. Run `python -m src.governance.runner speaker`
+        2. Submit a proposal with tag `CRITICAL_SAFETY` from a member over budget
+        3. Observe that the proposal is not truncated
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs / Traceback
+      description: Paste any error messages, traceback, or output. Use triple backticks.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version or commit hash are you running?
+      placeholder: e.g., v0.7.0 or commit abc1234
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - WSL
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Component
+      description: Which part of the framework is affected?
+      options:
+        - Neural Parliament / Speaker
+        - Ulysses Contracts
+        - Identity Layer
+        - TEE / Security
+        - Benchmarks / Experiments
+        - Documentation / Book
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Anything else that might help us diagnose the issue? Screenshots, theory references, etc.
+    validations:
+      required: false

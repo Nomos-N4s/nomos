@@ -1,0 +1,84 @@
+name: Feature Request
+description: Propose a new feature, architectural change, or research direction
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing ideas to the Governance Layer. Please describe the feature and its motivation clearly.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have searched existing issues and this feature has not been requested.
+          required: true
+        - label: This feature aligns with the project's scope (self-governing AI architecture).
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this solve? Why is it needed? Link to book chapters or theoretical gaps if relevant.
+      placeholder: |
+        Chapter 2 §3.7 notes that tag falsification halves budget after 3 offences, but there is no
+        mechanism for graduated penalties. A linear decay would better model procedural reputation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature or change. Be specific about API surface, new components, or protocol modifications.
+      placeholder: |
+        Add a `FalsificationPenalty` enum with tiers: WARNING, BUDGET_HALVE, SUSPEND.
+        Modify `SpeakerStateMachine` to track offence history per member...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches did you consider? Why is this one best?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Which layer or component does this affect?
+      options:
+        - Neural Parliament
+        - Ulysses Contracts
+        - Identity Layer
+        - TEE / Security
+        - Benchmarks / Experiments
+        - Formal Verification (Lean / Proofs)
+        - Documentation / Book
+        - Meta / Project Infrastructure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to implement this feature and submit a PR.
+          required: false
+        - label: This feature requires discussion with the maintainers before implementation.
+          required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Links to papers, related issues, prior art, or theoretical foundations.
+    validations:
+      required: false
