@@ -29,6 +29,19 @@ Fixes # (issue)
 
 ## Screenshots / Output
 &lt;!-- If applicable, add output, plots, or architecture diagrams. --&gt;
+&lt;!-- Benchmark example (if benchmarks were run):
+```
+Total time: X.XXs
+Total reports: 400
+Analysis: N effect sizes, M hacking episodes
+Generating figures...
+  -> results/figures/reward_curves.png
+  -> results/figures/violation_rates.png
+  -> results/figures/deadlock_frequency.png
+  -> results/figures/pareto_frontier.png
+All figures saved to results/figures/
+```
+--&gt;
 
 ## Additional Notes
 &lt;!-- Anything else reviewers should know? Link to theoretical foundations, review panel feedback, etc. --&gt;
