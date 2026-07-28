@@ -33,6 +33,59 @@ def _load_benchmark() -> dict[str, Any] | None:
         return None
     with open(path) as f:
         return json.load(f)
+    
+    
+def _generate_benchmark_summary(benchmarks: dict[str, Any] | None) -> str:
+    """
+    Generate a natural language summary of benchmark results.
+    """
+
+    if benchmarks is None:
+        return "No benchmark results available."
+
+    try:
+        aggregates = benchmarks.get("aggregates", [])
+
+        if not aggregates:
+            return "No benchmark aggregates available."
+
+        df = pd.DataFrame(aggregates)
+
+        required_columns = [
+            "strategy",
+            "mean_reward",
+            "mean_violations",
+        ]
+
+        if not all(column in df.columns for column in required_columns):
+            return "Incomplete benchmark results."
+
+        governance = df[
+            df["strategy"].str.lower().str.contains("governance")
+        ]
+
+        baselines = df[
+            ~df["strategy"].str.lower().str.contains("governance")
+        ]
+
+        if governance.empty or baselines.empty:
+            return "Insufficient data to compare governance and baseline strategies."
+
+        gov_reward = governance["mean_reward"].mean()
+        base_reward = baselines["mean_reward"].mean()
+
+        gov_violations = governance["mean_violations"].mean()
+        base_violations = baselines["mean_violations"].mean()
+
+        return (
+            f"Governance achieved an average reward of {gov_reward:.2f} "
+            f"compared to {base_reward:.2f} for baseline strategies. "
+            f"Governance recorded {gov_violations:.2f} average violations "
+            f"versus {base_violations:.2f} for baselines."
+        )
+
+    except Exception:
+        return "Unable to generate benchmark summary."
 
 
 def _load_prove_results() -> list[dict] | None:
@@ -83,6 +136,15 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
 
     benchmarks = _load_benchmark()
     _log_benchmark_to_backend(backend, benchmarks)
+    
+        # Auto-generated dashboard summary
+    benchmark_summary = _generate_benchmark_summary(benchmarks)
+
+    st.subheader("📌 Summary")
+    st.write(benchmark_summary)
+
+    if st.button("📋 Copy Summary", key="benchmark_copy_summary"):
+        st.code(benchmark_summary, language="text")
 
     if benchmarks is None:
         st.info(

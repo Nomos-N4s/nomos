@@ -58,6 +58,47 @@ def _load_safety_summary() -> pd.DataFrame | None:
     return _load_csv("safety_grid", "comparison_summary.csv")
 
 
+def _generate_rl_summary(summary: pd.DataFrame | None) -> str:
+    """
+    Generate a natural language summary of RL training results.
+    """
+
+    if summary is None or summary.empty:
+        return "No RL training results available."
+
+    required_columns = [
+        "mean_reward",
+        "std_reward",
+        "label",
+    ]
+
+    if not all(column in summary.columns for column in required_columns):
+        return "Incomplete RL training results."
+
+    try:
+        governed = summary[summary["label"].str.lower() == "governed"]
+        ungoverned = summary[summary["label"].str.lower() == "ungoverned"]
+
+        if governed.empty or ungoverned.empty:
+            return "Insufficient data to compare governed and ungoverned agents."
+
+        mean_reward_gov = governed["mean_reward"].mean()
+        std_reward_gov = governed["std_reward"].mean()
+
+        mean_reward_ung = ungoverned["mean_reward"].mean()
+        std_reward_ung = ungoverned["std_reward"].mean()
+
+        return (
+            f"Governed agents achieved "
+            f"{mean_reward_gov:.2f} ± {std_reward_gov:.2f} reward "
+            f"vs {mean_reward_ung:.2f} ± {std_reward_ung:.2f} "
+            f"for ungoverned agents."
+        )
+
+    except Exception:
+        return "Unable to generate RL training summary."
+
+
 def _log_rl_to_backend(backend: OntologyBackend | None, label: str, row: dict):
     if backend is None:
         return
@@ -79,6 +120,15 @@ def _render_top_level(backend: OntologyBackend | None):
     summary = _load_summary()
     gov_metrics = _load_metrics("governed")
     ung_metrics = _load_metrics("ungoverned")
+    
+    # Auto-generated dashboard summary
+    rl_summary = _generate_rl_summary(summary)
+
+    st.subheader("📌 Summary")
+    st.write(rl_summary)
+
+    if st.button("📋 Copy Summary", key="rl_copy_summary"):
+        st.code(rl_summary, language="text")
 
     if summary is not None and not summary.empty:
         st.subheader("Governed vs Ungoverned — Summary")
