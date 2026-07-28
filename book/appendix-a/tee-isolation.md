@@ -1,3 +1,8 @@
+---
+title: "Appendix A: TEE isolation for the Neural Parliament"
+description: "How Trusted Execution Environments hardware-isolate the Speaker from the optimization layer, preventing simulation-based bypass of governance decisions."
+---
+
 # Appendix A: TEE Isolation for the Governance Layer
 
 > *Hardware-level separation between governance and optimization.*

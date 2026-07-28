@@ -1,3 +1,8 @@
+---
+title: "Chapter 4: the Identity Layer and mutability tiers"
+description: "The Identity Layer defines an agent's ontological invariants across four mutability tiers, plus the genesis protocol that bootstraps autonomous governance."
+---
+
 # The Identity Layer
 
 > *"The self is not something ready-made, but something in continuous formation through choice of action."*

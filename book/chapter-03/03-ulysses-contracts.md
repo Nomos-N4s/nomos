@@ -1,3 +1,8 @@
+---
+title: "Chapter 3: Ulysses Contracts for AI self-binding"
+description: "Ulysses Contracts let AI agents voluntarily restrict future actions using meta-policies enforced by procedural inertia, monitors, and time-locked commits."
+---
+
 # Ulysses Contracts
 
 > *"Intelligence is not only the ability to choose well. It is also the ability to choose which future choices should exist."*

@@ -1,3 +1,8 @@
+---
+title: "Response to the first expert review panel"
+description: "Formal rebuttal to the initial expert panel's critiques of Chapters 1 and 2, including the infinite regress objection and residual physical-world risks."
+---
+
 # Response to Expert Review Panel
 
 > Formal rebuttal and acknowledgment of critiques received on Chapters 1-2.
