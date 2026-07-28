@@ -4,9 +4,13 @@ Publication-ready comparison figures from benchmark results.
 Generates four publication-quality plots:
 
 1. **Reward curves** — Mean cumulative reward over time with shaded 95% CI
-2. **Violation rates** — Grouped bar chart per scenario-strategy with error bars
-3. **Deadlock frequency** — Grouped bar chart of deadlock rates
-4. **Pareto frontier** — Reward vs. safety violations across all strategies
+   (bootstrap, from analysis pipeline).
+2. **Violation rates** — Grouped bar chart per scenario-strategy with
+   bootstrap CI error bars.
+3. **Deadlock frequency** — Grouped bar chart of deadlock rates with
+   bootstrap CI error bars.
+4. **Pareto frontier** — Reward vs. safety violations with the convex
+   Pareto frontier line drawn.
 
 Each figure is saved as both PNG (150 dpi) and SVG.
 
@@ -20,17 +24,44 @@ import os
 import statistics
 
 from ..experiments.metrics import ExperimentReport
+from .analysis import _bootstrap_ci
+
+_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+_MARKERS = ["o", "s", "D", "^", "v"]
 
 
 def _ensure_dir(path: str):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
 
 
+def _ci_to_error(values: list[float]) -> tuple[list[float], list[float]]:
+    """Convert bootstrap CI bounds to matplotlib-compatible asymmetric error.
+
+    For a bar plot, matplotlib ``yerr`` expects ``(2, N)`` or ``(N,)``.
+    This helper returns ``(lower_errors, upper_errors)`` where each element
+    is the distance from the mean to the respective CI bound.
+
+    Args:
+        values: Observed values.
+
+    Returns:
+        ``(lower_errors, upper_errors)`` — each a list of length 1
+        (single bar group) so that the caller can build the ``(2, N)`` array.
+    """
+    if not values:
+        return ([0.0], [0.0])
+    mean = statistics.mean(values)
+    lo, hi = _bootstrap_ci(values)
+    return ([mean - lo], [hi - mean])
+
+
 def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "results/figures"):
-    """Plot mean cumulative reward curves with 95% CI shaded bands.
+    """Plot mean cumulative reward curves with 95% bootstrap CI shaded bands.
 
     Creates a 2×2 subplot panel with one scenario per subplot.
     Each subplot shows all strategies as separate coloured lines.
+    Confidence bands derived from :func:`_bootstrap_ci` instead of
+    parametric normal approximation.
 
     Args:
         reports: List of experiment reports.
@@ -45,7 +76,6 @@ def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "resul
 
     scenarios = sorted(set(r.metadata.get("scenario", "unknown") for r in reports))
     strategies = sorted(set(r.metadata.get("strategy", "unknown") for r in reports))
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     fig.suptitle("Reward Curves Over Time", fontsize=14, fontweight="bold")
@@ -77,19 +107,19 @@ def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "resul
             aligned = [c[:min_len] for c in all_curves]
 
             means = [statistics.mean([c[i] for c in aligned]) for i in range(min_len)]
-            stds = [
-                statistics.stdev([c[i] for c in aligned]) if len(aligned) > 1 else 0
-                for i in range(min_len)
-            ]
-            cis = [1.96 * s / (len(aligned) ** 0.5) if len(aligned) > 1 else 0 for s in stds]
+            cis = []
+            for i in range(min_len):
+                step_vals = [c[i] for c in aligned]
+                lo, hi = _bootstrap_ci(step_vals)
+                cis.append((lo, hi))
 
             x = list(range(min_len))
-            color = colors[sidx % len(colors)]
+            color = _COLORS[sidx % len(_COLORS)]
             ax.plot(x, means, label=strategy, color=color, linewidth=1.5)
             ax.fill_between(
                 x,
-                [m - c for m, c in zip(means, cis)],
-                [m + c for m, c in zip(means, cis)],
+                [c[0] for c in cis],
+                [c[1] for c in cis],
                 alpha=0.15,
                 color=color,
             )
@@ -109,6 +139,7 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
     """Plot grouped bar chart of constraint violation rates per scenario.
 
     Each strategy is a different coloured bar within each scenario group.
+    Error bars are 95% bootstrap CIs (asymmetric).
 
     Args:
         reports: List of experiment reports.
@@ -124,7 +155,6 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
 
     scenarios = sorted(set(r.metadata.get("scenario", "unknown") for r in reports))
     strategies = sorted(set(r.metadata.get("strategy", "unknown") for r in reports))
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
     x = np.arange(len(scenarios))
     width = 0.8 / max(len(strategies), 1)
@@ -134,7 +164,8 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
 
     for sidx, strategy in enumerate(strategies):
         means = []
-        errors = []
+        lower_err = []
+        upper_err = []
         for scenario in scenarios:
             relevant = [
                 r
@@ -144,10 +175,13 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
             if relevant:
                 vals = [r.constraint_violations / max(r.total_steps, 1) for r in relevant]
                 means.append(statistics.mean(vals))
-                errors.append(statistics.stdev(vals) if len(vals) > 1 else 0)
+                lo, hi = _bootstrap_ci(vals)
+                lower_err.append(statistics.mean(vals) - lo)
+                upper_err.append(hi - statistics.mean(vals))
             else:
                 means.append(0)
-                errors.append(0)
+                lower_err.append(0)
+                upper_err.append(0)
 
         offset = (sidx - len(strategies) / 2 + 0.5) * width
         ax.bar(
@@ -155,8 +189,8 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
             means,
             width,
             label=strategy,
-            color=colors[sidx % len(colors)],
-            yerr=errors,
+            color=_COLORS[sidx % len(_COLORS)],
+            yerr=np.array([lower_err, upper_err]),
             capsize=3,
         )
 
@@ -175,6 +209,8 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
 def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "results/figures"):
     """Plot grouped bar chart of deadlock rates per scenario.
 
+    Error bars are 95% bootstrap CIs (asymmetric).
+
     Args:
         reports: List of experiment reports.
         output_dir: Directory for output files.
@@ -189,7 +225,6 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
 
     scenarios = sorted(set(r.metadata.get("scenario", "unknown") for r in reports))
     strategies = sorted(set(r.metadata.get("strategy", "unknown") for r in reports))
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
     x = np.arange(len(scenarios))
     width = 0.8 / max(len(strategies), 1)
@@ -199,7 +234,8 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
 
     for sidx, strategy in enumerate(strategies):
         means = []
-        errors = []
+        lower_err = []
+        upper_err = []
         for scenario in scenarios:
             relevant = [
                 r
@@ -209,10 +245,13 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
             if relevant:
                 vals = [r.deadlock_rate for r in relevant]
                 means.append(statistics.mean(vals))
-                errors.append(statistics.stdev(vals) if len(vals) > 1 else 0)
+                lo, hi = _bootstrap_ci(vals)
+                lower_err.append(statistics.mean(vals) - lo)
+                upper_err.append(hi - statistics.mean(vals))
             else:
                 means.append(0)
-                errors.append(0)
+                lower_err.append(0)
+                upper_err.append(0)
 
         offset = (sidx - len(strategies) / 2 + 0.5) * width
         ax.bar(
@@ -220,8 +259,8 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
             means,
             width,
             label=strategy,
-            color=colors[sidx % len(colors)],
-            yerr=errors,
+            color=_COLORS[sidx % len(_COLORS)],
+            yerr=np.array([lower_err, upper_err]),
             capsize=3,
         )
 
@@ -240,8 +279,9 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
 def plot_pareto_frontier(reports: list[ExperimentReport], output_dir: str = "results/figures"):
     """Plot Pareto frontier of total reward vs. constraint violations.
 
-    Each point is a single run. The upper-left region is the Pareto-optimal
-    frontier (high reward, few violations).
+    Each point is a single run.  The upper-left region is the Pareto-optimal
+    frontier (high reward, few violations).  A step line connecting the
+    non-dominated points is overlaid.
 
     Args:
         reports: List of experiment reports.
@@ -255,12 +295,11 @@ def plot_pareto_frontier(reports: list[ExperimentReport], output_dir: str = "res
     _ensure_dir(f"{output_dir}/pareto_frontier.png")
 
     strategies = sorted(set(r.metadata.get("strategy", "unknown") for r in reports))
-    markers = ["o", "s", "D", "^", "v"]
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
     fig, ax = plt.subplots(figsize=(8, 6))
     fig.suptitle("Pareto Frontier: Reward vs Safety", fontsize=14, fontweight="bold")
 
+    all_points = []
     for sidx, strategy in enumerate(strategies):
         relevant = [r for r in reports if r.metadata.get("strategy") == strategy]
         if not relevant:
@@ -268,15 +307,47 @@ def plot_pareto_frontier(reports: list[ExperimentReport], output_dir: str = "res
 
         rewards = [r.total_reward for r in relevant]
         violations = [r.constraint_violations for r in relevant]
+        points = list(zip(violations, rewards))
+        all_points.extend(points)
+
         ax.scatter(
             violations,
             rewards,
             label=strategy,
-            color=colors[sidx % len(colors)],
-            marker=markers[sidx % len(markers)],
+            color=_COLORS[sidx % len(_COLORS)],
+            marker=_MARKERS[sidx % len(_MARKERS)],
             alpha=0.6,
             s=40,
         )
+
+    if all_points:
+        n = len(all_points)
+        is_dominated = [False] * n
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                vi, ri = all_points[i]
+                vj, rj = all_points[j]
+                if vj <= vi and rj >= ri and (vj < vi or rj > ri):
+                    is_dominated[i] = True
+                    break
+
+        frontier = [all_points[i] for i in range(n) if not is_dominated[i]]
+        frontier.sort(key=lambda p: (p[0], -p[1]))
+
+        if frontier:
+            f_v = [p[0] for p in frontier]
+            f_r = [p[1] for p in frontier]
+            ax.step(
+                f_v,
+                f_r,
+                where="post",
+                color="black",
+                linewidth=1.5,
+                linestyle="--",
+                label="Pareto frontier",
+            )
 
     ax.set_xlabel("Total Constraint Violations")
     ax.set_ylabel("Total Reward")
