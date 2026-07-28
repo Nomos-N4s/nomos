@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - GitHub Actions workflow to build and deploy docs to GitHub Pages
 - GitHub Project #3 for issue tracking with 4 epics (A–D)
 
+### Changed
+- Aligned all four benchmark figures with analysis pipeline: reward curves use bootstrap CIs instead of parametric error; violation rate and deadlock frequency bar charts use bootstrap CI error bars instead of stdev; Pareto frontier overlay added; color palette unified across all figure types (#101)
+
 ## [0.7.0] — 2026-07-26
 
 ### Added
