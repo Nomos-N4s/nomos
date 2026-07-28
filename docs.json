@@ -59,6 +59,13 @@
           "book/responses/response-to-review-panel",
           "book/responses/response-to-expert-panel-harder-review"
         ]
+      },
+      {
+        "group": "Changelog",
+        "pages": [
+          "changelog/index",
+          "changelog/2026-07-28"
+        ]
       }
     ]
   }
