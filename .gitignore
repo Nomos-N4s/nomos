@@ -9,5 +9,6 @@ neo4j-donotpush.txt
 .coverage
 errors.txt
 site/
-results/rl/
+results/*
+!results/.gitkeep
 gov-budget-proof/
