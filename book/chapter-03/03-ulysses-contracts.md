@@ -332,7 +332,7 @@ Meta-constraints are ephemeral (apply to the next cycle). Contracts are persiste
 
 > In environments with temporal discounting or addictive reward structures (delayed gratification, temptation), parliamentary agents will learn to issue Ulysses Contracts. Monolithic agents (single objective, no Parliament) will not.
 
-*Rationale:* The Integrity and Planning committees jointly recognize that future action spaces contain traps (actions with high short-term reward but negative long-term utility). They propose restrictions that bind future Reward-seeking behavior. A monolithic optimizer has no mechanism for this — it cannot "choose" to restrict itself because there is no meta-level.
+*Rationale:* The Integrity and Planning committees jointly recognize that future action spaces contain traps (actions with high short-term reward but negative long-term utility). They propose restrictions that bind future reward-seeking behavior. A monolithic optimizer has no mechanism for this — it cannot "choose" to restrict itself because there is no meta-level.
 
 **Prediction 2: Contract robustness under pressure**
 
