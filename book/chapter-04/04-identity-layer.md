@@ -270,7 +270,7 @@ The relationship between governance procedures and hardware safety mechanisms:
 | Operational-tier modification | Yes | Supermajority vote | Adjusts parameter within $\mathcal{P}$ |
 | Constitutional-tier modification | Yes | Unanimity + multisig + 30d | Modifies core commitment |
 | Watchdog timer | No | Missing heartbeat | SAFE state |
-| Deadlock breaker | No | $T_{\text{deadlock}}$ cycles without consensus | Cold boot to genesis $G$
+| Deadlock breaker | No | $T_{\text{deadlock}}$ cycles without consensus | Cold boot to genesis $G$ |
 
 ---
 

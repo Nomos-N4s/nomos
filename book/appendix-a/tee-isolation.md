@@ -369,7 +369,7 @@ for i in range(MAX_PROPOSALS):
 
 ### A.10.3 Scope of Guarantee
 
-The constant-time property applies to the **Speaer only** — the code inside the TEE enclave. The Parliament members (value functions running outside the enclave) are not constant-time. This is acceptable because:
+The constant-time property applies to the **Speaker only** — the code inside the TEE enclave. The Parliament members (value functions running outside the enclave) are not constant-time. This is acceptable because:
 1. The sensitive data (veto decisions, vote tallies, active contract state) is inside the enclave
 2. The member value functions only produce public outputs (scores that are aggregated inside the enclave)
 3. The enclave's output is a single governance decision — the optimization layer sees only the final action mask
@@ -437,7 +437,7 @@ With $N = 1000$, the TEE overhead per action drops to approximately **0.023 micr
 
 **Macro-trajectory validation.** The TEE evaluates the batch's aggregate properties, not individual actions. This is appropriate because:
 - A single mildly risky action in a batch of safe actions is acceptable
-- A batch of uniformly safe actions with one catastropic action is detectable at the aggregate risk level
+- A batch of uniformly safe actions with one catastrophic action is detectable at the aggregate risk level
 - The Integrity Committee's per-proposal scoring is replaced by batch-level distributional scoring
 
 **Trade-off.** Batch verification trades action-level granularity for throughput. In practice, this is acceptable because:
@@ -456,7 +456,7 @@ The batch size $N$ and formation policy are part of the Speaker's immutable conf
 | $D_{\text{min}}$ | 0.3 | Minimum diversity score (fraction of unique actions) |
 | $\text{aggregate\_risk\_max}$ | 0.7 | Maximum allowable aggregate risk score per batch |
 
-The optimization layer selects the batch size based on the decision class (routine vs. high-impact vs. safety-critical), declared as part of the batch metadata. False declaration is a procedral violation evaluated by the Integrity Committee, with the same deterministic falsification penalty as tag falsification (§A.10).
+The optimization layer selects the batch size based on the decision class (routine vs. high-impact vs. safety-critical), declared as part of the batch metadata. False declaration is a procedural violation evaluated by the Integrity Committee, with the same deterministic falsification penalty as tag falsification (§A.10).
 
 ---
 

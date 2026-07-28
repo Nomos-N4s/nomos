@@ -384,7 +384,7 @@ This is the valid sub-concern. If all members share a pre-trained backbone, thei
 
 ### Verdict
 
-**Mostly wrong.** The discrete protocol is a gradient barrier by construction. The pre-training alignment concern is valid but has a straightforward engineering solution (independent frozen backbones).**
+**Mostly wrong.** The discrete protocol is a gradient barrier by construction. The pre-training alignment concern is valid but has a straightforward engineering solution (independent frozen backbones).
 
 ---
 
@@ -557,7 +557,7 @@ A black-box optimizer would need to learn a policy over a state space that is **
 
 Furthermore, the Reward Committee does not control what proposals the Safety, Integrity, Curiosity, Planning, Memory, or Social committees generate. Even if the optimizer learns the exact boundaries of the Reward Committee's own proposals, it cannot predict or control the votes of the other six members.
 
-The critique also overlooks the **TEE isolation**: the optimization layer cannot observe the Parliament's internal state (member scores, veto decisions, active contracts) because the Speaker executes inside the enclave. Black-box RL requires observation of outcomes to learn. With TEE isolation, the optimization layer sees only the final action mask — not the scores, not the vetos, not the margin of victory. This provides gravely impoverished feedback for black-box optimization.
+The critique also overlooks the **TEE isolation**: the optimization layer cannot observe the Parliament's internal state (member scores, veto decisions, active contracts) because the Speaker executes inside the enclave. Black-box RL requires observation of outcomes to learn. With TEE isolation, the optimization layer sees only the final action mask — not the scores, not the vetoes, not the margin of victory. This provides gravely impoverished feedback for black-box optimization.
 
 The reviewer's proposed fix — boundary jitter — contradicts the Phase 2 retraction of stochastic governance. We will not reintroduce randomness into the governance path. The defense against black-box optimization is:
 1. Non-stationary multi-member state space (cannot model transition probabilities)
@@ -865,7 +865,7 @@ This is not unique to our architecture. The U.S. Constitution required 39 human 
 
 ### Where the binary framing is incomplete
 
-The reviewer offers a false dichotomy: **human-written genesis (static sandbox) vs. self-modifying genesis (vulnerable to social engineering)** . There are at least three mechanisms in the middle:
+The reviewer offers a false dichotomy: **human-written genesis (static sandbox) vs. self-modifying genesis (vulnerable to social engineering)**. There are at least three mechanisms in the middle:
 
 **1. Tiered mutability with monotonic thresholds**
 

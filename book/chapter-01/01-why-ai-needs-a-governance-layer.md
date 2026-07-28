@@ -40,8 +40,8 @@ Instead of asking:
 - "What should I do?"
 
 governance asks:
--
--  "Which objectives should guide my decision?"
+
+- "Which objectives should guide my decision?"
 
 or
 
