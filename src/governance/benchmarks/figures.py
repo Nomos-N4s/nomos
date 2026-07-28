@@ -369,7 +369,9 @@ def plot_pareto_frontier(reports: list[ExperimentReport], output_dir: str = "res
     return fig
 
 
-def generate_all_figures(reports: list[ExperimentReport], output_dir: str = "results/figures") -> dict:
+def generate_all_figures(
+    reports: list[ExperimentReport], output_dir: str = "results/figures"
+) -> dict:
     """Generate all four publication-ready figures.
 
     Args:
