@@ -5,8 +5,13 @@ from src.governance.benchmarks.analysis import (
     StrategyAggregate,
     _bootstrap_ci,
     _cohens_d,
+    _cohens_d_ci,
     _mannwhitney_u,
+    _mannwhitney_u_exact,
     _bonferroni_correct,
+    _holm_bonferroni_correct,
+    _shapiro_wilk,
+    _is_paired,
     _detect_reward_hacking,
     aggregate_reports,
     compute_effect_sizes,
@@ -122,6 +127,143 @@ class TestMannWhitneyU:
         )
         assert u > 0.0
         assert p > 0.05
+
+
+class TestMannWhitneyUExact:
+    def test_identical_small(self):
+        u, p = _mannwhitney_u_exact([1.0, 2.0], [1.0, 2.0])
+        assert p > 0.05
+
+    def test_separated_small(self):
+        u, p = _mannwhitney_u_exact([5.0, 6.0], [1.0, 2.0])
+        assert u == 0.0
+        assert p == 0.3333
+
+    def test_falls_back_large(self):
+        u, p = _mannwhitney_u_exact(list(range(10)), list(range(10, 20)))
+        assert p < 0.05
+
+    def test_insufficient_samples(self):
+        u, p = _mannwhitney_u_exact([1.0], [2.0])
+        assert u == 0.0
+        assert p == 1.0
+
+
+class TestHolmBonferroni:
+    def test_single_comparison(self):
+        results = _holm_bonferroni_correct([0.01])
+        assert results[0]["corrected_p"] == 0.01
+        assert results[0]["significant"] is True
+        assert results[0]["method"] == "holm"
+
+    def test_less_conservative_than_bonferroni(self):
+        p_vals = [0.01, 0.03, 0.04]
+        bonf = _bonferroni_correct(p_vals)
+        holm = _holm_bonferroni_correct(p_vals)
+        for b, h in zip(bonf, holm):
+            assert h["corrected_p"] <= b["corrected_p"]
+
+    def test_two_strong_signals(self):
+        results = _holm_bonferroni_correct([0.01, 0.01], alpha=0.05)
+        # rank 1: 0.01 * 2 = 0.02; rank 2: 0.01 * 1 = 0.01
+        assert results[0]["corrected_p"] == 0.02
+        assert results[0]["significant"] is True
+        assert results[1]["corrected_p"] == 0.01
+
+    def test_first_significant_rest_not(self):
+        p_vals = [0.01, 0.04, 0.10]
+        results = _holm_bonferroni_correct(p_vals, alpha=0.05)
+        assert results[0]["corrected_p"] == 0.03
+        assert results[0]["significant"] is True
+        # rank 2: 0.04 * 2 = 0.08 > 0.05
+        assert results[1]["significant"] is False
+        assert results[2]["significant"] is False
+
+    def test_empty(self):
+        assert _holm_bonferroni_correct([]) == []
+
+    def test_custom_alpha(self):
+        results = _holm_bonferroni_correct([0.02, 0.02], alpha=0.01)
+        assert results[0]["significant"] is False
+
+    def test_rank_tracking(self):
+        results = _holm_bonferroni_correct([0.03, 0.01, 0.02])
+        for r in results:
+            assert 1 <= r["rank"] <= 3
+
+
+class TestCohensDCI:
+    def test_identical_groups(self):
+        ci = _cohens_d_ci([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
+        assert ci["d"] == 0.0
+
+    def test_large_effect(self):
+        ci = _cohens_d_ci([5.0, 6.0, 7.0], [1.0, 2.0, 3.0])
+        assert ci["d"] > 0.5
+
+    def test_small_samples(self):
+        ci = _cohens_d_ci([1.0], [2.0])
+        assert ci["d"] == 0.0
+
+    def test_ci_structure(self):
+        ci = _cohens_d_ci([1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0])
+        for key in ("d", "ci_lower", "ci_upper", "se_d"):
+            assert key in ci
+
+    def test_ci_contains_d(self):
+        ci = _cohens_d_ci([1.0, 2.0, 3.0, 4.0, 5.0], [2.0, 3.0, 4.0, 5.0, 6.0])
+        assert ci["ci_lower"] <= ci["d"] <= ci["ci_upper"]
+
+
+class TestShapiroWilk:
+    def test_normal_data(self):
+        sample = [0.5, 0.2, -0.3, 0.8, -0.1, 0.0, 0.4, 0.6, 0.1, -0.4]
+        result = _shapiro_wilk(sample)
+        assert "W" in result
+        assert "p_value" in result
+        assert "normal" in result
+
+    def test_uniform_approx_normal_enough(self):
+        result = _shapiro_wilk([1.0, 2.0, 3.0, 4.0, 5.0])
+        assert result["normal"] is True
+
+    def test_extreme_outlier_detected(self):
+        sample = [0.0] * 5 + [100.0]
+        result = _shapiro_wilk(sample)
+        # 6 values with one extreme outlier should be non-normal
+        assert result["normal"] is False
+
+    def test_too_small(self):
+        result = _shapiro_wilk([1.0, 2.0])
+        assert result["normal"] is True
+        assert result["warning"] == "n < 3"
+
+    def test_constant_values(self):
+        result = _shapiro_wilk([5.0, 5.0, 5.0, 5.0])
+        assert result["normal"] is True
+
+    def test_returns_warning_keys(self):
+        result = _shapiro_wilk([1.0, 2.0, 3.0, 4.0, 5.0])
+        for key in ("W", "p_value", "normal", "warning"):
+            assert key in result
+
+
+class TestIsPaired:
+    def test_equal_counts_paired(self):
+        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5, 6]}
+        assert _is_paired(groups, "A", "gov", "ran") is True
+
+    def test_unequal_counts_not_paired(self):
+        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5]}
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_empty_group_not_paired(self):
+        groups = {("gov", "A"): []}
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_different_scenario(self):
+        groups = {("gov", "A"): [1, 2], ("ran", "B"): [3, 4]}
+        assert _is_paired(groups, "A", "gov", "ran") is False
 
 
 class TestBonferroniCorrection:
@@ -258,7 +400,15 @@ class TestComputeEffectSizes:
         assert "p_value_raw" in entry
         assert "p_value_corrected" in entry
         assert "significant" in entry
+        assert "p_value_holm" in entry
+        assert "significant_holm" in entry
+        assert "cohens_d_ci" in entry
+        assert "cohens_d_se" in entry
+        assert "normality_warning" in entry
+        assert "paired" in entry
         assert isinstance(entry["significant"], bool)
+        assert isinstance(entry["significant_holm"], bool)
+        assert isinstance(entry["paired"], bool)
 
     def test_bonferroni_applied(self):
         reports = []
@@ -274,6 +424,8 @@ class TestComputeEffectSizes:
         for entry in es:
             assert 0.0 <= entry["p_value_raw"] <= 1.0
             assert entry["p_value_corrected"] >= entry["p_value_raw"]
+            assert entry["p_value_holm"] >= entry["p_value_raw"]
+            assert entry["p_value_holm"] <= entry["p_value_corrected"]
 
     def test_empty_reports(self):
         es = compute_effect_sizes([], [])
