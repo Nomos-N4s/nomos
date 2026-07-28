@@ -16,6 +16,7 @@ dependencies = [
     "pandas>=2.0",
     "certifi>=2024.0",
     "hypothesis>=6.161",
+    "matplotlib>=3.8",
 ]
 
 [project.optional-dependencies]
