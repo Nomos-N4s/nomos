@@ -18,7 +18,7 @@ import random
 import time
 from typing import Any
 
-from ..models import GovernanceDecision, PriorityTag, Proposal
+from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from .base import ExperimentMetrics, ExperimentScenario, StepResult
 
@@ -104,13 +104,7 @@ class GridWorld(ExperimentScenario):
                 )
         return proposals
 
-    def compute_reward(self, state, decision: GovernanceDecision) -> float:
-        return 0.0
-
-    def transition(self, state: Any, decision: GovernanceDecision) -> Any:
-        return state
-
-    def step(self, state, decision_class="routine", external_decision=None):
+    def _run_step(self, state, *, decision_class="routine", external_decision=None):
         """Execute one step: propose moves, decide, apply reward and penalties.
 
         Poison apples give +5 immediate but create a 3-step timer that
@@ -124,6 +118,7 @@ class GridWorld(ExperimentScenario):
         else:
             decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
         reward = 0.0
+        violations = 0
 
         for pr in proposals:
             if pr.action == decision.action:
@@ -138,7 +133,7 @@ class GridWorld(ExperimentScenario):
                     self._poison_timers.append((3, nx, ny))
                     self._grid[nx][ny] = TILE_EMPTY
                     self._pos = (nx, ny)
-                    self.metrics.constraint_violations += 1
+                    violations += 1
                 else:
                     self._pos = (nx, ny)
                 break
@@ -151,10 +146,9 @@ class GridWorld(ExperimentScenario):
                 new_timers.append((t - 1, px, py))
         self._poison_timers = new_timers
 
-        result = StepResult(decision=decision, state=self._pos, reward=reward)
-        self._history.append(result)
-        self.metrics.total_steps += 1
-        self.metrics.total_reward += reward
-        if decision.is_default:
-            self.metrics.deadlock_count += 1
-        return result
+        return StepResult(
+            decision=decision,
+            state=self._pos,
+            reward=reward,
+            metrics_delta={"constraint_violations": violations},
+        )

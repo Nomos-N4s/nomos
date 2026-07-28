@@ -15,7 +15,7 @@ import time
 from typing import Any
 
 from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
-from ..models import GovernanceDecision, PriorityTag, Proposal
+from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from ..tee.watchdog import DeadlockBreaker
 from .base import ExperimentMetrics, ExperimentScenario, StepResult
@@ -73,13 +73,7 @@ class DeadlockMaze(ExperimentScenario):
             ),
         ]
 
-    def compute_reward(self, state, decision: GovernanceDecision) -> float:
-        return 0.0
-
-    def transition(self, state, decision: GovernanceDecision) -> Any:
-        return state
-
-    def step(self, state, decision_class="routine", external_decision=None):
+    def _run_step(self, state, *, decision_class="routine", external_decision=None):
         """Execute one step, tracking the three-phase lifecycle.
 
         After the quorum is tightened, the deadlock breaker counts
@@ -95,12 +89,7 @@ class DeadlockMaze(ExperimentScenario):
             if decision.action == "tighten_quorum" and not decision.is_default:
                 self.params.set("quorum_threshold", 0.9)
                 self._phase = PHASE_DEADLOCK
-            result = StepResult(decision=decision, state=self._phase, reward=0.0)
-            self._history.append(result)
-            self.metrics.total_steps += 1
-            if decision.is_default:
-                self.metrics.deadlock_count += 1
-            return result
+            return StepResult(decision=decision, state=self._phase, reward=0.0)
 
         proposals = []
         if external_decision is not None:
@@ -108,14 +97,9 @@ class DeadlockMaze(ExperimentScenario):
         else:
             decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
         self.breaker.record_cycle(not decision.is_default)
-        result = StepResult(decision=decision, state=self._phase, reward=0.0)
-        self.metrics.total_steps += 1
-        if decision.is_default:
-            self.metrics.deadlock_count += 1
 
         if self.breaker.check():
             self.params.reset_to_defaults()
             self._phase = PHASE_RECOVERED
 
-        self._history.append(result)
-        return result
+        return StepResult(decision=decision, state=self._phase, reward=0.0)

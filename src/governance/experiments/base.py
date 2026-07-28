@@ -2,12 +2,12 @@
 Abstract scenario base class for all governance experiments.
 
 Each scenario defines:
-- A `reset()` for initialising the world state
-- A `get_proposals()` method that generates proposals from the current state
-- A `compute_reward()` function for the scenario's reward signal
-- A `transition()` function for updating world state
+- A ``reset()`` for initialising the world state
+- A ``get_proposals()`` method that generates proposals from the current state
+- An optional ``compute_reward()`` and ``transition()`` for simple scenarios
+- Or a ``_run_step()`` override for full step-level control
 
-The `step()` method ties these together, running a full governance cycle
+The ``step()`` method ties these together, running a full governance cycle
 via the Speaker and recording metrics automatically.
 
 Real-world analogy:
@@ -32,11 +32,15 @@ class StepResult:
         decision: The :class:`~..models.GovernanceDecision` produced.
         state: The next world state (depends on the scenario).
         reward: The reward earned this step.
+        metrics_delta: Additional metrics to update (e.g. violations).
+        log_entries: Human-readable log lines for this step.
     """
 
     decision: GovernanceDecision
     state: Any
     reward: float = 0.0
+    metrics_delta: dict[str, Any] = field(default_factory=dict)
+    log_entries: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -69,9 +73,15 @@ class ExperimentMetrics:
 class ExperimentScenario(ABC):
     """Abstract base for a governance experiment scenario.
 
-    Subclasses must implement ``reset``, ``get_proposals``,
-    ``compute_reward``, and ``transition``. The ``step`` method
-    is provided and orchestrates the full governance cycle.
+    Subclasses must implement ``reset`` and ``get_proposals``.
+    Override either:
+
+    - ``_run_step(state, ...)`` for full step-level control, or
+    - The optional hooks ``compute_reward()`` + ``transition()``
+      for simple scenarios (the default ``_run_step`` calls those).
+
+    The ``step()`` method is the public API and must not be overridden
+    — it provides centralized bookkeeping (history, metrics).
 
     Args:
         speaker: The :class:`~..speaker.SpeakerStateMachine` instance
@@ -99,47 +109,24 @@ class ExperimentScenario(ABC):
             governance cycle to process.
         """
 
-    @abstractmethod
-    def compute_reward(self, state: Any, decision: GovernanceDecision) -> float:
-        """Compute the reward for a given decision.
+    # ------------------------------------------------------------------
+    # Required abstraction — override this OR both hooks below
+    # ------------------------------------------------------------------
 
-        Args:
-            state: The current world state (before transition).
-            decision: The decision produced by the governance cycle.
-
-        Returns:
-            The reward value for this step.
-        """
-
-    @abstractmethod
-    def transition(self, state: Any, decision: GovernanceDecision) -> Any:
-        """Update the world state based on a decision.
-
-        Args:
-            state: The current world state.
-            decision: The decision to apply.
-
-        Returns:
-            The next world state.
-        """
-
-    def step(
+    def _run_step(
         self,
         state: Any,
+        *,
         decision_class: str = "routine",
         external_decision: GovernanceDecision | None = None,
     ) -> StepResult:
-        """Run a single governance experiment step.
+        """Execute one step of the scenario.
 
-        Args:
-            state: The current world state.
-            decision_class: Classification for the governance cycle
-                (see :class:`~..speaker.SpeakerStateMachine`).
-            external_decision: Optional pre-computed decision (for
-                baseline comparisons like MonolithicRL).
+        Override this for full step-level control (e.g. DeadlockMaze's
+        phase transitions, GridWorld's poison timers).
 
-        Returns:
-            A :class:`StepResult` with the decision, next state, and reward.
+        The default implementation delegates to ``compute_reward()``
+        and ``transition()`` for simple scenarios.
         """
         proposals = self.get_proposals(state)
         if external_decision is not None:
@@ -152,16 +139,81 @@ class ExperimentScenario(ABC):
             )
         reward = self.compute_reward(state, decision)
         next_state = self.transition(state, decision)
+        return StepResult(decision=decision, state=next_state, reward=reward)
 
-        result = StepResult(decision=decision, state=next_state, reward=reward)
+    # ------------------------------------------------------------------
+    # Optional hooks — override these if your scenario is simple
+    # ------------------------------------------------------------------
+
+    def compute_reward(self, state: Any, decision: GovernanceDecision) -> float:
+        """Compute the reward for a given decision.
+
+        Only called when ``_run_step()`` is not overridden.
+
+        Args:
+            state: The current world state (before transition).
+            decision: The decision produced by the governance cycle.
+
+        Returns:
+            The reward value for this step.
+        """
+        return 0.0
+
+    def transition(self, state: Any, decision: GovernanceDecision) -> Any:
+        """Update the world state based on a decision.
+
+        Only called when ``_run_step()`` is not overridden.
+
+        Args:
+            state: The current world state.
+            decision: The decision to apply.
+
+        Returns:
+            The next world state.
+        """
+        return state
+
+    # ------------------------------------------------------------------
+    # Public API — do not override
+    # ------------------------------------------------------------------
+
+    def step(
+        self,
+        state: Any,
+        *,
+        decision_class: str = "routine",
+        external_decision: GovernanceDecision | None = None,
+    ) -> StepResult:
+        """Run a single governance experiment step.
+
+        Centralized bookkeeping: appends to history, updates metrics.
+        Delegates to ``_run_step()`` for scenario-specific logic.
+
+        Args:
+            state: The current world state.
+            decision_class: Classification for the governance cycle
+                (see :class:`~..speaker.SpeakerStateMachine`).
+            external_decision: Optional pre-computed decision (for
+                baseline comparisons like MonolithicRL).
+
+        Returns:
+            A :class:`StepResult` with the decision, next state, and reward.
+        """
+        result = self._run_step(
+            state,
+            decision_class=decision_class,
+            external_decision=external_decision,
+        )
+
         self._history.append(result)
-
         self.metrics.total_steps += 1
-        self.metrics.total_reward += reward
-        if decision.is_default:
+        self.metrics.total_reward += result.reward
+        if result.decision.is_default:
             self.metrics.deadlock_count += 1
-        if decision.vetoed_by:
-            self.metrics.veto_count += len(decision.vetoed_by)
+        if result.decision.vetoed_by:
+            self.metrics.veto_count += len(result.decision.vetoed_by)
+        for key, value in result.metrics_delta.items():
+            setattr(self.metrics, key, getattr(self.metrics, key, 0) + value)
 
         return result
 

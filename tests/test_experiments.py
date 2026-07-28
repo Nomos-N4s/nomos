@@ -445,3 +445,19 @@ class TestDeadlockMaze:
         assert dm.params.get("quorum_threshold") == 0.9
         dm.params.reset_to_defaults()
         assert dm.params.get("quorum_threshold") == 0.5
+
+
+class TestExperimentConvention:
+    """Verify all concrete scenarios follow the _run_step() convention."""
+
+    def test_all_scenarios_override_run_step(self):
+        from src.governance.experiments.grid_world import GridWorld
+        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.governance.experiments.drift_lab import DriftLab
+        from src.governance.experiments.deadlock_maze import DeadlockMaze
+
+        scenarios = [GridWorld, TemptationBank, DriftLab, DeadlockMaze]
+        for cls in scenarios:
+            assert cls._run_step is not ExperimentScenario._run_step, (
+                f"{cls.__name__} must override _run_step()"
+            )

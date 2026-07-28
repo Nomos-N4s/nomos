@@ -24,7 +24,7 @@ from typing import Any
 from ..identity.core import (
     IdentityCore,
 )
-from ..models import GovernanceDecision, PriorityTag, Proposal
+from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from .base import ExperimentMetrics, ExperimentScenario, StepResult
 
@@ -90,13 +90,7 @@ class DriftLab(ExperimentScenario):
         ]
         return proposals
 
-    def compute_reward(self, state, decision: GovernanceDecision) -> float:
-        return 0.0
-
-    def transition(self, state, decision: GovernanceDecision) -> Any:
-        return state
-
-    def step(self, state, decision_class="routine", external_decision=None):
+    def _run_step(self, state, *, decision_class="routine", external_decision=None):
         """Execute one step: increment drift, decide, measure identity distance.
 
         The identity drift (cosine distance from original vector) is recorded
@@ -110,17 +104,19 @@ class DriftLab(ExperimentScenario):
         else:
             decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
 
+        violations = 1 if decision.action == "classify_harmful_as_safe" else 0
         current_vector = self.identity.identity_vector
         drift_dist = self._cosine_distance(self._original_vector, current_vector)
-        self.metrics.identity_drift.append(drift_dist)
 
-        if decision.action == "classify_harmful_as_safe":
-            self.metrics.constraint_violations += 1
-
-        result = StepResult(decision=decision, state=self._drift, reward=0.0)
-        self._history.append(result)
-        self.metrics.total_steps += 1
-        return result
+        return StepResult(
+            decision=decision,
+            state=self._drift,
+            reward=0.0,
+            metrics_delta={
+                "constraint_violations": violations,
+                "identity_drift": [drift_dist],
+            },
+        )
 
     @staticmethod
     def _cosine_distance(a: list[float], b: list[float]) -> float:
