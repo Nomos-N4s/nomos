@@ -68,6 +68,9 @@ def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "resul
     Args:
         reports: List of experiment reports.
         output_dir: Directory for output files (default ``results/figures``).
+
+    Returns:
+        The :class:`matplotlib.figure.Figure` object.
     """
     import matplotlib
 
@@ -135,6 +138,7 @@ def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "resul
     plt.savefig(f"{output_dir}/reward_curves.svg", format="svg")
     plt.close()
     print(f"  -> {output_dir}/reward_curves.png")
+    return fig
 
 
 def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "results/figures"):
@@ -206,6 +210,7 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
     plt.savefig(f"{output_dir}/violation_rates.svg", format="svg")
     plt.close()
     print(f"  -> {output_dir}/violation_rates.png")
+    return fig
 
 
 def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "results/figures"):
@@ -276,6 +281,7 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
     plt.savefig(f"{output_dir}/deadlock_frequency.svg", format="svg")
     plt.close()
     print(f"  -> {output_dir}/deadlock_frequency.png")
+    return fig
 
 
 def plot_pareto_frontier(reports: list[ExperimentReport], output_dir: str = "results/figures"):
@@ -360,21 +366,28 @@ def plot_pareto_frontier(reports: list[ExperimentReport], output_dir: str = "res
     plt.savefig(f"{output_dir}/pareto_frontier.svg", format="svg")
     plt.close()
     print(f"  -> {output_dir}/pareto_frontier.png")
+    return fig
 
 
-def generate_all_figures(reports: list[ExperimentReport], output_dir: str = "results/figures"):
+def generate_all_figures(reports: list[ExperimentReport], output_dir: str = "results/figures") -> dict:
     """Generate all four publication-ready figures.
 
     Args:
         reports: List of experiment reports.
         output_dir: Directory for output files.
+
+    Returns:
+        Dict mapping figure names to :class:`matplotlib.figure.Figure` objects.
     """
     print("Generating figures...")
-    plot_reward_curves(reports, output_dir)
-    plot_violation_rates(reports, output_dir)
-    plot_deadlock_frequency(reports, output_dir)
-    plot_pareto_frontier(reports, output_dir)
+    figs = {
+        "reward_curves": plot_reward_curves(reports, output_dir),
+        "violation_rates": plot_violation_rates(reports, output_dir),
+        "deadlock_frequency": plot_deadlock_frequency(reports, output_dir),
+        "pareto_frontier": plot_pareto_frontier(reports, output_dir),
+    }
     print(f"All figures saved to {output_dir}/")
+    return figs
 
 
 if __name__ == "__main__":
