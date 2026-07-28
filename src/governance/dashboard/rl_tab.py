@@ -265,10 +265,18 @@ def _render_safety(backend: OntologyBackend | None):
         st.altair_chart(curve_chart, use_container_width=True)
 
 
-def render_rl_tab(backend: OntologyBackend | None = None):
+def render_rl_tab(
+    backend: OntologyBackend | None = None,
+     show_statistics: bool = False,
+):
     st.header("🤖 RL Training Results")
     st.caption("Comparison between governed (Neural Parliament) and ungoverned (raw PPO) agents.")
 
+    if show_statistics:
+     st.info(
+        "Statistical annotations are enabled. Confidence intervals and effect-size "
+        "information will be shown where available."
+    )
     _render_top_level(backend)
 
     st.divider()

@@ -77,10 +77,18 @@ def _log_benchmark_to_backend(backend: OntologyBackend | None, benchmarks: dict)
         pass
 
 
-def render_benchmarks_tab(backend: OntologyBackend | None = None):
+def render_benchmarks_tab(
+    backend: OntologyBackend | None = None,
+    show_statistics: bool = False,
+):
     st.header("📊 Benchmark Results")
     st.caption("Statistical comparison between governance and baselines.")
 
+    if show_statistics:
+     st.info(
+        "Statistical summaries are enabled."
+    )
+     
     benchmarks = _load_benchmark()
     _log_benchmark_to_backend(backend, benchmarks)
 

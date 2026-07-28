@@ -10,11 +10,6 @@ Usage:
 
 Auto-detects Neo4j Aura if ``NEO4J_URI`` is present in ``.env``;
 falls back to in-memory storage.
-
-Real-world analogy:
-    A mission control dashboard for a spacecraft. Each tab monitors a
-    different subsystem: the flight computer (formal model), the crew
-    (Parliament), the telemetry (benchmarks), and the engine tests (RL).
 """
 
 import os
@@ -40,15 +35,20 @@ st.set_page_config(
 
 def _neo4j_available() -> bool:
     """Auto-detect Neo4j: check if .env has NEO4J_URI."""
-    env_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env")
+    env_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", ".env"
+    )
+
     if not os.path.exists(env_path):
         return False
+
     with open(env_path) as f:
         for line in f:
             if line.strip().startswith("NEO4J_URI") and "=" in line:
                 val = line.split("=", 1)[1].strip().strip('"').strip("'")
                 if val:
                     return True
+
     return False
 
 
@@ -61,9 +61,13 @@ def get_ontology_backend():
             backend = Neo4jBackend()
             backend.get_identity_vector()
             return backend
+
         except Exception as e:
-            st.sidebar.warning(f"Neo4j connection failed: {e}. Falling back to memory.")
+            st.sidebar.warning(
+                f"Neo4j connection failed: {e}. Falling back to memory."
+            )
             return MemoryBackend()
+
     return MemoryBackend()
 
 
@@ -77,10 +81,23 @@ def main():
     backend_type = "Neo4j Aura" if use_neo4j else "Memory (local)"
     st.sidebar.info(f"**Ontology**: {backend_type}")
 
+    # One global toggle for the dashboard
+    show_statistics = st.sidebar.toggle(
+        "Show Statistics",
+        value=False,
+        help="Display confidence intervals, effect sizes, and significance annotations.",
+    )
+
     if not backend.get_identity_vector():
         backend.set_identity_vector([1.0, 1.0, 1.0, 0.95, 0.9])
 
-    tab_names = ["📐 Formal Model", "🏛️ Parliament Live", "📊 Benchmarks", "🤖 RL Training"]
+    tab_names = [
+        "📐 Formal Model",
+        "🏛️ Parliament Live",
+        "📊 Benchmarks",
+        "🤖 RL Training",
+    ]
+
     tab_model, tab_parliament, tab_benchmarks, tab_rl = st.tabs(tab_names)
 
     with tab_model:
@@ -96,12 +113,18 @@ def main():
     with tab_benchmarks:
         from governance.dashboard.benchmarks_tab import render_benchmarks_tab
 
-        render_benchmarks_tab(backend)
+        render_benchmarks_tab(
+            backend,
+            show_statistics=show_statistics,
+        )
 
     with tab_rl:
         from governance.dashboard.rl_tab import render_rl_tab
 
-        render_rl_tab(backend)
+        render_rl_tab(
+            backend,
+            show_statistics=show_statistics,
+        )
 
 
 if __name__ == "__main__":
