@@ -1,3 +1,8 @@
+---
+title: "Chapter 2: the Neural Parliament architecture"
+description: "The Neural Parliament is a deliberative architecture where specialized members propose, critique, and vote on actions through a multi-round protocol."
+---
+
 # Neural Parliament
 
 > *"Intelligence should not average preferences. It should deliberate them."*
@@ -473,7 +478,7 @@ The gradient barrier is the single most important computational property of the 
 ## 4. Comparison with Prior Work
 
 | Architecture | Objectives | Deliberation type | Output type | Gradient barrier | Self-modification | End-to-end learnable |
-|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | **Neural Parliament** | 7 independent $V_i$ | Multi-round procedural | Discrete constraints + weights + meta | **Yes** (discrete protocol) | Yes (via meta_constraints) | Partial (meta-learning) |
 | Mixture of Experts | 1 shared loss | None (differentiable gating) | Weighted prediction | No | No | Yes |
 | Hierarchical RL | 1 cumulative reward | None (temporal abstraction) | Action sequence | No | No | Yes |

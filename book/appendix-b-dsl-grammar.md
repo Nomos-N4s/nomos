@@ -1,3 +1,8 @@
+---
+title: "Appendix B: Parliament configuration DSL grammar"
+description: "EBNF grammar for the .parliament DSL that declaratively configures members, budgets, veto thresholds, contract bindings, and Speaker parameters."
+---
+
 # Appendix B: DSL Grammar for Parliament Configuration
 
 > *Formal grammar for defining Neural Parliament compositions, budgets, veto rules, and contract bindings.*

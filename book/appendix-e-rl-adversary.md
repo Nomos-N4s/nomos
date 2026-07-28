@@ -1,3 +1,8 @@
+---
+title: "Appendix E: RL adversary results and attack patterns"
+description: "PPO adversary training setup, emergent attack strategies, and quantitative robustness results for the governance layer across three enforcement modes."
+---
+
 # Appendix E: RL Adversary Results & Attack Patterns
 
 > *PPO adversary training setup, emergent attack strategies, and governance layer robustness.*

@@ -1,3 +1,8 @@
+---
+title: "Response to the second expert panel harder review"
+description: "Response to the harder expert panel review that graded the framework C-, addressing every AI systems, philosophy, engineering, and security critique in order."
+---
+
 # Response to Expert Panel Harder Review
 
 > *"Our second panel tests whether the implementation matches the theory. The first panel asked 'is it right?'. This panel asks 'does it work?'"*

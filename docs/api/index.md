@@ -1,3 +1,8 @@
+---
+title: "API reference for the Governance Layer Python package"
+description: "Reference for the Python governance package: Speaker, Parliament members, identity core, Ulysses contracts, TEE modules, experiments, and benchmark utilities."
+---
+
 # API Reference
 
 ::: governance.speaker

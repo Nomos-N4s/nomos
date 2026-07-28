@@ -1,3 +1,8 @@
+---
+title: "Chapter 3: Ulysses Contracts for AI self-binding"
+description: "Ulysses Contracts let AI agents voluntarily restrict future actions using meta-policies enforced by procedural inertia, monitors, and time-locked commits."
+---
+
 # Ulysses Contracts
 
 > *"Intelligence is not only the ability to choose well. It is also the ability to choose which future choices should exist."*
@@ -167,8 +172,8 @@ $$
 
 They address different dimensions:
 - **Procedural inertia** makes revocation *hard* (high bar)
-- **Distributed monitors** makes bypassing *expensive* (scaling cost)
-- **Timelocks** makes violation *slow* (detectable delay)
+- **Distributed monitors** make bypassing *expensive* (scaling cost)
+- **Timelocks** make violation *slow* (detectable delay)
 
 No single mechanism guarantees inviolability. Together, they create a defense-in-depth where breaking a contract requires simultaneously overcoming a procedural supermajority, corrupting $N$ independent architectures, and waiting through a timelock window.
 

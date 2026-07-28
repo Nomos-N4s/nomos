@@ -138,18 +138,21 @@ class ExtensionSandbox:
             return
         candidate.phase = ExtensionPhase.ISOLATION_BUFFER
 
-        empirical = dict(candidate.candidate_properties)
+        candidate.monitor_reports = []
         for r in range(rounds):
-            for key in empirical:
+            measured = {}
+            for key, value in candidate.candidate_properties.items():
                 noise = (secrets.randbelow(11) - 5) / 100.0
-                empirical[key] = round(max(0.0, min(1.0, empirical[key] + noise)), 3)
+                measured[key] = round(max(0.0, min(1.0, value + noise)), 3)
             candidate.monitor_reports.append(
                 {
                     "round": r + 1,
-                    "observed": dict(empirical),
+                    "observed": dict(measured),
                 }
             )
-        candidate.empirical_properties = empirical
+        candidate.empirical_properties = dict(
+            measured if rounds > 0 else candidate.candidate_properties
+        )
 
     def audit(self, index: int, tolerance: float = 0.1) -> bool:
         """Compare empirical properties against the candidate's claimed values.

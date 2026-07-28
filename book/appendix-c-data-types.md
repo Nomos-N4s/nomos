@@ -1,3 +1,8 @@
+---
+title: "Appendix C: core data types reference"
+description: "Type signatures, field semantics, and invariants for the core dataclasses used by the Speaker, Parliament members, contracts, and identity components."
+---
+
 # Appendix C: Data Types Reference
 
 > *Complete type signatures, field semantics, and invariants for all core dataclasses.*

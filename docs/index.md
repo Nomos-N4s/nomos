@@ -1,59 +1,67 @@
+---
+title: "Governance Layer: bounded autonomy for autonomous AI"
+description: "Governance Layer is a formal framework that bounds autonomous AI with a Neural Parliament, Ulysses Contracts, and a verifiable Identity Layer."
+---
+
 # Governance Layer
 
-**A Formal Framework for Self-Governing AI**
+## Provably Bounded Governance for Autonomous AI
 
-*Created by Carlos Pinto (xcoder-es)*
+**Created by Carlos Pinto (xcoder-es)**
 
-The Governance Layer is a reference implementation of a formal framework for constraining AI agents through a Neural Parliament, Ulysses Contracts, and an Identity Layer. It ensures that autonomous systems remain safe, aligned, and corrigible — even under optimization pressure.
+Neural Parliament • Ulysses Contracts • Identity Layer
+
+A formal framework for bounded autonomous decision-making.
+
+**Explore**
+
+- [Theory](book/00-preface.md)
+- [API](api/index.md)
+- [Benchmarks](benchmarks/index.md)
+- [GitHub](https://github.com/xcoder-es/governance-layer)
+
+---
+
+## Why
+
+Optimization pressure erodes constraints that are not formally enforced. Governance Layer bounds autonomous behavior through deliberation, contracts, and a verifiable identity model before actions are executed.
+
+## Architecture at a Glance
+
+```mermaid
+flowchart LR
+    A[Proposal] --> B{Neural Parliament}
+    B -->|Approve| C[Ulysses Contract]
+    C --> D[Identity Layer]
+    D --> E[Bounded Action]
+    B -->|Reject| F[Discard]
+```
+
+## Key Numbers
+
+| Feature | Value |
+|---------|------:|
+| Parliament members | **7** |
+| κ modes | **3** |
+| Mutability tiers | **4** |
+| Verified predictions | **12** |
 
 ## Quick Start
 
 ```bash
 pip install -e ".[rl,minigrid]"
 python -m src.governance.runner speaker
-python -m src.governance.runner all --baselines --steps 1000 --seeds 5
 ```
 
-## Key Concepts
+---
 
-- **Neural Parliament** — Seven specialized committees (Reward, Safety, Curiosity, Planning, Memory, Social, Integrity) that score and vote on agent proposals using weighted range voting.
-- **Ulysses Contracts** — Pre-commitment mechanisms that restrict the agent's future action space. Enacted by supermajority, revoked only by unanimity.
-- **Identity Layer** — Formal ontology + core commitments + mutability tiers + genesis 3-of-5 multisig + bounded parameter envelope.
-- **Gradient Barrier** — The governance decision's gradient with respect to any member's proposal function is zero, preventing gradient-based attacks.
-- **κ₂ Budget Enforcement** — No member may submit more proposals than their allocated budget in a single governance cycle.
+## Explore More
 
-## Formal Verification
-
-The framework includes Lean 4 proofs of core invariants:
-
-- `budget_invariant_holds`: Budget enforcement (κ₂) preserved across all governance cycles
-- `vote_resolution_deterministic`: Vote outcomes are deterministic
-- `budget_preserves_positive`: Falsification mechanism never drops budget below 1
-- `falsification_params_are_immutable`: Falsification threshold and cutoff are immutable-tier
-
-## Dashboard
-
-```bash
-streamlit run src/governance/dashboard/app.py
-```
-
-Provides interactive visualization of:
-- Formal model state (Identity tuple, predictions)
-- Parliament voting (step-by-step replay)
-- Benchmark comparisons (effect sizes, CIs)
-- RL training results (governed vs ungoverned)
-
-## Citation
-
-```bibtex
-@software{governance_layer,
-  author = {Carlos Pinto (xcoder-es)},
-  title = {The Governance Layer: A Formal Framework for Self-Governing AI},
-  year = {2026},
-  url = {https://github.com/xcoder-es/governance-layer}
-}
-```
+- [Theory](book/00-preface.md)
+- [API](api/index.md)
+- [Benchmarks](benchmarks/index.md)
+- [GitHub](https://github.com/xcoder-es/governance-layer)
 
 ## License
 
-This work is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Licensed under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license.

@@ -1,3 +1,8 @@
+---
+title: "Chapter 1: why AI needs a governance layer"
+description: "Modern AI excels at optimization but fails at governance. This chapter argues intelligent systems need a dedicated layer to bound autonomous decisions."
+---
+
 # The Missing Layer: Why AI Needs Governance 
 
 > *"Optimization alone is not sufficient for intelligence."*
@@ -40,8 +45,8 @@ Instead of asking:
 - "What should I do?"
 
 governance asks:
--
--  "Which objectives should guide my decision?"
+
+- "Which objectives should guide my decision?"
 
 or
 

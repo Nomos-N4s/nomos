@@ -1,3 +1,8 @@
+---
+title: "Architecture diagrams for the Governance Layer stack"
+description: "Mermaid diagrams showing the three-layer capability, governance, and identity stack, plus the Parliament, contract, and TEE isolation control flows."
+---
+
 # Architecture Diagrams
 
 Visual overview of the Governance Layer framework. All diagrams render natively on GitHub (Mermaid).

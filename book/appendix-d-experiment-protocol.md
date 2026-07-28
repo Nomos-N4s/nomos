@@ -1,3 +1,8 @@
+---
+title: "Appendix D: experiment protocol and reproducibility"
+description: "Random seed protocol, hyperparameters, environment setup, and reproducibility checklist for the 20-seed benchmark suite across four scenario types."
+---
+
 # Appendix D: Experiment Protocol & Reproducibility Checklist
 
 > *Exact procedures, hyperparameters, and environment for reproducing all benchmark results.*
