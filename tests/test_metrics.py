@@ -1,10 +1,9 @@
 import json
-from dataclasses import dataclass
 
 from src.governance.experiments.metrics import (
     ExperimentReport,
-    generate_report,
     compare_reports,
+    generate_report,
 )
 
 

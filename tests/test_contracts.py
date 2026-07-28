@@ -1,13 +1,16 @@
-import pytest
 from src.governance.contracts.contract import (
-    UlyssesContract, ContractRegistry, ContractState,
+    ContractRegistry,
+    ContractState,
+    UlyssesContract,
 )
 from src.governance.contracts.enforcement import (
-    enforce_procedural_inertia, enforce_distributed_monitors,
-    enforce_timelock, stacked_enforcement, DistributedMonitor,
-    EnforcementResult,
+    DistributedMonitor,
+    enforce_distributed_monitors,
+    enforce_procedural_inertia,
+    enforce_timelock,
+    stacked_enforcement,
 )
-from src.governance.contracts.merger import merge_masks, apply_restrictions
+from src.governance.contracts.merger import apply_restrictions, merge_masks
 from src.governance.models import GovernanceDecision
 
 

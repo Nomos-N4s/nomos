@@ -2,7 +2,10 @@ import io
 import os
 import sys
 import tempfile
+
 import pytest
+
+from src.governance.experiments.metrics import ExperimentReport
 from src.governance.runner import (
     _build_baseline_flags,
     _export_csv,
@@ -11,7 +14,6 @@ from src.governance.runner import (
     cmd_speaker,
     main,
 )
-from src.governance.experiments.metrics import ExperimentReport
 
 
 class TestResolveCsvPath:

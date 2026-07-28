@@ -1,11 +1,12 @@
 import pytest
-from src.governance.identity.ontology import Ontology, compute_hash
-from src.governance.identity.keys import GenesisMultisig
+
 from src.governance.identity.extension import (
-    ExtensionPhase,
     ExtensionCandidate,
+    ExtensionPhase,
     ExtensionSandbox,
 )
+from src.governance.identity.keys import GenesisMultisig
+from src.governance.identity.ontology import Ontology
 
 
 class TestExtensionCandidate:

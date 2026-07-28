@@ -1,7 +1,7 @@
 from src.governance.identity.params import (
+    DEFAULT_PARAMETER_ENVELOPE,
     BoundedParameter,
     ParameterEnvelope,
-    DEFAULT_PARAMETER_ENVELOPE,
 )
 
 

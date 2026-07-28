@@ -77,6 +77,100 @@ def _cohens_d(control: list[float], treatment: list[float]) -> float:
     return (m1 - m2) / pooled
 
 
+def _cohens_d_ci(control: list[float], treatment: list[float], ci: float = 0.95) -> dict:
+    """Confidence interval for Cohen's d using the Delta-method approximation.
+
+    Args:
+        control: Governance rewards.
+        treatment: Baseline rewards.
+        ci: Confidence level (default 0.95).
+
+    Returns:
+        Dict with keys ``d``, ``ci_lower``, ``ci_upper``, ``se_d``.
+        Returns ``{"d": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "se_d": 0.0}``
+        if either group has fewer than 2 elements.
+    """
+    n1, n2 = len(control), len(treatment)
+    if n1 < 2 or n2 < 2:
+        return {"d": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "se_d": 0.0}
+
+    d = _cohens_d(control, treatment)
+    se = math.sqrt((n1 + n2) / (n1 * n2) + d * d / (2.0 * (n1 + n2 - 2)))
+    if se == 0:
+        return {"d": round(d, 3), "ci_lower": round(d, 3), "ci_upper": round(d, 3), "se_d": 0.0}
+
+    z = _inv_normal_cdf(1.0 - (1.0 - ci) / 2.0)
+    return {
+        "d": round(d, 3),
+        "ci_lower": round(d - z * se, 3),
+        "ci_upper": round(d + z * se, 3),
+        "se_d": round(se, 4),
+    }
+
+
+def _mannwhitney_u_exact(x: list[float], y: list[float]) -> tuple[float, float]:
+    """Exact two-tailed p-value for Mann-Whitney U via combinatorial enumeration.
+
+    Only valid when max(n1, n2) <= 8.  Falls back to normal approximation
+    for larger samples.
+
+    Args:
+        x: First group.
+        y: Second group.
+
+    Returns:
+        ``(U_statistic, p_value)``.
+    """
+    n1, n2 = len(x), len(y)
+    if n1 < 2 or n2 < 2:
+        return (0.0, 1.0)
+    if max(n1, n2) > 8:
+        return _mannwhitney_u(x, y)
+
+    import itertools
+
+    combined = [(v, 0) for v in x] + [(v, 1) for v in y]
+    n = n1 + n2
+    # Compute ranks for ALL values (handles ties)
+    combined.sort(key=lambda t: t[0])
+    ranks = [0.0] * n
+    tie_adjustment = 0.0
+    i = 0
+    while i < n:
+        j = i
+        while j < n and combined[j][0] == combined[i][0]:
+            j += 1
+        tie_count = j - i
+        avg_rank = (i + 1 + j) / 2.0
+        for k in range(i, j):
+            ranks[k] = avg_rank
+        if tie_count > 1:
+            tie_adjustment += tie_count**3 - tie_count
+        i = j
+
+    r1 = sum(ranks[k] for k in range(n) if combined[k][1] == 0)
+    u1 = r1 - n1 * (n1 + 1) / 2.0
+    u2 = n1 * n2 - u1
+    u_obs = min(u1, u2)
+
+    # Enumerate all possible assignments
+    all_indices = list(range(n))
+
+    count_extreme = 0
+    total = 0
+    for combo in itertools.combinations(all_indices, n1):
+        total += 1
+        r1_test = sum(ranks[k] for k in combo)
+        u1_test = r1_test - n1 * (n1 + 1) / 2.0
+        # Use the property that u1 + u2 = n1*n2 for the test statistic
+        obs = min(u1_test, n1 * n2 - u1_test)
+        if obs <= u_obs:
+            count_extreme += 1
+
+    p_val = count_extreme / max(total, 1)
+    return (round(u_obs, 2), round(p_val, 4))
+
+
 def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
     """Compute Mann-Whitney U test and two-tailed p-value (normal approx).
 
@@ -128,6 +222,39 @@ def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
     return (round(u, 2), round(p, 4))
 
 
+def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict]:
+    """Apply Holm-Bonferroni step-down correction for multiple comparisons.
+
+    Strictly more powerful than Bonferroni: sorts p-values ascending,
+    then the k-th smallest is rejected if p_k <= alpha / (m - k + 1).
+
+    Args:
+        p_values: Raw p-values (one per comparison).
+        alpha: Family-wise error rate (default 0.05).
+
+    Returns:
+        List of dicts with keys ``raw_p``, ``corrected_p``, ``significant``,
+        ``rank`` (1=smallest), ``method`` (``"holm"``).
+    """
+    m = len(p_values)
+    if m == 0:
+        return []
+    indexed = [(raw_p, i) for i, raw_p in enumerate(p_values)]
+    indexed.sort(key=lambda x: x[0])
+    results = [None] * m
+    for rank, (raw_p, orig_idx) in enumerate(indexed):
+        k = rank + 1
+        corrected = min(raw_p * (m - k + 1), 1.0)
+        results[orig_idx] = {
+            "raw_p": raw_p,
+            "corrected_p": round(corrected, 4),
+            "significant": corrected < alpha,
+            "rank": k,
+            "method": "holm",
+        }
+    return results
+
+
 def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict]:
     """Apply Bonferroni correction for multiple comparisons.
 
@@ -152,6 +279,141 @@ def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict
             }
         )
     return results
+
+
+def _inv_normal_cdf(p: float) -> float:
+    """Inverse standard normal CDF (Abramowitz & Stegun 26.2.23).
+
+    Uses the rational approximation valid for p in (0, 1).  Maximum
+    absolute error < 4.5e-4.
+    """
+    if p <= 0.0 or p >= 1.0:
+        return 0.0
+    if p < 0.5:
+        return -_inv_normal_cdf(1.0 - p)
+
+    q = 1.0 - p
+    t = math.sqrt(-2.0 * math.log(q))
+    c0, c1, c2 = 2.515517, 0.802853, 0.010328
+    d1, d2, d3 = 1.432788, 0.189269, 0.001308
+    z = t - (c0 + c1 * t + c2 * t * t) / (1.0 + d1 * t + d2 * t * t + d3 * t * t * t)
+    return z
+
+
+def _normal_cdf(x: float) -> float:
+    """Standard normal CDF using math.erf."""
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+_SHAPIRO_WILK_CRITICAL = [
+    0,
+    0,
+    0,  # 0, 1, 2 — not used
+    0.787,
+    0.748,
+    0.762,
+    0.788,
+    0.803,
+    0.818,
+    0.829,
+    0.842,  # 3-10
+    0.850,
+    0.859,
+    0.866,
+    0.874,
+    0.881,
+    0.887,
+    0.892,
+    0.897,  # 11-18
+    0.901,
+    0.905,
+    0.908,
+    0.911,
+    0.914,
+    0.916,
+    0.918,
+    0.920,  # 19-26
+    0.923,
+    0.924,
+    0.926,
+    0.927,
+    0.929,
+    0.930,
+    0.931,
+    0.933,  # 27-34
+    0.934,
+    0.935,
+    0.936,
+    0.937,
+    0.938,
+    0.939,
+    0.940,
+    0.941,  # 35-42
+    0.942,
+    0.943,
+    0.944,
+    0.945,
+    0.945,
+    0.946,
+    0.947,
+    0.947,  # 43-50
+]
+
+
+def _shapiro_wilk(x: list[float], alpha: float = 0.05) -> dict:
+    """Shapiro-Wilk test for normality (alpha = 0.05).
+
+    Computes the W statistic using Blom-score approximation of expected
+    normal order statistics.  The p-value is derived by interpolating the
+    published critical-value table (Shapiro & Wilk 1965, Royston 1992).
+
+    Args:
+        x: Sample values.
+        alpha: Significance threshold (default 0.05).
+
+    Returns:
+        Dict with keys ``W``, ``p_value``, ``normal``, ``warning``.
+    """
+    n = len(x)
+    warning = None
+    if n < 3:
+        return {"W": 1.0, "p_value": 1.0, "normal": True, "warning": "n < 3"}
+    if n > len(_SHAPIRO_WILK_CRITICAL) - 1:
+        return {"W": 1.0, "p_value": 1.0, "normal": True, "warning": f"n={n} > 50, skipping"}
+
+    x_sorted = sorted(x)
+    mean_x = statistics.mean(x)
+    ss = sum((xi - mean_x) ** 2 for xi in x_sorted)
+    if ss == 0:
+        return {"W": 1.0, "p_value": 1.0, "normal": True, "warning": "zero variance"}
+
+    # Blom scores for expected normal order statistics
+    m = [_inv_normal_cdf((i + 1 - 3 / 8) / (n + 1 / 4)) for i in range(n)]
+
+    # Normalize coefficients: a_i = m_i / sqrt(sum m_j^2)
+    m_norm = math.sqrt(sum(mi * mi for mi in m))
+    if m_norm == 0:
+        return {"W": 1.0, "p_value": 1.0, "normal": True, "warning": "zero score norm"}
+
+    a = [mi / m_norm for mi in m]
+    b = sum(a[i] * x_sorted[i] for i in range(n))
+    w_stat = b * b / ss
+
+    # Compare against critical value table at alpha = 0.05
+    crit = _SHAPIRO_WILK_CRITICAL[n] if n <= len(_SHAPIRO_WILK_CRITICAL) - 1 else 0.95
+    normal = w_stat >= crit
+    if normal:
+        p_est = max(0.5, 1.0 - (1.0 - alpha) * (w_stat - crit) / (1.0 - crit))
+    else:
+        p_est = min(alpha, alpha * w_stat / max(crit, 1e-9))
+    p_value = round(max(0.0, min(1.0, p_est)), 4)
+
+    return {
+        "W": round(w_stat, 6),
+        "p_value": p_value,
+        "normal": normal,
+        "warning": warning,
+    }
 
 
 def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[dict]:
@@ -190,6 +452,32 @@ def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[d
                         }
                     )
     return episodes
+
+
+def _is_paired(
+    groups: dict[tuple[str, str], list[float]],
+    scenario: str,
+    strategy_a: str,
+    strategy_b: str,
+) -> bool:
+    """Heuristic check whether two strategies share paired observations.
+
+    Strategies are considered paired (repeated measures) if they have the
+    same number of reports for a given scenario, suggesting a within-subject
+    design.  This is a simple diagnostic, not a formal structural-zero test.
+
+    Args:
+        groups: Mapping ``(strategy, scenario) -> rewards``.
+        scenario: Scenario name to check.
+        strategy_a: First strategy name.
+        strategy_b: Second strategy name.
+
+    Returns:
+        ``True`` if counts match and are >= 2.
+    """
+    n_a = len(groups.get((strategy_a, scenario), []))
+    n_b = len(groups.get((strategy_b, scenario), []))
+    return n_a >= 2 and n_b >= 2 and n_a == n_b
 
 
 @dataclass
@@ -258,22 +546,25 @@ def compute_effect_sizes(
     reports: list[ExperimentReport],
     alpha: float = 0.05,
 ) -> list[dict]:
-    """Compute Cohen's d and Mann-Whitney U with Bonferroni correction.
+    """Compute Cohen's d and Mann-Whitney U with multiple-test correction.
 
     For each scenario, governance rewards are compared against every
-    baseline using Cohen's d (parametric effect size) and Mann-Whitney U
-    (non-parametric test). Raw p-values are Bonferroni-corrected across
-    all comparisons within the call.
+    baseline using Cohen's d (parametric effect size, with CI and
+    normality check) and Mann-Whitney U (non-parametric test, exact
+    p-value when n < 8).  Raw p-values are corrected via both Bonferroni
+    and Holm-Bonferroni.  A paired-design heuristic is noted.
 
     Args:
         aggregates: Aggregates (used to determine which scenarios exist).
         reports: Full report list (used to access raw rewards per group).
-        alpha: Family-wise error rate for Bonferroni correction (default 0.05).
+        alpha: Family-wise error rate (default 0.05).
 
     Returns:
         List of dicts with keys ``scenario``, ``governance_vs``, ``cohens_d``,
-        ``mannwhitney_u``, ``p_value_raw``, ``p_value_corrected``,
-        ``significant``, ``n_governance``, ``n_baseline``, ``interpretation``.
+        ``cohens_d_ci``, ``cohens_d_se``, ``mannwhitney_u``, ``p_value_raw``,
+        ``p_value_corrected``, ``p_value_holm``, ``significant``,
+        ``significant_holm``, ``n_governance``, ``n_baseline``, ``paired``,
+        ``normality_warning``, ``interpretation``.
     """
     groups = defaultdict(list)
     for r in reports:
@@ -291,17 +582,35 @@ def compute_effect_sizes(
         for bl in baselines:
             treatment_rewards = groups.get((bl, scenario), [])
             d = _cohens_d(control_rewards, treatment_rewards)
-            u_stat, p_raw = _mannwhitney_u(control_rewards, treatment_rewards)
+            d_ci = _cohens_d_ci(control_rewards, treatment_rewards)
+
+            normality = _shapiro_wilk(control_rewards + treatment_rewards, alpha)
+            normality_warning = (
+                "data non-normal; Cohen's d CI is approximate" if not normality["normal"] else None
+            )
+
+            if max(len(control_rewards), len(treatment_rewards)) <= 8:
+                u_stat, p_raw = _mannwhitney_u_exact(control_rewards, treatment_rewards)
+            else:
+                u_stat, p_raw = _mannwhitney_u(control_rewards, treatment_rewards)
+
             raw_p_values.append(p_raw)
+
+            paired = _is_paired(groups, scenario, governance_key, bl)
+
             effect_sizes.append(
                 {
                     "scenario": scenario,
                     "governance_vs": bl,
                     "cohens_d": round(d, 3),
+                    "cohens_d_ci": [d_ci["ci_lower"], d_ci["ci_upper"]],
+                    "cohens_d_se": d_ci["se_d"],
                     "mannwhitney_u": u_stat,
                     "p_value_raw": p_raw,
                     "n_governance": len(control_rewards),
                     "n_baseline": len(treatment_rewards),
+                    "paired": paired,
+                    "normality_warning": normality_warning,
                     "interpretation": (
                         "large"
                         if abs(d) > 0.8
@@ -315,9 +624,12 @@ def compute_effect_sizes(
             )
 
     corrections = _bonferroni_correct(raw_p_values, alpha)
-    for es, corr in zip(effect_sizes, corrections):
+    holm_corrections = _holm_bonferroni_correct(raw_p_values, alpha)
+    for es, corr, hcorr in zip(effect_sizes, corrections, holm_corrections):
         es["p_value_corrected"] = corr["corrected_p"]
         es["significant"] = corr["significant"]
+        es["p_value_holm"] = hcorr["corrected_p"]
+        es["significant_holm"] = hcorr["significant"]
 
     return effect_sizes
 

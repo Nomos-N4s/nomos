@@ -1,15 +1,20 @@
 """End-to-end integration test: GridWorld with full Parliament."""
 
 import pytest
-from src.governance.models import Proposal, PriorityTag, GovernanceDecision
-from src.governance.speaker import SpeakerStateMachine
+
 from src.governance.committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExampleCuriosityMember, ExamplePlanningMember, ExampleSocialMember,
+    ExampleCuriosityMember,
+    ExampleIntegrityMember,
     ExampleMemoryMember,
+    ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
+    ExampleSocialMember,
 )
-from src.governance.contracts.contract import UlyssesContract, ContractRegistry
+from src.governance.contracts.contract import ContractRegistry, UlyssesContract
 from src.governance.contracts.merger import merge_masks
+from src.governance.models import GovernanceDecision, PriorityTag, Proposal
+from src.governance.speaker import SpeakerStateMachine
 
 
 @pytest.fixture

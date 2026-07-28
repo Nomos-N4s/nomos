@@ -1,4 +1,3 @@
-import pytest
 from src.governance.identity.keys import GenesisManifest, GenesisMultisig, KeyHolder
 
 

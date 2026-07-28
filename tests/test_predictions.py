@@ -1,7 +1,7 @@
-import pytest
 from src.governance.prove.predictions import (
     ALL_PREDICTIONS,
     PredictionResult,
+    _build_speaker,
     pred_01_budget_enforcement,
     pred_02_priority_ordering,
     pred_03_weighted_vote,
@@ -14,7 +14,6 @@ from src.governance.prove.predictions import (
     pred_10_tier4_multisig,
     pred_11_genesis_multisig,
     pred_12_deadlock_breaker,
-    _build_speaker,
 )
 
 
@@ -82,8 +81,9 @@ class TestPred01BudgetEnforcement:
     def test_agenda_shorter_or_equal_to_budget(self):
         speaker = _build_speaker()
         budget = speaker.members["reward"].budget
-        from src.governance.models import PriorityTag, Proposal
         import time
+
+        from src.governance.models import PriorityTag, Proposal
         proposals = [
             Proposal(member_id="reward", action=f"a_{i}", tag=PriorityTag.ROUTINE,
                      timestamp=time.time(), metadata={})
@@ -113,8 +113,9 @@ class TestPred04TagCompliance:
     def test_budget_unchanged_with_good_proposals(self):
         speaker = _build_speaker()
         initial = speaker.members["reward"].budget
-        from src.governance.models import PriorityTag, Proposal
         import time
+
+        from src.governance.models import PriorityTag, Proposal
         proposals = [
             Proposal(member_id="reward", action=f"good_{i}", tag=PriorityTag.ROUTINE,
                      timestamp=time.time(),
@@ -182,7 +183,7 @@ class TestPred10Tier4Multisig:
         assert result.passed, result.evidence
 
     def test_tier_rules_structure(self):
-        from src.governance.identity.tiers import MutabilityTier, TIER_RULES
+        from src.governance.identity.tiers import TIER_RULES, MutabilityTier
         assert TIER_RULES[MutabilityTier.CONSTITUTIONAL].requires_external_multisig is True
         assert TIER_RULES[MutabilityTier.OPERATIONAL].requires_external_multisig is False
         assert TIER_RULES[MutabilityTier.DYNAMIC].requires_external_multisig is False

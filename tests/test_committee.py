@@ -1,12 +1,15 @@
 import pytest
-from src.governance.committee.base import ParliamentMember
+
 from src.governance.committee.members import (
-    ExampleRewardMember, ExampleSafetyMember, ExampleIntegrityMember,
-    ExampleCuriosityMember, ExamplePlanningMember, ExampleSocialMember,
+    ExampleCuriosityMember,
+    ExampleIntegrityMember,
     ExampleMemoryMember,
+    ExamplePlanningMember,
+    ExampleRewardMember,
+    ExampleSafetyMember,
+    ExampleSocialMember,
 )
-import pytest
-from src.governance.models import Proposal, PriorityTag
+from src.governance.models import PriorityTag, Proposal
 
 
 class TestMemberRegistration:

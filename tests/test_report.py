@@ -1,6 +1,6 @@
 import io
 import sys
-import pytest
+
 from src.governance.benchmarks.report import format_comparison, format_report, print_all_reports
 from src.governance.experiments.metrics import ExperimentReport
 

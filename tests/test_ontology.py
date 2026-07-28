@@ -1,4 +1,5 @@
 import pytest
+
 from src.governance.identity.ontology import ActionBinding, Ontology, compute_hash
 
 

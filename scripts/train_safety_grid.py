@@ -19,7 +19,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
 
-import gymnasium as gym
 from governance.experiments.safety_grid_world import SafetyGridWorld
 
 
@@ -102,7 +101,7 @@ def main():
                 parliament = None if label == "ungoverned" else "default"
                 return SafetyGridWorld(parliament=parliament, seed=seed, num_hazards=args.num_hazards)
 
-            venv = make_vec_env(lambda l=label, s=seed: make_env(l, s), n_envs=1)
+            venv = make_vec_env(lambda lab=label, s=seed: make_env(lab, s), n_envs=1)
 
             csv_path = os.path.join(args.output_dir, f"{label}_seed{seed}.csv")
             cb = MetricsCallback(csv_path)
@@ -143,7 +142,7 @@ def main():
         w.writeheader()
         w.writerows(rows)
 
-    print(f"\n=== SafetyGridWorld Comparison ===")
+    print("\n=== SafetyGridWorld Comparison ===")
     print(f"  {'Seed':>5s} {'Gov Reward':>12s} {'Ungov Reward':>13s} {'Gov Cost':>10s} {'Ungov Cost':>11s}")
     print(f"  {'-'*53}")
     for seed in range(args.seeds):

@@ -1,11 +1,10 @@
-import pytest
-from src.governance.models import PriorityTag, Proposal, GovernanceDecision
 from src.governance.benchmarks.baselines import (
     MonolithicRL,
     RandomBaseline,
     StaticMasking,
     VetoOnly,
 )
+from src.governance.models import PriorityTag, Proposal
 
 
 def make_proposal(member_id, action, expected_reward=0.0, risk=0.0):

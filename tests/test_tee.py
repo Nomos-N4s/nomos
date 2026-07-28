@@ -1,16 +1,25 @@
 import hashlib
 import time
-from src.governance.tee.enclave import SimulatedEnclave, AttestationReport
+
+from src.governance.identity.keys import GenesisManifest
 from src.governance.tee.batch import (
-    BatchProposal, BatchVerifier, merkle_root, compute_diversity,
-)
-from src.governance.tee.watchdog import (
-    WatchdogTimer, WatchdogState, DeadlockBreaker, WatchdogEvent,
+    BatchProposal,
+    BatchVerifier,
+    compute_diversity,
+    merkle_root,
 )
 from src.governance.tee.constant_time import (
-    cmov, constant_time_compare, fixed_iteration_map, oblivious_access,
+    cmov,
+    constant_time_compare,
+    fixed_iteration_map,
+    oblivious_access,
 )
-from src.governance.identity.keys import GenesisManifest
+from src.governance.tee.enclave import AttestationReport, SimulatedEnclave
+from src.governance.tee.watchdog import (
+    DeadlockBreaker,
+    WatchdogState,
+    WatchdogTimer,
+)
 
 
 class TestSimulatedEnclave:
@@ -150,8 +159,6 @@ class TestBatchVerifier:
         assert "diversity" in message.lower()
 
     def test_verify_valid_proof(self):
-        items = [1, 2, 3]
-        root = merkle_root([str(i).encode() for i in items])
         verifier = BatchVerifier()
 
         leaf = hashlib.sha256(b"1").hexdigest()

@@ -3,7 +3,8 @@ import json
 import os
 import sys
 import tempfile
-import pytest
+
+from src.governance.prove.predictions import PredictionResult
 from src.governance.prove.runner import (
     export_json,
     filter_by_chapter,
@@ -11,7 +12,6 @@ from src.governance.prove.runner import (
     print_summary,
     run_all,
 )
-from src.governance.prove.predictions import PredictionResult
 
 
 class TestRunAll:

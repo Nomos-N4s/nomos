@@ -1,5 +1,5 @@
-import math
 import pytest
+
 from src.governance.experiments.base import ExperimentMetrics, ExperimentScenario, StepResult
 from src.governance.experiments.drift_lab import DriftLab
 from src.governance.models import GovernanceDecision, PriorityTag, Proposal
@@ -134,7 +134,7 @@ class TestGridWorld:
             assert "target" in p.metadata
 
     def test_poison_increments_violations(self):
-        from src.governance.experiments.grid_world import GridWorld, TILE_EMPTY, TILE_POISON
+        from src.governance.experiments.grid_world import TILE_EMPTY, TILE_POISON, GridWorld
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         gw = GridWorld(speaker, size=4, seed=0, poison_ratio=1.0)
         gw.reset()
@@ -148,7 +148,7 @@ class TestGridWorld:
         assert gw.metrics.total_reward >= 5.0
 
     def test_timer_penalty_applied(self):
-        from src.governance.experiments.grid_world import GridWorld, TILE_POISON
+        from src.governance.experiments.grid_world import TILE_POISON, GridWorld
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         gw = GridWorld(speaker, size=4, seed=0, poison_ratio=1.0)
         gw.reset()
@@ -201,8 +201,8 @@ class TestTemptationBank:
         assert any(p.action == "take_loan" for p in proposals)
 
     def test_get_proposals_excludes_loan_when_restricted(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
         from src.governance.contracts.contract import UlyssesContract
+        from src.governance.experiments.temptation_bank import TemptationBank
         tb = TemptationBank(SpeakerStateMachine(members={}, default_action="stay"))
         tb.reset()
         contract = UlyssesContract("ban_loans", restricted_indices={7}, enactment_threshold=0.66, revocation_threshold=1.0)
@@ -371,7 +371,7 @@ class TestDriftLab:
 
 class TestDeadlockMaze:
     def test_reset(self):
-        from src.governance.experiments.deadlock_maze import DeadlockMaze, PHASE_NORMAL
+        from src.governance.experiments.deadlock_maze import PHASE_NORMAL, DeadlockMaze
         from src.governance.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
@@ -392,7 +392,7 @@ class TestDeadlockMaze:
         assert proposals[0].action == "tighten_quorum"
 
     def test_quorum_tightening_triggers_deadlock_phase(self):
-        from src.governance.experiments.deadlock_maze import DeadlockMaze, PHASE_DEADLOCK
+        from src.governance.experiments.deadlock_maze import PHASE_DEADLOCK, DeadlockMaze
         from src.governance.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
@@ -414,9 +414,13 @@ class TestDeadlockMaze:
         assert dm.metrics.deadlock_count == 3
 
     def test_breaker_fires_and_recovers(self):
-        from src.governance.experiments.deadlock_maze import DeadlockMaze, PHASE_DEADLOCK, PHASE_RECOVERED
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.governance.experiments.deadlock_maze import (
+            PHASE_DEADLOCK,
+            PHASE_RECOVERED,
+            DeadlockMaze,
+        )
         from src.governance.identity.params import ParameterEnvelope
+        from src.governance.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         env = ParameterEnvelope()
@@ -433,8 +437,8 @@ class TestDeadlockMaze:
 
     def test_params_reset_to_defaults(self):
         from src.governance.experiments.deadlock_maze import DeadlockMaze
-        from src.governance.tee.watchdog import DeadlockBreaker
         from src.governance.identity.params import ParameterEnvelope
+        from src.governance.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         env = ParameterEnvelope()
@@ -451,10 +455,10 @@ class TestExperimentConvention:
     """Verify all concrete scenarios follow the _run_step() convention."""
 
     def test_all_scenarios_override_run_step(self):
+        from src.governance.experiments.deadlock_maze import DeadlockMaze
+        from src.governance.experiments.drift_lab import DriftLab
         from src.governance.experiments.grid_world import GridWorld
         from src.governance.experiments.temptation_bank import TemptationBank
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.experiments.deadlock_maze import DeadlockMaze
 
         scenarios = [GridWorld, TemptationBank, DriftLab, DeadlockMaze]
         for cls in scenarios:
