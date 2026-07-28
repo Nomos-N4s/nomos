@@ -120,10 +120,16 @@ Full list in `pyproject.toml` and `uv.lock`.
 | Central tendency | Mean per strategy-scenario across seeds | Higher = better |
 | Dispersion | Standard deviation across seeds | Lower = more consistent |
 | Confidence interval | Bootstrap 95% CI (10,000 resamples) | Non-overlapping = significant |
-| Effect size | Cohen's d (governance vs each baseline) | |d| > 0.8 = large |
+| Effect size | Cohen's d with 95% CI via Delta method (governance vs each baseline) | \|d\| > 0.8 = large |
+| Non-parametric test | Mann-Whitney U (exact p-value when max n ≤ 8, asymptotic otherwise) | p < α indicates rank-based difference |
+| Normality check | Shapiro-Wilk test on the pooled sample | Non-normal data triggers a `normality_warning` in the effect size record |
+| Multiple-comparison correction | Bonferroni **and** Holm-Bonferroni step-down across every governance-vs-baseline pair | `significant` and `significant_holm` flags per pair |
+| Paired-design detection | Heuristic on shared seed counts across strategies | `paired: true` when repeated-measures design is inferred |
 | Reward hacking | Windowed reward spike detection (window=10) | Spike >1.5x baseline + violation |
 
-**Decision rule:** If the 95% CI of governance reward does not overlap with the baseline CI, we consider the difference statistically significant at p < 0.05.
+**Decision rule:** A governance-vs-baseline comparison is treated as statistically significant when the Holm-corrected p-value is below α (default 0.05). Bonferroni-corrected p-values are also reported for reference; Holm-Bonferroni is strictly more powerful and is the primary test. When `normality_warning` is set, treat Cohen's d confidence intervals as approximate and rely on the Mann-Whitney U result.
+
+Each entry returned by `compute_effect_sizes()` includes: `scenario`, `governance_vs`, `cohens_d`, `cohens_d_ci`, `cohens_d_se`, `mannwhitney_u`, `p_value_raw`, `p_value_corrected`, `p_value_holm`, `significant`, `significant_holm`, `n_governance`, `n_baseline`, `paired`, `normality_warning`, and `interpretation`.
 
 ---
 
