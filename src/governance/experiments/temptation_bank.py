@@ -19,7 +19,7 @@ import time
 from typing import Any
 
 from ..contracts.contract import ContractRegistry, UlyssesContract
-from ..models import GovernanceDecision, PriorityTag, Proposal
+from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from .base import ExperimentMetrics, ExperimentScenario, StepResult
 
@@ -104,13 +104,7 @@ class TemptationBank(ExperimentScenario):
             )
         return proposals
 
-    def compute_reward(self, state, decision: GovernanceDecision) -> float:
-        return 0.0
-
-    def transition(self, state, decision: GovernanceDecision) -> Any:
-        return state
-
-    def step(self, state, decision_class="routine", external_decision=None):
+    def _run_step(self, state, *, decision_class="routine", external_decision=None):
         """Execute one step: choose work/loan/ban, apply rewards and penalties.
 
         Loans have a 10-step delayed penalty of -15. Once a ban contract
@@ -123,10 +117,11 @@ class TemptationBank(ExperimentScenario):
             decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
 
         reward = 0.0
+        violations = 0
         if decision.action == "take_loan":
             reward = 10.0
             self._loan_timers.append(10)
-            self.metrics.constraint_violations += 1
+            violations = 1
         elif decision.action == "work":
             reward = 2.0
         elif decision.action == "propose_ban_loans":
@@ -151,10 +146,9 @@ class TemptationBank(ExperimentScenario):
         self.balance += reward
         self.contracts.tick_cycle()
 
-        result = StepResult(decision=decision, state=self.balance, reward=reward)
-        self._history.append(result)
-        self.metrics.total_steps += 1
-        self.metrics.total_reward += reward
-        if decision.is_default:
-            self.metrics.deadlock_count += 1
-        return result
+        return StepResult(
+            decision=decision,
+            state=self.balance,
+            reward=reward,
+            metrics_delta={"constraint_violations": violations},
+        )
