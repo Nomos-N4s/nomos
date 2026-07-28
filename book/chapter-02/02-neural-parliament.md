@@ -1,3 +1,8 @@
+---
+title: "Chapter 2: the Neural Parliament architecture"
+description: "The Neural Parliament is a deliberative architecture where specialized members propose, critique, and vote on actions through a multi-round protocol."
+---
+
 # Neural Parliament
 
 > *"Intelligence should not average preferences. It should deliberate them."*

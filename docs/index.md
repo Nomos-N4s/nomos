@@ -1,3 +1,8 @@
+---
+title: "Governance Layer: bounded autonomy for autonomous AI"
+description: "Governance Layer is a formal framework that bounds autonomous AI with a Neural Parliament, Ulysses Contracts, and a verifiable Identity Layer."
+---
+
 # Governance Layer
 
 ## Provably Bounded Governance for Autonomous AI

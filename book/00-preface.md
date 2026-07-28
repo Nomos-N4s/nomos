@@ -1,3 +1,8 @@
+---
+title: "Preface: why I am building the Governance Layer"
+description: "Author Carlos Pinto explains why modern AI systems need governance mechanisms, not just optimization, to make trustworthy autonomous decisions."
+---
+
 # Why am I Building this?
 
 **Carlos Pinto (xcoder-es)** — *capintobe@gmail.com*

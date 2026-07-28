@@ -1,3 +1,8 @@
+---
+title: "Benchmark results across four governance scenarios"
+description: "Summary of benchmark results and figures comparing five strategies across GridWorld, TemptationBank, DriftLab, and DeadlockMaze governance scenarios."
+---
+
 # Benchmark Results
 
 See the [benchmark results summary](https://github.com/xcoder-es/governance-layer/blob/main/results/benchmark_summary.csv) and
