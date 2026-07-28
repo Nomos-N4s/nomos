@@ -1,6 +1,6 @@
 ---
 title: "Changelog"
-description: "Weekly updates to the Governance Layer product."
+description: "Weekly release notes for Governance Layer, covering new features, updates, and bug fixes across the Parliament, contracts, and experiments."
 ---
 
 # Changelog
