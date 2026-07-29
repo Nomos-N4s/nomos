@@ -1,4 +1,4 @@
-.PHONY: test build docs docker-build docker-test lint clean
+.PHONY: test build docs docker-build docker-test lint clean reproduce
 
 test:
 	python -m pytest tests/ -v --tb=short --cov=src.governance --cov-report=term-missing
@@ -21,6 +21,11 @@ docker-test:
 lint:
 	ruff check src/
 	ruff format --check src/
+
+reproduce: docker-build
+	mkdir -p results
+	docker run --rm -v "$(CURDIR)/results:/app/results" governance-layer all --baselines --steps 1000 --seeds 20
+	@echo "=== Reproducibility check complete ==="
 
 clean:
 	rm -rf site/ build/ dist/ .coverage* .pytest_cache/
