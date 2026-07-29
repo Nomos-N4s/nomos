@@ -60,31 +60,42 @@ def _generate_benchmark_summary(benchmarks: dict[str, Any] | None) -> str:
         if not all(column in df.columns for column in required_columns):
             return "Incomplete benchmark results."
 
-        governance = df[
-            df["strategy"].str.lower().str.contains("governance")
-        ]
-
-        baselines = df[
-            ~df["strategy"].str.lower().str.contains("governance")
-        ]
+        governance = df[df["strategy"].str.lower() == "governance"]
+        baselines = df[df["strategy"].str.lower() != "governance"]
 
         if governance.empty or baselines.empty:
             return "Insufficient data to compare governance and baseline strategies."
 
-        gov_reward = governance["mean_reward"].mean()
-        base_reward = baselines["mean_reward"].mean()
+        summary_lines = []
+        scenarios = sorted(set(governance["scenario"]) & set(baselines["scenario"]))
 
-        gov_violations = governance["mean_violations"].mean()
-        base_violations = baselines["mean_violations"].mean()
+        for scenario in scenarios:
+            gov_row = governance[governance["scenario"] == scenario]
+            base_rows = baselines[baselines["scenario"] == scenario]
 
-        return (
-            f"Governance achieved an average reward of {gov_reward:.2f} "
-            f"compared to {base_reward:.2f} for baseline strategies. "
-            f"Governance recorded {gov_violations:.2f} average violations "
-            f"versus {base_violations:.2f} for baselines."
-        )
+            if gov_row.empty or base_rows.empty:
+                continue
 
-    except Exception:
+            gov_reward = gov_row["mean_reward"].mean()
+            gov_violations = gov_row["mean_violations"].mean()
+
+            best_base = base_rows.loc[base_rows["mean_reward"].idxmax()]
+            delta = gov_reward - best_base["mean_reward"]
+
+            summary_lines.append(
+                f"In {scenario}, governance achieved {gov_reward:.2f} reward "
+                f"({gov_violations:.2f} avg. violations), a delta of {delta:+.2f} "
+                f"versus the best baseline ({best_base['strategy']}: "
+                f"{best_base['mean_reward']:.2f})."
+            )
+
+        if not summary_lines:
+            return "Insufficient data to compare governance and baseline strategies."
+
+        return " ".join(summary_lines)
+
+    except Exception as e:
+        st.warning(f"Benchmark summary generation failed: {e}")
         return "Unable to generate benchmark summary."
 
 
@@ -136,15 +147,16 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
 
     benchmarks = _load_benchmark()
     _log_benchmark_to_backend(backend, benchmarks)
-    
+
+    if benchmarks is not None:
         # Auto-generated dashboard summary
-    benchmark_summary = _generate_benchmark_summary(benchmarks)
+        benchmark_summary = _generate_benchmark_summary(benchmarks)
 
-    st.subheader("📌 Summary")
-    st.write(benchmark_summary)
+        st.subheader("📌 Summary")
+        st.write(benchmark_summary)
 
-    if st.button("📋 Copy Summary", key="benchmark_copy_summary"):
-        st.code(benchmark_summary, language="text")
+        if st.button("📋 Copy Summary", key="benchmark_copy_summary"):
+            st.code(benchmark_summary, language="text")
 
     if benchmarks is None:
         st.info(

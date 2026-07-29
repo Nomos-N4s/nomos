@@ -120,17 +120,17 @@ def _render_top_level(backend: OntologyBackend | None):
     summary = _load_summary()
     gov_metrics = _load_metrics("governed")
     ung_metrics = _load_metrics("ungoverned")
-    
-    # Auto-generated dashboard summary
-    rl_summary = _generate_rl_summary(summary)
-
-    st.subheader("📌 Summary")
-    st.write(rl_summary)
-
-    if st.button("📋 Copy Summary", key="rl_copy_summary"):
-        st.code(rl_summary, language="text")
 
     if summary is not None and not summary.empty:
+        # Auto-generated dashboard summary
+        rl_summary = _generate_rl_summary(summary)
+
+        st.subheader("📌 Summary")
+        st.write(rl_summary)
+
+        if st.button("📋 Copy Summary", key="rl_copy_summary"):
+            st.code(rl_summary, language="text")
+
         st.subheader("Governed vs Ungoverned — Summary")
 
         for _, row in summary.iterrows():

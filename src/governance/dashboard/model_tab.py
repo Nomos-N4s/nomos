@@ -57,7 +57,7 @@ def _generate_model_summary(
             else "not available"
         )
 
-        prediction_results = run_all()
+        prediction_results = run_all_safe()
         passed = sum(1 for r in prediction_results if r.passed)
 
         return (
@@ -81,7 +81,7 @@ def render_model_tab(backend: OntologyBackend):
     entities = backend.get_entities_by_type("action")
     identity_vec = backend.get_identity_vector()
     
-        # Auto-generated dashboard summary
+    # Auto-generated dashboard summary
     model_summary = _generate_model_summary(
         backend,
         identity_vec,
@@ -131,8 +131,6 @@ def render_model_tab(backend: OntologyBackend):
         )
 
     with col4:
-        from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
-
         params = DEFAULT_PARAMETER_ENVELOPE.snapshot()
         st.metric(
             r"$\mathcal{P}$ (Parameters)",
