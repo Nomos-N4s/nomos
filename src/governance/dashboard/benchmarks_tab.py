@@ -33,8 +33,8 @@ def _load_benchmark() -> dict[str, Any] | None:
         return None
     with open(path) as f:
         return json.load(f)
-    
-    
+
+
 def _generate_benchmark_summary(benchmarks: dict[str, Any] | None) -> str:
     """
     Generate a natural language summary of benchmark results.

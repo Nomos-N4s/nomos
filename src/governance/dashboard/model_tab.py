@@ -24,6 +24,7 @@ from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
 from ..ontology.backend import OntologyBackend
 from ..prove.runner import run_all
 
+
 def _generate_model_summary(
     backend: OntologyBackend,
     identity_vec: list | None,
@@ -51,11 +52,7 @@ def _generate_model_summary(
         commitment_count = len(core.commitments)
         parameter_count = len(params)
 
-        vector_status = (
-            "available"
-            if identity_vec
-            else "not available"
-        )
+        vector_status = "available" if identity_vec else "not available"
 
         prediction_results = run_all_safe()
         passed = sum(1 for r in prediction_results if r.passed)
@@ -70,6 +67,7 @@ def _generate_model_summary(
     except Exception:
         return "Unable to generate model summary."
 
+
 def render_model_tab(backend: OntologyBackend):
     st.header(
         r"Formal Model $\mathcal{I} = \langle \mathcal{O}, \mathcal{C}_{\text{core}}, \mathcal{K}, \mathcal{P} \rangle$"
@@ -80,7 +78,7 @@ def render_model_tab(backend: OntologyBackend):
 
     entities = backend.get_entities_by_type("action")
     identity_vec = backend.get_identity_vector()
-    
+
     # Auto-generated dashboard summary
     model_summary = _generate_model_summary(
         backend,
