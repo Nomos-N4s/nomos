@@ -53,6 +53,11 @@ omit = [
     "src/governance/runner.py",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (excluded from quick local runs, included in CI).",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
