@@ -34,6 +34,7 @@ def parse_file(path: str | Path) -> ParliamentConfig:
 
 # -- Tokenizer --
 
+
 def _tokenize(text: str) -> list[tuple[int, str]]:
     result: list[tuple[int, str]] = []
     for line in text.split("\n"):
@@ -47,6 +48,7 @@ def _tokenize(text: str) -> list[tuple[int, str]]:
 
 
 # -- Block parser (indentation-aware) --
+
 
 def _parse_forest(tokens: list[tuple[int, str]]) -> list[_Node]:
     forest: list[_Node] = []
@@ -90,9 +92,7 @@ def _parse_value(raw: str) -> Any:
 
 
 def _parse_atom(raw: str) -> Any:
-    if (raw.startswith('"') and raw.endswith('"')) or (
-        raw.startswith("'") and raw.endswith("'")
-    ):
+    if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
         return raw[1:-1]
 
     try:
@@ -109,6 +109,7 @@ def _parse_atom(raw: str) -> Any:
 
 
 # -- Root validation --
+
 
 def _validate_root(forest: list[_Node]) -> None:
     if not forest:
@@ -159,7 +160,7 @@ def _extract_kvs(children: list[_Node]) -> dict[str, Any]:
 
 
 def _build_member(node: _Node) -> DSLMemberConfig:
-    mid = node.name[len(_MEMBER):].strip()
+    mid = node.name[len(_MEMBER) :].strip()
     if not mid:
         raise DSLParseError("member section missing identifier")
 
@@ -182,7 +183,7 @@ def _build_member(node: _Node) -> DSLMemberConfig:
 
 
 def _build_contract(node: _Node) -> DSLContractConfig:
-    cid = node.name[len(_CONTRACT):].strip()
+    cid = node.name[len(_CONTRACT) :].strip()
     if not cid:
         raise DSLParseError("contract section missing identifier")
 

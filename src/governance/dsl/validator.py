@@ -21,11 +21,9 @@ def _validate_members(members: tuple[DSLMemberConfig, ...]) -> None:
     seen: set[str] = set()
     for member in members:
         if not member.member_id:
-            raise DSLValidationError(f"member has empty member_id")
+            raise DSLValidationError("member has empty member_id")
         if member.member_id in seen:
-            raise DSLValidationError(
-                f"duplicate member identifier '{member.member_id}'"
-            )
+            raise DSLValidationError(f"duplicate member identifier '{member.member_id}'")
         seen.add(member.member_id)
 
         if member.budget <= 0:
@@ -39,8 +37,7 @@ def _validate_members(members: tuple[DSLMemberConfig, ...]) -> None:
             )
         if not 0.0 <= member.weight <= 1.0:
             raise DSLValidationError(
-                f"member '{member.member_id}': weight must be in [0.0, 1.0], "
-                f"got {member.weight}"
+                f"member '{member.member_id}': weight must be in [0.0, 1.0], got {member.weight}"
             )
 
 
@@ -48,11 +45,9 @@ def _validate_contracts(contracts: tuple[DSLContractConfig, ...]) -> None:
     seen: set[str] = set()
     for contract in contracts:
         if not contract.contract_id:
-            raise DSLValidationError(f"contract has empty contract_id")
+            raise DSLValidationError("contract has empty contract_id")
         if contract.contract_id in seen:
-            raise DSLValidationError(
-                f"duplicate contract identifier '{contract.contract_id}'"
-            )
+            raise DSLValidationError(f"duplicate contract identifier '{contract.contract_id}'")
         seen.add(contract.contract_id)
 
         if not 0.0 <= contract.enactment_threshold <= 1.0:
@@ -81,8 +76,7 @@ def _validate_contracts(contracts: tuple[DSLContractConfig, ...]) -> None:
 def _validate_speaker(speaker: DSLSpeakerConfig) -> None:
     if not 0.0 <= speaker.majority_threshold <= 1.0:
         raise DSLValidationError(
-            f"speaker: majority_threshold must be in [0.0, 1.0], "
-            f"got {speaker.majority_threshold}"
+            f"speaker: majority_threshold must be in [0.0, 1.0], got {speaker.majority_threshold}"
         )
     if not 0.0 <= speaker.supermajority_threshold <= 1.0:
         raise DSLValidationError(
