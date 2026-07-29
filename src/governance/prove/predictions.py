@@ -87,7 +87,7 @@ from ..committee.members import (
 from ..contracts.contract import ContractState, UlyssesContract
 from ..contracts.merger import apply_restrictions
 from ..identity.keys import GenesisMultisig
-from ..identity.tiers import MutabilityTier, TIER_RULES
+from ..identity.tiers import TIER_RULES, MutabilityTier
 from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from ..tee.watchdog import DeadlockBreaker
