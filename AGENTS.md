@@ -46,6 +46,7 @@
 - External contributors engaging (RISO525 on #67). Need watchful review on any PRs.
 - **#63** Pinned deps + Dockerfile + Makefile — done
 - **#64** CI/CD (lint + lean-build + badges) — done
+- **#68** Bonferroni correction + Mann-Whitney U — added to statistical analysis in `analysis.py`
 - **#71** OSF preregistration — content ready, needs manual upload at https://osf.io/
 - **CLA** drafted, CONTRIBUTING.md updated
 
@@ -55,9 +56,8 @@
 ## Next Move
 1. OSF: manually upload `osf-registration.md` content to https://osf.io/ — needs a user account
 2. #66: Extend test coverage to experiments, benchmarks, tee, identity
-3. #68: Add Bonferroni correction + Mann-Whitney U to statistical analysis
-4. #72: Activate git-push from Colab notebooks  
-5. Review any incoming external PRs against CLA + code standards
+3. #72: Activate git-push from Colab notebooks  
+4. Review any incoming external PRs against CLA + code standards
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
