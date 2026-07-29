@@ -35,6 +35,9 @@ docs = [
     "mkdocs-literate-nav>=0.6",
     "mkdocs-section-index>=0.3",
 ]
+types = [
+    "ty>=0.0.64",
+]
 
 [tool.coverage.run]
 source = ["src/governance"]
@@ -68,6 +71,26 @@ ignore = ["E402", "E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.rules]
+unresolved-import = "warn"
+unresolved-attribute = "warn"
+unsupported-operator = "warn"
+invalid-parameter-default = "error"
+
+[tool.ty.src]
+include = ["src/governance/benchmarks", "src/governance/experiments"]
+exclude = [
+    "src/governance/experiments/minigrid_wrapper.py",
+    "src/governance/experiments/safety_gym_wrapper.py",
+    "src/governance/experiments/safety_grid_world.py",
+    "src/governance/experiments/gym_env.py",
+    "src/governance/experiments/rl_train.py",
+    "src/governance/experiments/rl_adversary.py",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
