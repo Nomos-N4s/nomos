@@ -315,7 +315,9 @@ def pred_07_timelock() -> PredictionResult:
         created_at_cycle=0,
     )
     contract.enact()
-    blocked_before_ticks = contract.state == ContractState.ENACTED and contract.timelock_blocks == 10
+    blocked_before_ticks = (
+        contract.state == ContractState.ENACTED and contract.timelock_blocks == 10
+    )
     for _ in range(5):
         contract.tick()
     mid_timelock = contract.timelock_blocks
