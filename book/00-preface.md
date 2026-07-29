@@ -9,7 +9,7 @@ description: "Author Carlos Pinto explains why modern AI systems need governance
 
 I am not an academic. I do not hold a PhD. I am not affiliated with a research institution. I work as a solo software builder.
 
- Like many developers, I spend a great deal of time thinking about how intelligence works, how software systems evolve, and why current approaches succeed or fail. This project began from a simple observation.
+Like many developers, I spend a great deal of time thinking about how intelligence works, how software systems evolve, and why current approaches succeed or fail. This project began from a simple observation.
 
 > "Modern AI systems are extraordinarily capable at optimization. Yet many of the decisions humans consider intelligent are not optimization problems."
 
