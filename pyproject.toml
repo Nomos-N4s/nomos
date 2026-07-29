@@ -17,7 +17,6 @@ dependencies = [
     "certifi>=2024.0",
     "hypothesis>=6.161",
     "matplotlib>=3.8",
-    "lark>=1.1",
 ]
 
 [project.optional-dependencies]
