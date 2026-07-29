@@ -9,4 +9,6 @@ Weekly updates to the Governance Layer product. For the full version history, se
 
 ## Posts
 
+- [Week of 2026-07-29](/changelog/2026-08-02)
+- [Week of 2026-07-27](/changelog/2026-07-29)
 - [Week of 2026-07-28](/changelog/2026-07-28)

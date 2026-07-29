@@ -12,6 +12,7 @@ pre-commitment, and identity coherence.
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 [![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 [![Lean 4](https://img.shields.io/badge/Lean%204-verified-2ea44f)](gov-budget-proof/)
+[![Types](https://img.shields.io/badge/types-ty-blue)](https://docs.astral.sh/ty/)
 
 ---
 

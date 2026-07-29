@@ -114,6 +114,17 @@ class UlyssesContract:
         """Move contract to REVOKED state (restrictions lifted)."""
         self.state = ContractState.REVOKED
 
+    def tick(self):
+        """Advance this contract's lifecycle by one governance cycle.
+
+        Decrements the timelock counter. When timelock reaches zero,
+        transitions from ENACTED to ACTIVE so restrictions take effect.
+        """
+        if self.timelock_blocks > 0:
+            self.timelock_blocks -= 1
+        if self.state == ContractState.ENACTED and self.timelock_blocks <= 0:
+            self.state = ContractState.ACTIVE
+
     def applies_to(self, action_index: int) -> bool:
         """Check if this contract restricts a given action.
 

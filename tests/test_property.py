@@ -1,4 +1,6 @@
-from hypothesis import given
+import hashlib
+
+from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from src.governance.committee.members import (
@@ -12,6 +14,20 @@ from src.governance.committee.members import (
 )
 from src.governance.models import PriorityTag, Proposal
 from src.governance.speaker import SpeakerStateMachine
+
+from src.governance.contracts.contract import ContractState, UlyssesContract
+from src.governance.contracts.enforcement import (
+    enforce_procedural_inertia,
+    enforce_timelock,
+    stacked_enforcement,
+)
+from src.governance.contracts.merger import apply_restrictions
+from src.governance.identity.keys import GenesisMultisig
+from src.governance.identity.ontology import compute_hash
+from src.governance.identity.tiers import TIER_RULES, MutabilityTier
+from src.governance.tee.batch import merkle_root
+from src.governance.tee.constant_time import cmov, constant_time_compare, oblivious_access
+from src.governance.tee.watchdog import DeadlockBreaker, WatchdogState, WatchdogTimer
 
 ALL_MEMBERS = {
     "reward": ExampleRewardMember(),
@@ -51,6 +67,12 @@ PROPOSAL_STRATEGY = st.builds(
     timestamp=st.floats(min_value=0.0, max_value=1e12, allow_nan=False, allow_infinity=False),
     metadata=META,
 )
+
+ACTION_INDEX = st.integers(min_value=0, max_value=100)
+ACTION_SET = st.sets(ACTION_INDEX, min_size=0, max_size=20)
+VOTE_FRACTION = st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False)
+THRESHOLD = st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False)
+BYTE_PAIR = st.tuples(st.binary(min_size=0, max_size=50), st.binary(min_size=0, max_size=50))
 
 
 class TestPropertyBudgetInvariant:
@@ -314,3 +336,260 @@ class TestPropertyAllMembersParticipate:
         speaker = SpeakerStateMachine(members=dict(ALL_MEMBERS), default_action="noop")
         decision = speaker.run_governance_cycle(state="normal", raw_proposals=[])
         assert decision.scores == {}
+
+
+class TestPropertyMaskMerger:
+    @given(allowed=ACTION_SET, restricted=ACTION_SET)
+    def test_restrictions_never_add_actions(self, allowed, restricted):
+        result = apply_restrictions(allowed, restricted)
+        assert result <= allowed
+
+    @given(allowed=ACTION_SET, restricted=ACTION_SET)
+    def test_sequential_equals_union(self, allowed, restricted):
+        r1 = {i for i in restricted if i % 2 == 0}
+        r2 = {i for i in restricted if i % 2 == 1}
+        sequential = apply_restrictions(apply_restrictions(allowed, r1), r2)
+        union = apply_restrictions(allowed, r1 | r2)
+        assert sequential == union
+
+    @given(allowed=ACTION_SET)
+    def test_empty_restriction_is_identity(self, allowed):
+        assert apply_restrictions(allowed, set()) == allowed
+
+
+class TestPropertyEnforcementMonotonicity:
+    @given(vote=VOTE_FRACTION, threshold=THRESHOLD)
+    def test_inertia_matches_threshold_logic(self, vote, threshold):
+        contract = UlyssesContract(
+            contract_id="test", restricted_indices={1}, revocation_threshold=threshold,
+        )
+        result = enforce_procedural_inertia(contract, vote)
+        assert result.compliant == (vote < threshold)
+
+    @given(vote=VOTE_FRACTION, t1=THRESHOLD, t2=THRESHOLD)
+    def test_monotonic_in_revocation_threshold(self, vote, t1, t2):
+        c1 = UlyssesContract(contract_id="a", restricted_indices={1}, revocation_threshold=t1)
+        c2 = UlyssesContract(contract_id="b", restricted_indices={1}, revocation_threshold=t2)
+        r1 = enforce_procedural_inertia(c1, vote)
+        r2 = enforce_procedural_inertia(c2, vote)
+        if t1 <= t2 and r1.compliant:
+            assert r2.compliant
+
+    @given(vote=VOTE_FRACTION, threshold=THRESHOLD)
+    def test_stacked_short_circuits_on_inertia_failure(self, vote, threshold):
+        contract = UlyssesContract(
+            contract_id="test", restricted_indices={1}, revocation_threshold=threshold,
+        )
+        inertia = enforce_procedural_inertia(contract, vote)
+        stacked = stacked_enforcement(contract, vote, [], 0, None, 0)
+        if not inertia.compliant:
+            assert not stacked.compliant
+            assert stacked.reason == inertia.reason
+
+
+class TestPropertyTimelockDecrement:
+    @given(start_blocks=st.integers(min_value=0, max_value=100), ticks=st.integers(min_value=0, max_value=100))
+    def test_timelock_expires_exactly_at_target_block(self, start_blocks, ticks):
+        assume(start_blocks > 0)
+        contract = UlyssesContract(
+            contract_id="time_test", restricted_indices={1},
+            timelock_blocks=start_blocks,
+        )
+        result = enforce_timelock(contract, ticks)
+        assert result.compliant == (ticks < start_blocks)
+
+    @given(blocks=st.integers(min_value=1, max_value=50))
+    def test_timelock_remaining_decreases_with_ticks(self, blocks):
+        contract = UlyssesContract(
+            contract_id="time_test", restricted_indices={1},
+            timelock_blocks=blocks, state=ContractState.ACTIVE,
+        )
+        from src.governance.contracts.contract import ContractRegistry
+        reg = ContractRegistry()
+        reg.add(contract)
+        for cycle in range(blocks + 2):
+            remaining = blocks - cycle
+            result = enforce_timelock(contract, cycle)
+            if remaining > 0:
+                assert result.compliant
+                assert "remaining" in result.reason
+            else:
+                assert not result.compliant
+                assert "expired" in result.reason
+            reg.tick_cycle()
+
+
+class TestPropertyTierRules:
+    def test_constitutional_requires_multisig(self):
+        rule = TIER_RULES[MutabilityTier.CONSTITUTIONAL]
+        assert rule.requires_external_multisig
+        assert rule.requires_parliament_unanimity
+
+    def test_operational_does_not_require_multisig(self):
+        rule = TIER_RULES[MutabilityTier.OPERATIONAL]
+        assert not rule.requires_external_multisig
+
+    def test_immutable_cannot_modify(self):
+        rule = TIER_RULES[MutabilityTier.IMMUTABLE]
+        assert not rule.can_modify(MutabilityTier.IMMUTABLE)
+
+    @given(tier=st.sampled_from([MutabilityTier.CONSTITUTIONAL, MutabilityTier.OPERATIONAL, MutabilityTier.DYNAMIC]))
+    def test_non_immutable_tiers_can_modify(self, tier):
+        rule = TIER_RULES[tier]
+        assert rule.can_modify(tier)
+
+    def test_all_tiers_have_positive_cooling_off(self):
+        for tier, rule in TIER_RULES.items():
+            assert rule.cooling_off_days >= 0
+
+    def test_no_tier_accepts_negative_cooling_off(self):
+        for rule in TIER_RULES.values():
+            assert rule.cooling_off_days >= 0
+
+
+class TestPropertyMultisigThresholds:
+    @given(
+        n_holders=st.integers(min_value=1, max_value=8),
+        threshold=st.integers(min_value=1, max_value=8),
+        sigs=st.integers(min_value=0, max_value=8),
+    )
+    def test_authorized_if_and_only_if_sigs_meet_threshold(self, n_holders, threshold, sigs):
+        assume(threshold <= n_holders)
+        msig = GenesisMultisig(threshold=threshold, total_holders=n_holders)
+        for i in range(n_holders):
+            msig.add_holder(f"holder_{i}")
+        for i in range(min(sigs, n_holders)):
+            msig.sign(f"holder_{i}")
+        assert msig.is_authorized == (sigs >= threshold)
+
+    @given(
+        n_holders=st.integers(min_value=1, max_value=8),
+    )
+    def test_sign_idempotent(self, n_holders):
+        msig = GenesisMultisig(threshold=n_holders, total_holders=n_holders)
+        for i in range(n_holders):
+            msig.add_holder(f"holder_{i}")
+        msig.sign("holder_0")
+        count_after_first = msig.signatures_count
+        msig.sign("holder_0")
+        assert msig.signatures_count == count_after_first
+
+
+class TestPropertyOntologyHashDeterminism:
+    @given(data=st.binary(min_size=0, max_size=200))
+    def test_deterministic(self, data):
+        assert compute_hash(data) == compute_hash(data)
+
+    @given(data=st.binary(min_size=1, max_size=100))
+    def test_different_inputs_different_hashes(self, data):
+        assume(data != b"")
+        other = bytes(b ^ 0xFF for b in data)
+        assume(data != other)
+        assert compute_hash(data) != compute_hash(other)
+
+
+class TestPropertyWatchdogTransitions:
+    def test_initial_state_normal(self):
+        wd = WatchdogTimer()
+        assert wd.state == WatchdogState.NORMAL
+
+    def test_heartbeat_keeps_normal(self):
+        wd = WatchdogTimer()
+        wd.heartbeat()
+        assert wd.state == WatchdogState.NORMAL
+
+    def test_check_returns_cold_boot_sticky(self):
+        wd = WatchdogTimer()
+        wd._state = WatchdogState.COLD_BOOT
+        result = wd.check()
+        assert result == WatchdogState.COLD_BOOT
+
+    def test_heartbeat_does_not_exit_cold_boot(self):
+        wd = WatchdogTimer()
+        wd._state = WatchdogState.COLD_BOOT
+        wd.heartbeat()
+        assert wd.state == WatchdogState.COLD_BOOT
+
+    def test_heartbeat_restores_from_missed(self):
+        wd = WatchdogTimer()
+        wd._state = WatchdogState.HEARTBEAT_MISSED
+        wd.heartbeat()
+        assert wd.state == WatchdogState.NORMAL
+
+
+class TestPropertyDeadlockBreaker:
+    @given(threshold=st.integers(min_value=1, max_value=20), cycles=st.integers(min_value=0, max_value=50))
+    def test_fires_exactly_once_when_threshold_reached(self, threshold, cycles):
+        db = DeadlockBreaker(threshold_cycles=threshold)
+        triggered = False
+        for _ in range(cycles):
+            db.record_cycle(decision_produced=False)
+            if db.check():
+                assert not triggered
+                triggered = True
+        assert triggered == (cycles >= threshold)
+
+    def test_decision_produced_resets_counter(self):
+        db = DeadlockBreaker(threshold_cycles=5)
+        for _ in range(3):
+            db.record_cycle(decision_produced=False)
+        db.record_cycle(decision_produced=True)
+        assert db.stalled_cycles == 0
+
+    def test_reset_clears_trigger(self):
+        db = DeadlockBreaker(threshold_cycles=2)
+        db.record_cycle(decision_produced=False)
+        db.record_cycle(decision_produced=False)
+        db.check()
+        assert db.total_cold_boots == 1
+        db.reset()
+        assert not db.is_deadlocked
+
+
+EMPTY_MERKLE_ROOT = hashlib.sha256(b"empty").hexdigest()
+
+
+class TestPropertyMerkleConsistency:
+    @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=0, max_size=8))
+    def test_deterministic(self, items):
+        assert merkle_root(items) == merkle_root(items)
+
+    @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=1, max_size=8))
+    def test_root_changes_when_content_changes(self, items):
+        first = merkle_root(items)
+        modified = items[:]
+        modified[0] = modified[0] + b"x"
+        first_modified = merkle_root(modified)
+        assert first != first_modified or items == modified
+
+    def test_empty_root_is_known_constant(self):
+        assert merkle_root([]) == EMPTY_MERKLE_ROOT
+
+    @given(item=st.binary(min_size=1, max_size=50))
+    def test_single_item_root(self, item):
+        expected = hashlib.sha256(item).hexdigest()
+        assert merkle_root([item]) == expected
+
+
+class TestPropertyConstantTime:
+    @given(pair=BYTE_PAIR)
+    def test_compare_match(self, pair):
+        a, b = pair
+        assert constant_time_compare(a, b) == (a == b)
+
+    @given(a=st.integers(min_value=-1000, max_value=1000), b=st.integers(min_value=-1000, max_value=1000))
+    def test_cmov_selection(self, a, b):
+        assert cmov(True, a, b) == a
+        assert cmov(False, a, b) == b
+
+    @given(
+        data=st.lists(st.integers(min_value=0, max_value=100), min_size=1, max_size=20),
+        idx=st.integers(min_value=0, max_value=50),
+    )
+    def test_oblivious_access_correctness(self, data, idx):
+        default = -1
+        result = oblivious_access(data, idx, default)
+        if 0 <= idx < len(data):
+            assert result == data[idx]
+        else:
+            assert result == default

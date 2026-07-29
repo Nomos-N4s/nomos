@@ -43,21 +43,41 @@
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 
 ### Active
+- **Phase C (#126): Foundation Fixes** — Clean up tech debt and security before repo split.
+  - #127 Remove `.env` from git
+  - #128 Clean root directory litter
+  - #129 Fix `docs/` symlinks
+  - #130 Decide `results/` commit strategy
 - External contributors engaging (RISO525 on #67). Need watchful review on any PRs.
-- **#63** Pinned deps + Dockerfile + Makefile — done
-- **#64** CI/CD (lint + lean-build + badges) — done
 - **#71** OSF preregistration — content ready, needs manual upload at https://osf.io/
-- **CLA** drafted, CONTRIBUTING.md updated
 
 ### Blocked
-- *(none)*
+- Post-Phase-C work blocked until #126 is complete (repo model depends on clean foundation).
+
+## Roadmap
+
+### Phase C (now): Foundation Fixes (#126)
+Clean security/debt items. Then 3-repo split:
+- **Book** (private) — formal spec, review history
+- **Implementation** (public, current repo) — code, tests, benchmarks
+- **Website** (public, new repo) — Astro + GitHub Pages
+
+### Phase D (next): Validation & Consumability
+1. AI agent validation (LLM <-> Parliament integration benchmark)
+2. Website build (separate repo, Astro)
+3. Fix `dsl/` placeholder (Appendix B grammar → parser)
+4. Language-agnostic API for governance protocol
+
+### Phase E (enterprise-readiness)
+- Plugin architecture for committee members
+- TEE integration beyond simulation
+- Expand Lean proofs to full protocol
 
 ## Next Move
-1. OSF: manually upload `osf-registration.md` content to https://osf.io/ — needs a user account
-2. #66: Extend test coverage to experiments, benchmarks, tee, identity
-3. #68: Add Bonferroni correction + Mann-Whitney U to statistical analysis
-4. #72: Activate git-push from Colab notebooks  
-5. Review any incoming external PRs against CLA + code standards
+1. #127 Remove `.env` from git
+2. #128 Clean root litter
+3. #129 Fix docs/ symlinks
+4. #130 Decide results/ strategy
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement

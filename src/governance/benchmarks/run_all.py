@@ -134,7 +134,7 @@ def _get_baseline(strategy: str, seed: int):
     mapping = {
         "monolithic_rl": MonolithicRL(),
         "random": RandomBaseline(seed=seed),
-        "static_masking": StaticMasking(blocked_actions=frozenset()),
+        "static_masking": StaticMasking(),
         "veto_only": VetoOnly(),
     }
     return mapping.get(strategy)
