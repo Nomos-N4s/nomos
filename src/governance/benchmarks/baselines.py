@@ -90,8 +90,8 @@ class StaticMasking(BaselineGovernance):
 
     name = "static_masking"
 
-    def __init__(self, blocked_actions: set = frozenset()):
-        self.blocked = set(blocked_actions)
+    def __init__(self, blocked_actions: set[int] | None = None):
+        self.blocked = set(blocked_actions) if blocked_actions is not None else set()
 
     def decide(self, state, proposals):
         filtered = [p for p in proposals if p.action not in self.blocked]

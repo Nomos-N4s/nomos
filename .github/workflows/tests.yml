@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -71,3 +74,39 @@ jobs:
         run: |
           cd gov-budget-proof
           lake build
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ty
+        run: pip install ty
+      - name: Install package
+        run: pip install -e .
+      - name: Run type checker
+        run: ty check src/governance/benchmarks/ src/governance/experiments/
+
+  benchmark-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv
+        run: pip install uv
+      - name: Sync dependencies
+        run: uv sync
+      - name: Install package in editable mode
+        run: uv pip install -e .
+      - name: Run benchmark smoke test
+        run: |
+          uv run python -m src.governance.runner all --steps 10 --seeds 1 --strategies governance --csv
+          echo "Checking for CSV output..."
+          ls -la results/*.csv
+          test -f results/*.csv && echo "CSV output found" || echo "No CSV output"
