@@ -84,10 +84,10 @@ from ..committee.members import (
     ExampleRewardMember,
     ExampleSafetyMember,
 )
-from ..contracts.contract import UlyssesContract
+from ..contracts.contract import ContractState, UlyssesContract
 from ..contracts.merger import apply_restrictions
 from ..identity.keys import GenesisMultisig
-from ..identity.tiers import MutabilityTier
+from ..identity.tiers import MutabilityTier, TIER_RULES
 from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from ..tee.watchdog import DeadlockBreaker
@@ -315,17 +315,23 @@ def pred_07_timelock() -> PredictionResult:
         created_at_cycle=0,
     )
     contract.enact()
-    pre_timelock = contract.timelock_blocks
-    contract.timelock_blocks = max(0, contract.timelock_blocks - 1)
-    post_timelock = contract.timelock_blocks
-    passed = pre_timelock > 0 and post_timelock < pre_timelock
+    blocked_before_ticks = contract.state == ContractState.ENACTED and contract.timelock_blocks == 10
+    for _ in range(5):
+        contract.tick()
+    mid_timelock = contract.timelock_blocks
+    still_enacted = contract.state == ContractState.ENACTED
+    for _ in range(5):
+        contract.tick()
+    expired = contract.timelock_blocks == 0
+    activated = contract.state == ContractState.ACTIVE
+    passed = blocked_before_ticks and mid_timelock == 5 and still_enacted and expired and activated
     return PredictionResult(
         id=7,
         chapter="Ch3",
         section="2.4",
         description="Timelock decrements over time, preventing immediate revocation",
         passed=passed,
-        evidence=f"Timelock before decrement={pre_timelock}, after decrement={post_timelock}",
+        evidence=f"Before ticks: timelock=10 state=ENACTED; after 5 ticks: timelock={mid_timelock} state={'ENACTED' if still_enacted else 'ACTIVE'}; after 10 ticks: timelock={contract.timelock_blocks} state={contract.state.name}",
     )
 
 
@@ -384,25 +390,17 @@ def pred_09_coherence_veto() -> PredictionResult:
 
 
 def pred_10_tier4_multisig() -> PredictionResult:
-    rules = {
-        MutabilityTier.IMMUTABLE: "impossible",
-        MutabilityTier.CONSTITUTIONAL: "unanimity + 3-of-5 multisig",
-        MutabilityTier.OPERATIONAL: "supermajority (2/3)",
-        MutabilityTier.DYNAMIC: "majority (1/2 + 1)",
-    }
-    constitutional_highest = rules[MutabilityTier.CONSTITUTIONAL].find("multisig") >= 0
-    lower_tiers_no_multisig = (
-        rules[MutabilityTier.OPERATIONAL].find("multisig") == -1
-        and rules[MutabilityTier.DYNAMIC].find("multisig") == -1
-    )
-    passed = constitutional_highest and lower_tiers_no_multisig
+    constitutional = TIER_RULES[MutabilityTier.CONSTITUTIONAL].requires_external_multisig
+    operational = TIER_RULES[MutabilityTier.OPERATIONAL].requires_external_multisig
+    dynamic = TIER_RULES[MutabilityTier.DYNAMIC].requires_external_multisig
+    passed = constitutional is True and operational is False and dynamic is False
     return PredictionResult(
         id=10,
         chapter="Ch4",
         section="2.5",
         description="Tier-4 (Constitutional) requires external multisig; lower tiers do not",
         passed=passed,
-        evidence=f"CONSTITUTIONAL requires multisig={constitutional_highest}, OPERATIONAL requires multisig={not lower_tiers_no_multisig}, DYNAMIC requires multisig={not lower_tiers_no_multisig}",
+        evidence=f"CONSTITUTIONAL.requires_external_multisig={constitutional}, OPERATIONAL.requires_external_multisig={operational}, DYNAMIC.requires_external_multisig={dynamic}",
     )
 
 
