@@ -47,7 +47,6 @@ omit = [
     "src/governance/dashboard/*",
     "src/governance/ontology/*",
     "src/governance/tee/*",
-    "src/governance/dsl/*",
     "src/governance/prove/*",
     "src/governance/identity/extension.py",
     "src/governance/identity/keys.py",
@@ -82,7 +81,7 @@ unsupported-operator = "warn"
 invalid-parameter-default = "error"
 
 [tool.ty.src]
-include = ["src/governance/benchmarks", "src/governance/experiments"]
+include = ["src/governance/benchmarks", "src/governance/experiments", "src/governance/dsl"]
 exclude = [
     "src/governance/experiments/minigrid_wrapper.py",
     "src/governance/experiments/safety_gym_wrapper.py",
