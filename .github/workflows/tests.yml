@@ -91,7 +91,7 @@ jobs:
         run: uv pip install -e .
       - name: Run benchmark smoke test
         run: |
-          uv run python -m src.governance.runner all --steps 10 --seeds 1 --strategies governance
+          uv run python -m src.governance.runner all --steps 10 --seeds 1 --strategies governance --csv
           echo "Checking for CSV output..."
           ls -la results/*.csv
           test -f results/*.csv && echo "CSV output found" || echo "No CSV output"
