@@ -1,0 +1,24 @@
+start: parliament
+
+parliament: "parliament" "{" member_def* contract_def* speaker_config "}"
+
+member_def: "member" CNAME "{" "class" ":" ESCAPED_STRING ";" "budget" ":" INT ";" "veto_threshold" ":" FLOAT ";" "weight" ":" FLOAT ";" "config" "{" key_value* "}" ";" "}"
+
+contract_def: "contract" CNAME "{" "restricted_indices" ":" "[" INT* "]" ";" "enactment_threshold" ":" FLOAT ";" "revocation_threshold" ":" FLOAT ";" "enforcement_mode" ":" ENFORCEMENT_MODE ";" "}"
+
+ENFORCEMENT_MODE: "soft" | "hard" | "constitutional"
+
+speaker_config: "speaker" "{" "default_action" ":" ESCAPED_STRING ";" "majority_threshold" ":" FLOAT ";" "supermajority_threshold" ":" FLOAT ";" "max_rounds" ":" INT ";" "}"
+
+key_value: CNAME ":" value ";"
+
+value: ESCAPED_STRING | INT | FLOAT
+
+FLOAT: INT "." INT
+
+%import common.CNAME
+%import common.INT
+%import common.ESCAPED_STRING
+%import common.WS
+%ignore WS
+%ignore /\/\/[^\n]*/
