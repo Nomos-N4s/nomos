@@ -241,7 +241,7 @@ def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list
         return []
     indexed = [(raw_p, i) for i, raw_p in enumerate(p_values)]
     indexed.sort(key=lambda x: x[0])
-    results = [None] * m
+    results: list[dict] = [{} for _ in range(m)]
     for rank, (raw_p, orig_idx) in enumerate(indexed):
         k = rank + 1
         corrected = min(raw_p * (m - k + 1), 1.0)
