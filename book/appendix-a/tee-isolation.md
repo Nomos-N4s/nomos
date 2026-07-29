@@ -221,8 +221,6 @@ At 3 GHz, this is approximately **23 microseconds** per governance cycle — far
 
 ---
 
----
-
 ## A.9 Hardware Watchdog Timer
 
 > *Mitigates TEE allocation starvation (Phase 3, Attack 3).*
