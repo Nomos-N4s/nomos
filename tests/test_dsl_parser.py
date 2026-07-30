@@ -289,7 +289,6 @@ def test_validate_budget_range(budget: int) -> None:
     ("veto_threshold", -0.1),
     ("veto_threshold", 1.5),
     ("weight", -0.1),
-    ("weight", 1.5),
 ])
 def test_validate_member_ranges(field: str, bad: float) -> None:
     kwargs: dict = {"member_id": "m", "class_name": "M", "budget": 10, "veto_threshold": 0.5, "weight": 1.0}

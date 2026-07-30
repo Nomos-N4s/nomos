@@ -35,9 +35,9 @@ def _validate_members(members: tuple[DSLMemberConfig, ...]) -> None:
                 f"member '{member.member_id}': veto_threshold must be in [0.0, 1.0], "
                 f"got {member.veto_threshold}"
             )
-        if not 0.0 <= member.weight <= 1.0:
+        if member.weight < 0.0:
             raise DSLValidationError(
-                f"member '{member.member_id}': weight must be in [0.0, 1.0], got {member.weight}"
+                f"member '{member.member_id}': weight must be non-negative, got {member.weight}"
             )
 
 

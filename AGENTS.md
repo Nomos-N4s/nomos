@@ -29,7 +29,8 @@
   | Speaker | `speaker.py` (191 lines) | Full state machine: budgets, agenda sorting, scoring, tag compliance, vetoes, weighted voting |
   | Experiments | `experiments/` (469 lines) | base.py (scenario ABC + metrics), grid_world.py, temptation_bank.py, drift_lab.py, deadlock_maze.py, metrics.py |
   | Benchmarks | `benchmarks/` (360+ lines) | baselines.py (4 comparison strategies), run_all.py, report.py, **analysis.py** (statistical pipeline + Cohen's d + reward-hacking detection), **figures.py** (4 publication-ready plots) |
-  | CLI | `runner.py` (220 lines) | Full argparse: `--baselines`, `--strategies`, `--steps`, `--seeds`, `--csv` export |
+  | CLI | `runner.py` (320 lines) | Full argparse: `--baselines`, `--strategies`, `--steps`, `--seeds`, `--csv` export, `--config` (DSL) |
+| DSL | `dsl/` (5 files, ~550 lines) | Indentation-based parser, validator, models, errors |
   | Ontology | `ontology/` (246 lines) | ABC + MemoryBackend (default) + Neo4jBackend (when .env configured) |
   | Dashboard | `dashboard/` (550 lines) | Streamlit app with 4 tabs: Formal Model, Parliament Live, Benchmarks, RL Training |
 
@@ -43,29 +44,25 @@
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 
 ### Active
-- **Phase C (#126): Foundation Fixes** — Clean up tech debt and security before repo split.
-  - #127 Remove `.env` from git
-  - #128 Clean root directory litter
-  - #129 Fix `docs/` symlinks
-  - #130 Decide `results/` commit strategy
+- **Phase D (#131): DSL Implementation** — Complete.
+  - #132 (Parser + Validator) — Implemented and merged via PR #134.
+  - #133 (Examples + Runner Integration) — Implemented and open as PR #136.
+  - See Phase D details below.
 - External contributors engaging (RISO525 on #67). Need watchful review on any PRs.
 - **#71** OSF preregistration — content ready, needs manual upload at https://osf.io/
 
 ### Blocked
-- Post-Phase-C work blocked until #126 is complete (repo model depends on clean foundation).
+- (none)
 
 ## Roadmap
 
-### Phase C (now): Foundation Fixes (#126)
-Clean security/debt items. Then 3-repo split:
-- **Book** (private) — formal spec, review history
-- **Implementation** (public, current repo) — code, tests, benchmarks
-- **Website** (public, new repo) — Astro + GitHub Pages
-
-### Phase D (next): Validation & Consumability
-1. AI agent validation (LLM <-> Parliament integration benchmark)
-2. Website build (separate repo, Astro)
-3. Fix `dsl/` placeholder (Appendix B grammar → parser)
+### Phase D (now): Validation & Consumability
+1. ✅ **DSL Implementation (#131)** — Indentation-based .parliament parser, validator, examples, runner integration.
+   - Parser: Hand-written (~170 lines), zero deps. Supports indentation blocks, comments, list values, optional `config:` sections. [#132 / PR #134 merged]
+   - Examples: 4 `.parliament` files in `examples/` — one per experiment scenario (GridWorld, TemptationBank, DriftLab, DeadlockMaze). [#133 / PR #136 open]
+   - Runner: `build_from_config()` + `--config` flag threads config-built Speaker through all experiment functions.
+2. AI agent validation (LLM <-> Parliament integration benchmark)
+3. Website build (separate repo, Astro)
 4. Language-agnostic API for governance protocol
 
 ### Phase E (enterprise-readiness)
@@ -74,10 +71,9 @@ Clean security/debt items. Then 3-repo split:
 - Expand Lean proofs to full protocol
 
 ## Next Move
-1. #127 Remove `.env` from git
-2. #128 Clean root litter
-3. #129 Fix docs/ symlinks
-4. #130 Decide results/ strategy
+1. Rebase/maintain PR #136 for merge.
+2. Begin AI agent validation (#D2).
+3. Website build (#D3).
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
@@ -98,4 +94,6 @@ Clean security/debt items. Then 3-repo split:
 - `src/governance/benchmarks/analysis.py`: Statistical pipeline — bootstrap CIs, Cohen's d, reward-hacking detection
 - `src/governance/benchmarks/figures.py`: Publication-ready plots — reward curves, violation rates, deadlock frequency, Pareto frontier
 - `src/governance/runner.py`: CLI entry point (`python -m src.governance.runner all --baselines --steps 1000 --seeds 20`)
+- `src/governance/dsl/`: Parser (`parser.py`), validator (`validator.py`), models (`models.py`), errors (`errors.py`)
 - `.gitignore`: excludes `*brainstorm.txt` and `reviews.txt`
+- `examples/`: Example `.parliament` config files for all four experiment scenarios
