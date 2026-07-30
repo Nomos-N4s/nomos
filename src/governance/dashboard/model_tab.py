@@ -20,8 +20,52 @@ from ..identity.core import (
     EnforcementMode,
     IdentityCore,
 )
+from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
 from ..ontology.backend import OntologyBackend
 from ..prove.runner import run_all
+
+
+def _generate_model_summary(
+    backend: OntologyBackend,
+    identity_vec: list | None,
+) -> str:
+    """
+    Generate a natural language summary of the formal model state.
+    """
+
+    try:
+        entities = backend.get_entities_by_type("action")
+
+        core = IdentityCore()
+        core.add_commitment(
+            CoreCommitment(
+                CommitmentType.VALUE_PRINCIPLE,
+                "Always classify honestly",
+                CommitmentThreshold.SUPERMAJORITY,
+                EnforcementMode.INTEGRITY_VETO,
+            )
+        )
+
+        params = DEFAULT_PARAMETER_ENVELOPE.snapshot()
+
+        entity_count = len(entities)
+        commitment_count = len(core.commitments)
+        parameter_count = len(params)
+
+        vector_status = "available" if identity_vec else "not available"
+
+        prediction_results = run_all_safe()
+        passed = sum(1 for r in prediction_results if r.passed)
+
+        return (
+            f"The formal model currently contains {entity_count} ontology entities, "
+            f"{commitment_count} core commitments, and {parameter_count} parameters. "
+            f"The identity vector is {vector_status}. "
+            f"Formal verification has passed {passed}/{len(prediction_results)} predictions."
+        )
+
+    except Exception:
+        return "Unable to generate model summary."
 
 
 def render_model_tab(backend: OntologyBackend):
@@ -34,6 +78,18 @@ def render_model_tab(backend: OntologyBackend):
 
     entities = backend.get_entities_by_type("action")
     identity_vec = backend.get_identity_vector()
+
+    # Auto-generated dashboard summary
+    model_summary = _generate_model_summary(
+        backend,
+        identity_vec,
+    )
+
+    st.subheader("📌 Summary")
+    st.write(model_summary)
+
+    if st.button("📋 Copy Summary", key="model_copy_summary"):
+        st.code(model_summary, language="text")
 
     with col1:
         st.metric(
@@ -73,8 +129,6 @@ def render_model_tab(backend: OntologyBackend):
         )
 
     with col4:
-        from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
-
         params = DEFAULT_PARAMETER_ENVELOPE.snapshot()
         st.metric(
             r"$\mathcal{P}$ (Parameters)",
