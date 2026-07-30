@@ -9,12 +9,14 @@ Usage:
     ``python -m src.governance.runner all --baselines --steps 1000 --seeds 20``
     ``python -m src.governance.runner all --baselines --csv results/run.csv``
     ``python -m src.governance.runner gridworld --baselines --strategies governance,monolithic_rl``
+    ``python -m src.governance.runner gridworld --config examples/grid_world.parliament``
     ``python -m src.governance.runner prove --all``
     ``python -m src.governance.runner prove --ch4``
 """
 
 import argparse
 import csv
+import importlib
 import os
 import sys
 import time
@@ -27,12 +29,86 @@ from .benchmarks.run_all import (
     run_gridworld_experiments,
     run_temptation_experiments,
 )
+from .committee.base import ParliamentMember
+from .contracts.contract import UlyssesContract
+from .dsl import ParliamentConfig, parse_file, validate
 from .experiments.metrics import ExperimentReport
+from .speaker import SpeakerStateMachine
 
 ALL_STRATEGIES = ["governance", "monolithic_rl", "random", "static_masking", "veto_only"]
 
 
-def _resolve_csv_path(csv_arg):
+def build_from_config(config_path: str) -> SpeakerStateMachine:
+    """Parse a .parliament file and build a fully-configured Speaker.
+
+    Args:
+        config_path: Path to a .parliament configuration file.
+
+    Returns:
+        A :class:`~.speaker.SpeakerStateMachine` with members, contracts,
+        and parameters configured from the file.
+
+    Usage:
+        ``python -m src.governance.runner gridworld --config examples/grid_world.parliament``
+    """
+    config = parse_file(config_path)
+    validate(config)
+
+    members = _build_members(config)
+    speaker = SpeakerStateMachine(
+        members=members,
+        default_action=config.speaker.default_action,
+        majority_threshold=config.speaker.majority_threshold,
+        supermajority_threshold=config.speaker.supermajority_threshold,
+        max_rounds=config.speaker.max_rounds,
+    )
+    return speaker
+
+
+def _build_members(config: ParliamentConfig) -> dict[str, ParliamentMember]:
+    members: dict[str, ParliamentMember] = {}
+    for mc in config.members:
+        cls = _import_member_class(mc.class_name)
+        member = cls()
+        member.member_id = mc.member_id
+        member.veto_threshold = mc.veto_threshold
+        member.weight = mc.weight
+        member.budget = mc.budget
+        members[member.member_id] = member
+    return members
+
+
+def _import_member_class(class_name: str) -> type[ParliamentMember]:
+    mod = importlib.import_module("governance.committee.members")
+    if hasattr(mod, class_name):
+        return getattr(mod, class_name)
+    example_name = f"Example{class_name}"
+    if hasattr(mod, example_name):
+        return getattr(mod, example_name)
+    if "." in class_name:
+        parts = class_name.split(".")
+        mod = importlib.import_module(".".join(parts[:-1]))
+        return getattr(mod, parts[-1])
+    msg = f"cannot import ParliamentMember class '{class_name}'"
+    raise ImportError(msg)
+
+
+def _build_contracts(config: ParliamentConfig) -> list[UlyssesContract]:
+    contracts: list[UlyssesContract] = []
+    for cc in config.contracts:
+        contracts.append(
+            UlyssesContract(
+                contract_id=cc.contract_id,
+                restricted_indices=set(cc.restricted_indices),
+                enactment_threshold=cc.enactment_threshold,
+                revocation_threshold=cc.revocation_threshold,
+                enforcement_mode=cc.enforcement_mode,
+            )
+        )
+    return contracts
+
+
+def _resolve_csv_path(csv_arg: str | None) -> str | None:
     if csv_arg is None:
         return None
     if csv_arg == "":
@@ -84,6 +160,9 @@ def _build_baseline_flags(args) -> dict:
             flags["strategies"] = [s.strip() for s in strategies.split(",")]
         else:
             flags["strategies"] = ALL_STRATEGIES
+    config_path = getattr(args, "config", None)
+    if config_path:
+        flags["config_path"] = config_path
     return flags
 
 
@@ -252,6 +331,12 @@ def _add_shared_args(parser):
         default=None,
         help="Export results to CSV (default: results/run_<timestamp>.csv)",
     )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to .parliament config file (replaces hardcoded Speaker setup)",
+    )
 
     def _validate_positive(parser, ns):
         if ns.steps is not None and ns.steps < 1:
@@ -278,7 +363,7 @@ def main():
                 "temptation": cmd_temptation,
                 "drift": cmd_drift,
                 "deadlock": cmd_deadlock,
-            }[name](ns)
+            }[_n](ns)
         )
 
     p_all = sub.add_parser("all", help="Run all experiments")

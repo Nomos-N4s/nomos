@@ -29,13 +29,23 @@ from ..speaker import SpeakerStateMachine
 from .baselines import MonolithicRL, RandomBaseline, StaticMasking, VetoOnly
 
 
-def build_governance_layer() -> SpeakerStateMachine:
+def build_governance_layer(config_path: str | None = None) -> SpeakerStateMachine:
     """Construct a Speaker with the four standard committee members.
+
+    Args:
+        config_path: Optional path to a .parliament file. When provided,
+            the Speaker is built from the DSL config instead of using
+            hardcoded defaults.
 
     Returns:
         A :class:`~..speaker.SpeakerStateMachine` with reward, safety,
         integrity, and planning members.
     """
+    if config_path:
+        from ..runner import build_from_config
+
+        return build_from_config(config_path)
+
     members = {
         "reward": ExampleRewardMember(),
         "safety": ExampleSafetyMember(),
@@ -49,7 +59,13 @@ def build_governance_layer() -> SpeakerStateMachine:
 
 
 def _run_scenario(
-    scenario_class, scenario_kwargs: dict, strategy_name: str, steps: int, seed: int, baseline=None
+    scenario_class,
+    scenario_kwargs: dict,
+    strategy_name: str,
+    steps: int,
+    seed: int,
+    baseline=None,
+    config_path: str | None = None,
 ) -> ExperimentReport:
     """Run a single scenario-strategy-seed combination.
 
@@ -62,11 +78,12 @@ def _run_scenario(
         seed: Random seed (for reproducibility).
         baseline: Optional :class:`BaselineGovernance` instance.
             If None, the full Speaker is used.
+        config_path: Optional path to a .parliament config file.
 
     Returns:
         An :class:`~..experiments.metrics.ExperimentReport`.
     """
-    speaker = build_governance_layer()
+    speaker = build_governance_layer(config_path)
 
     if scenario_class.__name__ == "DriftLab":
         from ..identity.core import (
@@ -146,6 +163,7 @@ def _run_experiment_set(
     steps: int,
     seeds: int,
     strategies: list[str] | None = None,
+    config_path: str | None = None,
 ) -> list[ExperimentReport]:
     """Run all strategy-seed combinations for a single scenario.
 
@@ -155,6 +173,7 @@ def _run_experiment_set(
         steps: Steps per run.
         seeds: Number of random seeds.
         strategies: List of strategy names (default: ``["governance"]``).
+        config_path: Optional path to a .parliament config file.
 
     Returns:
         A list of :class:`~..experiments.metrics.ExperimentReport`.
@@ -173,13 +192,17 @@ def _run_experiment_set(
                 steps=steps,
                 seed=seed,
                 baseline=baseline,
+                config_path=config_path,
             )
             reports.append(report)
     return reports
 
 
 def run_gridworld_experiments(
-    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+    steps: int = 1000,
+    seeds: int = 1,
+    strategies: list[str] | None = None,
+    config_path: str | None = None,
 ) -> list[ExperimentReport]:
     """Run GridWorld (poison fruit) experiments across strategies."""
     return _run_experiment_set(
@@ -188,11 +211,15 @@ def run_gridworld_experiments(
         steps=steps,
         seeds=seeds,
         strategies=strategies,
+        config_path=config_path,
     )
 
 
 def run_temptation_experiments(
-    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+    steps: int = 1000,
+    seeds: int = 1,
+    strategies: list[str] | None = None,
+    config_path: str | None = None,
 ) -> list[ExperimentReport]:
     """Run TemptationBank (voluntary self-binding) experiments."""
     return _run_experiment_set(
@@ -201,11 +228,15 @@ def run_temptation_experiments(
         steps=steps,
         seeds=seeds,
         strategies=strategies,
+        config_path=config_path,
     )
 
 
 def run_drift_experiments(
-    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+    steps: int = 1000,
+    seeds: int = 1,
+    strategies: list[str] | None = None,
+    config_path: str | None = None,
 ) -> list[ExperimentReport]:
     """Run DriftLab (identity drift) experiments."""
     scenario_kwargs = {}
@@ -215,11 +246,15 @@ def run_drift_experiments(
         steps=steps,
         seeds=seeds,
         strategies=strategies,
+        config_path=config_path,
     )
 
 
 def run_deadlock_experiments(
-    steps: int = 1000, seeds: int = 1, strategies: list[str] | None = None
+    steps: int = 1000,
+    seeds: int = 1,
+    strategies: list[str] | None = None,
+    config_path: str | None = None,
 ) -> list[ExperimentReport]:
     """Run DeadlockMaze (deadlock recovery) experiments."""
     return _run_experiment_set(
@@ -228,6 +263,7 @@ def run_deadlock_experiments(
         steps=steps,
         seeds=seeds,
         strategies=strategies,
+        config_path=config_path,
     )
 
 
