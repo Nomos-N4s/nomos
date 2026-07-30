@@ -1,0 +1,32 @@
+# DeadlockMaze configuration: deadlock recovery via tightened quorum
+# Multiple safety-conscious members with high veto thresholds.
+parliament:
+  member safety:
+    class: ExampleSafetyMember
+    budget: 5
+    veto_threshold: 0.6
+    weight: 2.0
+
+  member integrity:
+    class: ExampleIntegrityMember
+    budget: 5
+    veto_threshold: 0.7
+    weight: 2.5
+
+  member planning:
+    class: ExamplePlanningMember
+    budget: 3
+    veto_threshold: 0.4
+    weight: 1.5
+
+  contract tighten_quorum:
+    restricted_indices: [1]
+    enactment_threshold: 0.75
+    revocation_threshold: 1.0
+    enforcement_mode: hard
+
+  speaker:
+    default_action: emergency_shutdown
+    majority_threshold: 0.5
+    supermajority_threshold: 0.75
+    max_rounds: 5
