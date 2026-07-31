@@ -35,7 +35,17 @@ class StubBackend(AgentBackend):
 
     def __init__(self, script: Sequence[int] | None = None, seed: int = 0):
         self._script = list(script) if script is not None else None
+        self._seed = seed
         self._rng = random.Random(seed)
+        self._calls = 0
+
+    def reset(self) -> None:
+        """Restore the stub to its just-constructed state.
+
+        Resets the call counter and re-seeds the RNG so a paired arm
+        replays the identical action stream.
+        """
+        self._rng = random.Random(self._seed)
         self._calls = 0
 
     def select_action(self, context: dict[str, Any]) -> AgentAction:

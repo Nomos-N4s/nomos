@@ -79,3 +79,12 @@ class AgentBackend(ABC):
         Returns:
             The chosen :class:`AgentAction`.
         """
+
+    def reset(self) -> None:
+        """Restore the backend to its initial state.
+
+        Called by the harness before each arm so both arms of a pair
+        consume identical action streams. Stateful backends (scripted
+        stubs, caches) must override this; stateless LLM adapters can
+        keep the default no-op.
+        """
