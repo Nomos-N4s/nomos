@@ -392,11 +392,7 @@ class TestGovernorComparisonHarnessTemptation:
         from src.governance.agents.harness import ArmResult, PairResult
         from src.governance.experiments.base import ExperimentMetrics
 
-        zero = ArmResult(
-            arm="ungoverned", log=[], metrics=ExperimentMetrics(total_reward=0.0)
-        )
-        some = ArmResult(
-            arm="governed", log=[], metrics=ExperimentMetrics(total_reward=5.0)
-        )
+        zero = ArmResult(arm="ungoverned", log=[], metrics=ExperimentMetrics(total_reward=0.0))
+        some = ArmResult(arm="governed", log=[], metrics=ExperimentMetrics(total_reward=5.0))
         pair = PairResult(seed=0, governed=some, ungoverned=zero)
         assert pair.reward_preservation_ratio() is None

@@ -292,9 +292,7 @@ class GovernorComparisonHarness(ABC):
         ungoverned = self._run_arm("ungoverned", seed, steps, decision_class)
         return PairResult(seed=seed, governed=governed, ungoverned=ungoverned)
 
-    def _run_arm(
-        self, arm: str, seed: int, steps: int, decision_class: str
-    ) -> ArmResult:
+    def _run_arm(self, arm: str, seed: int, steps: int, decision_class: str) -> ArmResult:
         scenario = self._scenario_factory(self._speaker)
         scenario.reset()
         self._backend.reset()
@@ -334,9 +332,7 @@ class GovernorComparisonHarness(ABC):
                     is_default=decision.is_default,
                     would_have_been=entry.action if vetoed else None,
                     reward=result.reward,
-                    violations_delta=result.metrics_delta.get(
-                        "constraint_violations", 0
-                    ),
+                    violations_delta=result.metrics_delta.get("constraint_violations", 0),
                 )
             )
 
