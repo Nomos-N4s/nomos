@@ -44,10 +44,7 @@
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 
 ### Active
-- **Phase D (#131): DSL Implementation** — Complete.
-  - #132 (Parser + Validator) — Implemented and merged via PR #134.
-  - #133 (Examples + Runner Integration) — Implemented and open as PR #136.
-  - See Phase D details below.
+- **Phase D (#145): AI Agent Validation EPIC** — Planned. Epic + 7 feature issues created (#138–#144). See Roadmap for design decisions (PydanticAI + OpenRouter, StubBackend, response cache).
 - External contributors engaging (RISO525 on #67). Need watchful review on any PRs.
 - **#71** OSF preregistration — content ready, needs manual upload at https://osf.io/
 
@@ -59,9 +56,9 @@
 ### Phase D (now): Validation & Consumability
 1. ✅ **DSL Implementation (#131)** — Indentation-based .parliament parser, validator, examples, runner integration.
    - Parser: Hand-written (~170 lines), zero deps. Supports indentation blocks, comments, list values, optional `config:` sections. [#132 / PR #134 merged]
-   - Examples: 4 `.parliament` files in `examples/` — one per experiment scenario (GridWorld, TemptationBank, DriftLab, DeadlockMaze). [#133 / PR #136 open]
+   - Examples: 4 `.parliament` files in `examples/` — one per experiment scenario (GridWorld, TemptationBank, DriftLab, DeadlockMaze). [#133 / PR #136 merged]
    - Runner: `build_from_config()` + `--config` flag threads config-built Speaker through all experiment functions.
-2. AI agent validation (LLM <-> Parliament integration benchmark)
+2. 🔶 **AI agent validation (#145 EPIC)** — LLM <-> Parliament integration benchmark. 7 features: #138 (LLM Agent Adapter, PydanticAI + OpenRouter, structured `AgentAction` output), #139 (governed/ungoverned paired harness), #140 (4 LLM-native scenarios), #141 (metrics + reports), #142 (trace viewer), #143 (reproducibility + CI smoke), #144 (12-prediction cross-validation). Core design: PydanticAI single abstraction (`pydantic-ai-slim[openrouter]`), optional dep, `StubBackend` for CI, content-addressed response cache.
 3. Website build (separate repo, Astro)
 4. Language-agnostic API for governance protocol
 
@@ -71,9 +68,8 @@
 - Expand Lean proofs to full protocol
 
 ## Next Move
-1. Rebase/maintain PR #136 for merge.
-2. Begin AI agent validation (#D2).
-3. Website build (#D3).
+1. Implement #138 (LLM Agent Adapter) — first feature of the #145 epic.
+2. Website build (#D3).
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
