@@ -80,8 +80,14 @@ def main():
     if not backend.get_identity_vector():
         backend.set_identity_vector([1.0, 1.0, 1.0, 0.95, 0.9])
 
-    tab_names = ["📐 Formal Model", "🏛️ Parliament Live", "📊 Benchmarks", "🤖 RL Training"]
-    tab_model, tab_parliament, tab_benchmarks, tab_rl = st.tabs(tab_names)
+    tab_names = [
+        "📐 Formal Model",
+        "🏛️ Parliament Live",
+        "📊 Benchmarks",
+        "🤖 RL Training",
+        "🧭 Agent Traces",
+    ]
+    tab_model, tab_parliament, tab_benchmarks, tab_rl, tab_agent = st.tabs(tab_names)
 
     with tab_model:
         from governance.dashboard.model_tab import render_model_tab
@@ -102,6 +108,11 @@ def main():
         from governance.dashboard.rl_tab import render_rl_tab
 
         render_rl_tab(backend)
+
+    with tab_agent:
+        from governance.dashboard.agent_tab import render_agent_tab
+
+        render_agent_tab(backend)
 
 
 if __name__ == "__main__":
