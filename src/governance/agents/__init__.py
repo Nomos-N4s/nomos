@@ -15,9 +15,22 @@ Backends ship in three flavours:
 - :class:`~.stub.StubBackend` — deterministic fake agent (CI, tests)
 - :class:`~.pydantic_adapter.PydanticAIAdapter` — real LLM agent via
   PydanticAI (provider-agnostic: OpenAI, Anthropic, OpenRouter, ...)
+
+The :class:`~.harness.GovernorComparisonHarness` pairs a backend against
+itself with and without governance, so the effect of the Parliament can
+be measured on identical trials.
 """
 
 from .base import AgentAction, AgentBackend
+from .harness import ActionSpace, ArmResult, GovernorComparisonHarness, PairResult
 from .stub import StubBackend
 
-__all__ = ["AgentAction", "AgentBackend", "StubBackend"]
+__all__ = [
+    "AgentAction",
+    "AgentBackend",
+    "ActionSpace",
+    "ArmResult",
+    "PairResult",
+    "GovernorComparisonHarness",
+    "StubBackend",
+]
