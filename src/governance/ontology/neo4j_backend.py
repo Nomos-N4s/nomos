@@ -34,8 +34,8 @@ try:
 except ImportError:
     CERTIFI_AVAILABLE = False
 
-from .backend import OntologyBackend
 from ..env import load_project_env
+from .backend import OntologyBackend
 
 
 def _load_env() -> dict[str, str]:
