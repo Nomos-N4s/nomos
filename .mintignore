@@ -1,0 +1,12 @@
+# Root-level project files that are not Mintlify docs pages.
+# Excluded so the Mintlify Deployment PR check does not try to parse
+# them as documentation (they have no frontmatter and fail its parser).
+#
+# README.md, LICENSE.md, CHANGELOG.md, and CONTRIBUTING.md are ignored
+# automatically by Mintlify and do not need to be listed here.
+AGENTS.md
+CLA.md
+CODE_OF_CONDUCT.md
+REPRODUCIBILITY.md
+SECURITY.md
+osf-registration.md
