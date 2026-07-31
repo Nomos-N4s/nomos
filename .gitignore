@@ -12,4 +12,5 @@ errors.txt
 site/
 results/*
 !results/.gitkeep
+results/agent/cache/
 gov-budget-proof/
