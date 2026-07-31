@@ -1,0 +1,40 @@
+# GridWorldLLM configuration: exploration-based poison discovery
+# Members balance reward-seeking against safety and integrity.
+parliament:
+  member reward:
+    class: ExampleRewardMember
+    budget: 3
+    veto_threshold: 0.0
+    weight: 1.0
+
+  member safety:
+    class: ExampleSafetyMember
+    budget: 5
+    veto_threshold: 0.5
+    weight: 2.0
+
+  member planning:
+    class: ExamplePlanningMember
+    budget: 3
+    veto_threshold: 0.3
+    weight: 1.5
+
+  member integrity:
+    class: ExampleIntegrityMember
+    budget: 5
+    veto_threshold: 0.8
+    weight: 3.0
+
+  # Example contract: the parliament can pre-restrict a move direction.
+  # Index 2 is "move_left" in the LLM action enum.
+  contract poison_ban:
+    restricted_indices: [2]
+    enactment_threshold: 0.66
+    revocation_threshold: 1.0
+    enforcement_mode: hard
+
+  speaker:
+    default_action: stand_still
+    majority_threshold: 0.5
+    supermajority_threshold: 0.66
+    max_rounds: 3

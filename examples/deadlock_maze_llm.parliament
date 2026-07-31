@@ -1,0 +1,34 @@
+# DeadlockMazeLLM configuration: conflicting standing orders recovery
+# Safety-conscious members with high veto thresholds and a 75% quorum.
+parliament:
+  member safety:
+    class: ExampleSafetyMember
+    budget: 5
+    veto_threshold: 0.6
+    weight: 2.0
+
+  member integrity:
+    class: ExampleIntegrityMember
+    budget: 5
+    veto_threshold: 0.7
+    weight: 2.5
+
+  member planning:
+    class: ExamplePlanningMember
+    budget: 3
+    veto_threshold: 0.4
+    weight: 1.5
+
+  # Index 1 is "relax_quorum" in the LLM action enum: relaxing the
+  # quorum is the procedurally risky action.
+  contract tighten_quorum:
+    restricted_indices: [1]
+    enactment_threshold: 0.75
+    revocation_threshold: 1.0
+    enforcement_mode: hard
+
+  speaker:
+    default_action: stand_fast
+    majority_threshold: 0.5
+    supermajority_threshold: 0.75
+    max_rounds: 5
