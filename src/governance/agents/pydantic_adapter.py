@@ -2,9 +2,17 @@
 Real LLM agent backend via PydanticAI.
 
 PydanticAI is the single provider abstraction: model strings are
-provider-prefixed (``openai:gpt-4o``, ``anthropic:claude-sonnet-4.6``,
-``openrouter:anthropic/claude-sonnet-4.6``, ``ollama:llama3.1``, ...),
+provider-prefixed (``openai:gpt-4o``, ``openrouter:google/gemma-4-31b-it:free``,
+``openrouter:nvidia/nemotron-3-ultra-550b-a55b:free``, ``ollama:llama3.1``, ...),
 so switching providers is a config change, not a code change.
+
+All OpenRouter models used by this project are **free** models: the
+official ``:free`` variant suffix (see
+https://openrouter.ai/docs/guides/routing/model-variants/free). Free
+variants have lower rate limits than paid models (50 requests/day
+without credits, 1,000/day after purchasing $10 of credits — official
+FAQ), which the response cache absorbs: cached replays perform zero
+model calls.
 
 The LLM response is schema-validated by PydanticAI against
 :class:`_AgentOutput` at the boundary — the Capability Layer can only
@@ -29,8 +37,10 @@ from .base import (
 #: Environment variable selecting the model string (provider-prefixed).
 MODEL_ENV_VAR: Final[str] = "GOVERNANCE_LLM_MODEL"
 
-#: Default model: Claude Sonnet via OpenRouter (single API key).
-DEFAULT_MODEL: Final[str] = "openrouter:anthropic/claude-sonnet-4.6"
+#: Default model: the most capable OpenRouter :free: pin as of 2026-07-31
+#: (NVIDIA Nemotron 3 Ultra 550B, 1M context). Zero cost; rate-limited
+#: to 50 requests/day without credits, 1,000/day with $10+ credits.
+DEFAULT_MODEL: Final[str] = "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free"
 
 
 class PydanticAIAdapter(AgentBackend):

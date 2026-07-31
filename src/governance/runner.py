@@ -12,7 +12,7 @@ Usage:
     ``python -m src.governance.runner gridworld --config examples/grid_world.parliament``
     ``python -m src.governance.runner prove --all``
     ``python -m src.governance.runner prove --ch4``
-    ``python -m src.governance.runner agent --seeds 20 --model openrouter:anthropic/claude-sonnet-4.6``
+    ``python -m src.governance.runner agent --seeds 20 --model openrouter:nvidia/nemotron-3-ultra-550b-a55b:free``
     ``python -m src.governance.runner agent --seeds 1 --steps 30 --stub``
 """
 
@@ -473,7 +473,8 @@ def main():
         type=str,
         default=None,
         help="Provider-prefixed model string (default: $GOVERNANCE_LLM_MODEL or "
-        "openrouter:anthropic/claude-sonnet-4.6)",
+        "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free; OpenRouter free "
+        "models use the :free suffix)",
     )
     p_agent.add_argument(
         "--temperature",

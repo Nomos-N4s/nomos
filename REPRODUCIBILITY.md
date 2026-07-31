@@ -113,16 +113,28 @@ python -m src.governance.agents.schema check results/agent
 ```bash
 python -m src.governance.runner agent --seeds 20 --steps 100 \
     --backend pydanticai \
-    --model openrouter:anthropic/claude-sonnet-4.6 \
+    --model openrouter:nvidia/nemotron-3-ultra-550b-a55b:free \
     --temperature 0.0
 ```
 
 - **Pinned models**: the model string is recorded in every cache entry
   and must be pinned exactly. The default reference model is
-  `openrouter:anthropic/claude-sonnet-4.6`. Alternative pins (e.g.
-  `openrouter:anthropic/claude-sonnet-4.5`, `openai:gpt-5`) must be
-  stated in the report; results across different model pins are not
-  directly comparable.
+  `openrouter:nvidia/nemotron-3-ultra-550b-a55b:free` (NVIDIA Nemotron 3
+  Ultra 550B — the most capable **free** model on OpenRouter as of
+  2026-07-31). All reference models are OpenRouter `:free` variants
+  (official convention: append `:free` to any model ID — see
+  https://openrouter.ai/docs/guides/routing/model-variants/free), so
+  full runs cost nothing. Do not use the `openrouter/free` router alias
+  for reference runs: it resolves to different models over time, which
+  breaks pinning.
+- **Sensitivity pins** (2+ models): `openai/gpt-oss-20b:free`
+  (131k context, small/fast) and `google/gemma-4-31b-it:free`
+  (262k context) are the recommended second/third pins. Results across
+  different model pins are not directly comparable.
+- **Free-model rate limits** (official FAQ): 50 requests/day without
+  credits, 1,000 requests/day once $10 of credits have been purchased.
+  The response cache absorbs this: cached replays perform zero model
+  calls, so only first runs consume the budget.
 - **Temperature**: `0.0` (the default) makes sampling deterministic
   on the provider side; the rendered prompt carries no timestamps, so
   identical prompts are always identical strings.
