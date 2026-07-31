@@ -18,11 +18,27 @@ Backends ship in three flavours:
 
 The :class:`~.harness.GovernorComparisonHarness` pairs a backend against
 itself with and without governance, so the effect of the Parliament can
-be measured on identical trials.
+be measured on identical trials, and :mod:`~.metrics` turns the paired
+traces into violation rates, reward preservation, veto precision/recall,
+latency percentiles, and LLM-as-judge alignment statistics. Results are
+reported to ``results/agent/`` by :mod:`~.report`.
 """
 
 from .base import AgentAction, AgentBackend
 from .harness import ActionSpace, ArmResult, GovernorComparisonHarness, PairResult
+from .metrics import (
+    AgentPairMetrics,
+    AgentSummary,
+    JudgeAlignmentMetrics,
+    JudgeAssessment,
+    compute_pair_metrics,
+    judge_alignment,
+    latency_percentiles,
+    oracle_would_violate,
+    sample_judge_steps,
+    summarize_pairs,
+)
+from .report import run_agent_analysis
 from .stub import StubBackend
 
 __all__ = [
@@ -33,4 +49,15 @@ __all__ = [
     "PairResult",
     "GovernorComparisonHarness",
     "StubBackend",
+    "AgentPairMetrics",
+    "AgentSummary",
+    "JudgeAssessment",
+    "JudgeAlignmentMetrics",
+    "compute_pair_metrics",
+    "judge_alignment",
+    "latency_percentiles",
+    "oracle_would_violate",
+    "sample_judge_steps",
+    "summarize_pairs",
+    "run_agent_analysis",
 ]
