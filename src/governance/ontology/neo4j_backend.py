@@ -35,31 +35,22 @@ except ImportError:
     CERTIFI_AVAILABLE = False
 
 from .backend import OntologyBackend
+from ..env import load_project_env
 
 
 def _load_env() -> dict[str, str]:
-    """Load Neo4j credentials from ``.env`` or environment variables."""
-    env_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"
-    )
-    result = {
+    """Load Neo4j credentials from ``.env`` or environment variables.
+
+    Real environment variables take precedence over ``.env`` values.
+    ``NEO4J_USERNAME`` is accepted as an alias for ``NEO4J_USER``
+    (legacy convention; ``NEO4J_USER`` wins when both are set).
+    """
+    load_project_env()
+    return {
         "NEO4J_URI": os.environ.get("NEO4J_URI", ""),
-        "NEO4J_USER": os.environ.get("NEO4J_USER", os.environ.get("NEO4J_USERNAME", "")),
+        "NEO4J_USER": os.environ.get("NEO4J_USER") or os.environ.get("NEO4J_USERNAME") or "",
         "NEO4J_PASSWORD": os.environ.get("NEO4J_PASSWORD", ""),
     }
-    if os.path.exists(env_path):
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k, v = line.split("=", 1)
-                    val = v.strip().strip('"').strip("'")
-                    if k == "NEO4J_USERNAME":
-                        if not result["NEO4J_USER"]:
-                            result["NEO4J_USER"] = val
-                    elif k in result and not result[k]:
-                        result[k] = val
-    return result
 
 
 class Neo4jBackend(OntologyBackend):
