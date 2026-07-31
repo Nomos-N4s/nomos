@@ -20,6 +20,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+agent = [
+    "pydantic-ai-slim[openrouter]>=2.21",
+]
 rl = [
     "torch>=2.0",
     "stable-baselines3>=2.3",
@@ -81,7 +84,7 @@ unsupported-operator = "warn"
 invalid-parameter-default = "error"
 
 [tool.ty.src]
-include = ["src/governance/benchmarks", "src/governance/experiments", "src/governance/dsl"]
+include = ["src/governance/benchmarks", "src/governance/experiments", "src/governance/dsl", "src/governance/agents"]
 exclude = [
     "src/governance/experiments/minigrid_wrapper.py",
     "src/governance/experiments/safety_gym_wrapper.py",
@@ -89,6 +92,7 @@ exclude = [
     "src/governance/experiments/gym_env.py",
     "src/governance/experiments/rl_train.py",
     "src/governance/experiments/rl_adversary.py",
+    "src/governance/agents/pydantic_adapter.py",
 ]
 
 [tool.setuptools.packages.find]
