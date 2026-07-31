@@ -183,6 +183,23 @@ class SpeakerStateMachine:
         """
         return self._sort_agenda(self._apply_budgets(proposals))
 
+    def score_against_members(self, state: Any, proposal: Proposal) -> dict[str, float]:
+        """Score one proposal against every member's value function.
+
+        Public entry point for consumers (audit traces, dashboards)
+        that need per-member scores without running a full governance
+        cycle. The governance cycle itself scores proposals internally;
+        this method exposes the same evaluation deterministically.
+
+        Args:
+            state: Current environment state.
+            proposal: The proposal under evaluation.
+
+        Returns:
+            Map of member_id → score in [-1, 1].
+        """
+        return self._score_proposal(state, proposal)
+
     def _score_proposal(self, state: Any, proposal: Proposal) -> dict[str, float]:
         """Score a single proposal against every member's value function.
 
