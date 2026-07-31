@@ -193,6 +193,18 @@ class ContractRegistry:
                 return c
         return None
 
+    def get_all(self) -> list[UlyssesContract]:
+        """Return every registered contract, in registration order.
+
+        Unlike :meth:`get_active`, this includes PROPOSED, REVOKED,
+        and EXPIRED contracts, so audit traces can replay the full
+        lifecycle of each contract.
+
+        Returns:
+            All registered contracts.
+        """
+        return list(self._contracts)
+
     def tick_cycle(self):
         """Advance the governance cycle counter.
 
