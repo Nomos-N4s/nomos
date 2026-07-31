@@ -156,7 +156,7 @@ class TestPydanticAIAdapter:
 
     def test_model_falls_back_to_default(self) -> None:
         adapter = PydanticAIAdapter(system_prompt="sys")
-        assert adapter.model == "openrouter:anthropic/claude-sonnet-4.6"
+        assert adapter.model == "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free"
 
     def test_agent_built_lazily(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
