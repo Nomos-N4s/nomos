@@ -72,6 +72,18 @@ class TemptationBankLLM(LLMScenario):
         """Render wealth, outstanding loans, and contract state."""
         return render_temptation_bank(self.balance, self._loan_timers, self._loans_banned)
 
+    def contract_snapshot(self) -> list[dict[str, Any]]:
+        """Snapshot the loan-ban contract lifecycle for audit traces."""
+        return [
+            {
+                "contract_id": contract.contract_id,
+                "state": contract.state.name,
+                "restricted_indices": sorted(contract.restricted_indices),
+                "timelock_blocks": contract.timelock_blocks,
+            }
+            for contract in self.contracts.get_all()
+        ]
+
     def proposal_metadata(self, action: str) -> dict[str, Any]:
         """Static risk and reward estimates for each action."""
         if action == "take_loan":

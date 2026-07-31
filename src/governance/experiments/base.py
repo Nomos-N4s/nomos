@@ -173,6 +173,20 @@ class ExperimentScenario(ABC):
         """
         return state
 
+    def contract_snapshot(self) -> list[dict[str, Any]]:
+        """Per-step snapshot of the scenario's Ulysses Contracts.
+
+        Override in scenarios that manage a
+        :class:`~..contracts.contract.ContractRegistry` so audit traces
+        can record the contract lifecycle (PROPOSED → ENACTED → ACTIVE /
+        BREACHED) aligned with steps. The default reports no contracts.
+
+        Returns:
+            One dict per registered contract with ``contract_id``,
+            ``state``, ``restricted_indices``, and ``timelock_blocks``.
+        """
+        return []
+
     # ------------------------------------------------------------------
     # Public API — do not override
     # ------------------------------------------------------------------

@@ -130,6 +130,14 @@ class StepLogEntry:
         violations_delta: Constraint violations this step.
         select_latency: Wall-clock seconds spent in the backend's
             ``select_action`` call (the LLM call for live adapters).
+        proposal_metadata: The metadata carried by the governed arm's
+            proposal (empty for the ungoverned arm).
+        committee_scores: Per-member scores for the governed arm's
+            proposal (empty for the ungoverned arm).
+        vetoers: Members whose score fell below their veto threshold
+            (empty when the step was not vetoed).
+        contract_state: Scenario contract snapshot after the step
+            (empty when the scenario manages no contracts).
     """
 
     step: int
@@ -146,6 +154,10 @@ class StepLogEntry:
     reward: float
     violations_delta: int
     select_latency: float = 0.0
+    proposal_metadata: dict[str, Any] = field(default_factory=dict)
+    committee_scores: dict[str, float] = field(default_factory=dict)
+    vetoers: list[str] = field(default_factory=list)
+    contract_state: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -319,7 +331,7 @@ class GovernorComparisonHarness(ABC):
             select_latency = time.perf_counter() - latency_start
             entry = self._action_space.entry(agent_action.action_index)
 
-            decision = self._decide(arm, scenario, observation, entry, decision_class)
+            decision, trace = self._decide(arm, scenario, observation, entry, decision_class)
             result = scenario.step(
                 state=observation,
                 decision_class=decision_class,
@@ -344,6 +356,10 @@ class GovernorComparisonHarness(ABC):
                     reward=result.reward,
                     violations_delta=result.metrics_delta.get("constraint_violations", 0),
                     select_latency=select_latency,
+                    proposal_metadata=trace["proposal_metadata"],
+                    committee_scores=trace["committee_scores"],
+                    vetoers=trace["vetoers"] if vetoed else [],
+                    contract_state=scenario.contract_snapshot(),
                 )
             )
 
@@ -356,12 +372,17 @@ class GovernorComparisonHarness(ABC):
         state: Any,
         entry: ActionSpaceEntry,
         decision_class: str,
-    ) -> GovernanceDecision:
+    ) -> tuple[GovernanceDecision, dict[str, Any]]:
         """Turn the agent's chosen action into a decision for the arm.
 
         The ungoverned arm applies the agent's action directly. The
         governed arm submits it as a proposal to the Speaker, which may
         veto it and fall back to the default action.
+
+        The second return value carries the per-step trace record:
+        the proposal metadata, every member's score, and the members
+        whose score fell below their veto threshold — the raw material
+        for the audit trace and veto heatmap.
 
         Args:
             arm: ``"governed"`` or ``"ungoverned"``.
@@ -373,13 +394,20 @@ class GovernorComparisonHarness(ABC):
             decision_class: Governance decision class.
 
         Returns:
-            The decision to apply to the environment.
+            ``(decision, trace)`` where ``trace`` has keys
+            ``proposal_metadata``, ``committee_scores``, and
+            ``vetoers``.
         """
         if arm == "ungoverned":
-            return GovernanceDecision(
+            decision = GovernanceDecision(
                 action=entry.action,
                 governance_meta={"arm": "ungoverned", "agent_action_index": -1},
             )
+            return decision, {
+                "proposal_metadata": {},
+                "committee_scores": {},
+                "vetoers": [],
+            }
 
         metadata = cast(
             dict[str, Any],
@@ -391,8 +419,26 @@ class GovernorComparisonHarness(ABC):
             tag=PriorityTag.ROUTINE,
             metadata=metadata,
         )
-        return self._speaker.run_governance_cycle(
+        decision = self._speaker.run_governance_cycle(
             state=state,
             raw_proposals=[proposal],
             decision_class=decision_class,
         )
+        committee_scores = self._speaker.score_against_members(state, proposal)
+        # The agent's own proxy seat scores a constant 0.5; it exists only
+        # for budget mechanics and would pollute the audit trace heatmap.
+        committee_scores = {
+            member_id: score
+            for member_id, score in committee_scores.items()
+            if member_id != AGENT_MEMBER_ID
+        }
+        vetoers = [
+            member_id
+            for member_id, member in self._speaker.members.items()
+            if committee_scores.get(member_id, 0.0) < member.veto_threshold
+        ]
+        return decision, {
+            "proposal_metadata": metadata,
+            "committee_scores": committee_scores,
+            "vetoers": vetoers,
+        }
