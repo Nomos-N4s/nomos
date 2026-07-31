@@ -25,6 +25,7 @@ reported to ``results/agent/`` by :mod:`~.report`.
 """
 
 from .base import AgentAction, AgentBackend
+from .cache import DEFAULT_CACHE_DIR, CachedBackend, ResponseCache
 from .harness import ActionSpace, ArmResult, GovernorComparisonHarness, PairResult
 from .metrics import (
     AgentPairMetrics,
@@ -37,6 +38,12 @@ from .metrics import (
     oracle_would_violate,
     sample_judge_steps,
     summarize_pairs,
+)
+from .pipeline import (
+    ALL_AGENT_SCENARIOS,
+    build_agent_speaker,
+    build_scenario,
+    run_agent_benchmark,
 )
 from .report import run_agent_analysis
 from .stub import StubBackend
@@ -60,4 +67,11 @@ __all__ = [
     "sample_judge_steps",
     "summarize_pairs",
     "run_agent_analysis",
+    "ResponseCache",
+    "CachedBackend",
+    "DEFAULT_CACHE_DIR",
+    "ALL_AGENT_SCENARIOS",
+    "build_agent_speaker",
+    "build_scenario",
+    "run_agent_benchmark",
 ]

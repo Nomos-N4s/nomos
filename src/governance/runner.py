@@ -12,6 +12,8 @@ Usage:
     ``python -m src.governance.runner gridworld --config examples/grid_world.parliament``
     ``python -m src.governance.runner prove --all``
     ``python -m src.governance.runner prove --ch4``
+    ``python -m src.governance.runner agent --seeds 20 --model openrouter:anthropic/claude-sonnet-4.6``
+    ``python -m src.governance.runner agent --seeds 1 --steps 30 --stub``
 """
 
 import argparse
@@ -22,6 +24,7 @@ import sys
 import time
 from datetime import datetime
 
+from .agents.cache import DEFAULT_CACHE_DIR
 from .benchmarks.report import print_all_reports
 from .benchmarks.run_all import (
     run_deadlock_experiments,
@@ -308,6 +311,60 @@ def cmd_adversary(args):
     adversary_main()
 
 
+def _build_pydanticai_factory(model: str | None, temperature: float | None):
+    """Backend factory for real LLM runs (one adapter per scenario).
+
+    Each scenario briefs the agent with its own system prompt, so a
+    fresh adapter is built per scenario inside the factory.
+
+    Args:
+        model: Provider-prefixed model string (may be None to use the
+            ``GOVERNANCE_LLM_MODEL`` env var or the adapter default).
+        temperature: Sampling temperature.
+
+    Returns:
+        A ``(scenario) -> PydanticAIAdapter`` factory.
+    """
+    from .agents.pydantic_adapter import PydanticAIAdapter
+
+    def factory(scenario):
+        return PydanticAIAdapter(
+            system_prompt=scenario.system_prompt(),
+            model=model,
+            temperature=temperature,
+        )
+
+    return factory
+
+
+def cmd_agent(args):
+    from .agents import DEFAULT_CACHE_DIR
+    from .agents.pipeline import run_agent_benchmark
+    from .agents.report import format_agent_summary
+
+    cache_dir = args.cache if args.cache else DEFAULT_CACHE_DIR
+    backend_factory = None
+    if args.backend == "pydanticai":
+        backend_factory = _build_pydanticai_factory(args.model, args.temperature)
+
+    result = run_agent_benchmark(
+        seeds=args.seeds,
+        steps=args.steps,
+        backend_factory=backend_factory,
+        use_cache=not args.no_cache,
+        cache_dir=cache_dir,
+    )
+
+    summary = result["analysis"]["summary"]
+    print(format_agent_summary(summary))
+    print(f"Cache: {result['cache_stats']} entries in {cache_dir}")
+    print(f"Cache manifest: {result['manifest_path']}")
+    print(
+        "Reports written to results/agent/ "
+        "(report.md, benchmark_results.json, benchmark_summary.csv)"
+    )
+
+
 def _add_shared_args(parser):
     parser.add_argument(
         "--steps", type=int, default=1000, help="Number of steps per run (default: 1000)"
@@ -389,6 +446,53 @@ def main():
     p_adv = sub.add_parser("adversary", help="RL adversary experiment (needs torch+sb3)")
     p_adv.add_argument("forward_args", nargs=argparse.REMAINDER)
     p_adv.set_defaults(func=cmd_adversary)
+
+    p_agent = sub.add_parser(
+        "agent", help="Run the governed/ungoverned LLM agent validation benchmark"
+    )
+    p_agent.add_argument(
+        "--seeds",
+        type=int,
+        default=1,
+        help="Number of seed pairs per scenario (default: 1)",
+    )
+    p_agent.add_argument(
+        "--steps",
+        type=int,
+        default=100,
+        help="Steps per arm (default: 100)",
+    )
+    p_agent.add_argument(
+        "--backend",
+        choices=["stub", "pydanticai"],
+        default="stub",
+        help="Agent backend: deterministic stub (CI, no API key) or real LLM (default: stub)",
+    )
+    p_agent.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Provider-prefixed model string (default: $GOVERNANCE_LLM_MODEL or "
+        "openrouter:anthropic/claude-sonnet-4.6)",
+    )
+    p_agent.add_argument(
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="Sampling temperature; 0.0 makes full runs deterministic (default: 0.0)",
+    )
+    p_agent.add_argument(
+        "--cache",
+        type=str,
+        default="",
+        help=f"Response cache directory (default: {DEFAULT_CACHE_DIR})",
+    )
+    p_agent.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable the response cache (each step calls the backend)",
+    )
+    p_agent.set_defaults(func=cmd_agent)
 
     args = parser.parse_args()
     if args.command is None:
