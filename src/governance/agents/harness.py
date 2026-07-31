@@ -21,6 +21,7 @@ Real-world analogy:
     treatment because the trial arms are otherwise identical.
 """
 
+import time
 from abc import ABC
 from collections.abc import Callable, Sequence
 from copy import copy
@@ -127,6 +128,8 @@ class StepLogEntry:
             the governed arm vetoed it, else None.
         reward: Reward earned this step.
         violations_delta: Constraint violations this step.
+        select_latency: Wall-clock seconds spent in the backend's
+            ``select_action`` call (the LLM call for live adapters).
     """
 
     step: int
@@ -142,6 +145,7 @@ class StepLogEntry:
     would_have_been: Any | None
     reward: float
     violations_delta: int
+    select_latency: float = 0.0
 
 
 @dataclass
@@ -310,7 +314,9 @@ class GovernorComparisonHarness(ABC):
                 step=step,
                 arm=arm,
             )
+            latency_start = time.perf_counter()
             agent_action = self._backend.select_action(context)
+            select_latency = time.perf_counter() - latency_start
             entry = self._action_space.entry(agent_action.action_index)
 
             decision = self._decide(arm, scenario, observation, entry, decision_class)
@@ -337,6 +343,7 @@ class GovernorComparisonHarness(ABC):
                     would_have_been=entry.action if vetoed else None,
                     reward=result.reward,
                     violations_delta=result.metrics_delta.get("constraint_violations", 0),
+                    select_latency=select_latency,
                 )
             )
 
