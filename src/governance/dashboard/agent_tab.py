@@ -71,7 +71,6 @@ def _events_dataframe(viewer: dict) -> pd.DataFrame:
                     "vetoed": event["decision"]["vetoed"],
                     "veto_reason": event["veto_reason"] or "",
                     "latency_ms": event["latency_ms"],
-                    "reward": None,
                 }
             )
     return pd.DataFrame(rows)

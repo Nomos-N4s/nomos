@@ -90,7 +90,9 @@ def build_trace_event(entry: StepLogEntry) -> dict[str, Any]:
             if entry.arm == "governed"
             else None
         ),
-        "committee_scores": dict(entry.committee_scores),
+        "committee_scores": {
+            member_id: round(score, 3) for member_id, score in entry.committee_scores.items()
+        },
         "decision": {
             "action": str(entry.decision_action),
             "is_default": entry.is_default,
