@@ -1,0 +1,42 @@
+name: Agent Benchmark Smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-agent-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv
+        run: pip install uv
+      - name: Sync dependencies
+        run: uv sync
+      - name: Install package in editable mode
+        run: uv pip install -e ".[agent]"
+      - name: Run agent benchmark smoke test
+        run: |
+          uv run python -m src.governance.runner agent --seeds 1 --steps 30 --backend stub
+          echo "Checking for agent artifacts..."
+          ls -la results/agent/
+          test -f results/agent/agent_report.md && echo "Report found"
+          test -f results/agent/agent_benchmark_results.json && echo "Results found"
+          test -f results/agent/agent_benchmark_summary.csv && echo "Summary found"
+          test -f results/agent/cache_manifest.json && echo "Manifest found"
+      - name: Validate artifact contract (schema, not values)
+        run: |
+          uv run python -m src.governance.agents.schema check results/agent
