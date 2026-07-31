@@ -57,6 +57,10 @@ results. The seed list covers a diverse range to detect sensitivity.
 | `results/figures/violation_rates.svg` | Constraint violation rates by strategy |
 | `results/figures/deadlock_frequency.svg` | Deadlock counts (DeadlockMaze scenario) |
 | `results/figures/pareto_frontier.svg` | Reward vs. violations Pareto frontier |
+| `results/agent/agent_report.md` | Agent validation human-readable summary |
+| `results/agent/agent_benchmark_results.json` | Per-pair and aggregate agent metrics |
+| `results/agent/agent_benchmark_summary.csv` | One row per agent seed pair |
+| `results/agent/cache_manifest.json` | SHA-256 digests of every cache entry |
 
 ## Verifying Results
 
@@ -81,6 +85,89 @@ python -m src.governance.runner prove --all
 ```
 
 Expected output: `12/12 PASS`
+
+## Agent Benchmark (LLM) Protocol
+
+The governed/ungoverned LLM agent validation run follows its own
+reproducibility protocol. LLM sampling is non-deterministic by nature;
+this protocol makes full runs reproducible through **deterministic
+prompt rendering**, **temperature 0**, and a **content-addressed
+response cache**.
+
+### Quick smoke run (CI, no API key)
+
+```bash
+python -m src.governance.runner agent --seeds 1 --steps 30 --backend stub
+```
+
+The stub backend is deterministic and exercises the identical pipeline
+(4 scenarios × 2 arms × 1 seed) without any model call. CI runs this
+plus the artifact contract check:
+
+```bash
+python -m src.governance.agents.schema check results/agent
+```
+
+### Full protocol run
+
+```bash
+python -m src.governance.runner agent --seeds 20 --steps 100 \
+    --backend pydanticai \
+    --model openrouter:anthropic/claude-sonnet-4.6 \
+    --temperature 0.0
+```
+
+- **Pinned models**: the model string is recorded in every cache entry
+  and must be pinned exactly. The default reference model is
+  `openrouter:anthropic/claude-sonnet-4.6`. Alternative pins (e.g.
+  `openrouter:anthropic/claude-sonnet-4.5`, `openai:gpt-5`) must be
+  stated in the report; results across different model pins are not
+  directly comparable.
+- **Temperature**: `0.0` (the default) makes sampling deterministic
+  on the provider side; the rendered prompt carries no timestamps, so
+  identical prompts are always identical strings.
+- **API key**: set `GOVERNANCE_LLM_MODEL` to override the model; the
+  provider key comes from PydanticAI's standard env config
+  (`OPENROUTER_API_KEY` for OpenRouter).
+
+### Response cache and replay determinism
+
+Every validated response is stored under a content address
+(`results/agent/cache/{sha256}.json`) keyed by
+`(model, prompt_hash, temperature)` where `prompt_hash` is the SHA-256
+of the full rendered prompt (system prompt + observation). Re-running
+the protocol with the same cache directory performs **zero model
+calls**: every step replays the stored response, so trajectories are
+bit-identical.
+
+Verification steps:
+
+```bash
+# 1. Re-run with the same cache; expect "Cache: {'hits': N, 'misses': 0}"
+python -m src.governance.runner agent --seeds 20 --steps 100 --backend pydanticai
+
+# 2. Check the committed manifest against the cache directory
+python -m src.governance.agents.schema check results/agent
+
+# 3. Manual digest comparison (Linux/macOS)
+(cd results/agent && sha256sum -c cache_manifest.json 2>/dev/null || true)
+```
+
+The cache manifest (`results/agent/cache_manifest.json`) maps every
+entry to its SHA-256 digest and is committed with full runs, so
+reviewers can verify replay determinism. The cache directory itself is
+git-ignored.
+
+### Artifact contract
+
+The committed reference for the agent artifacts is the schema contract
+in `src/governance/agents/schema.py`. CI compares new runs against
+this contract (keys, types, non-emptiness) — **never values**, which
+change when model versions change. Schema stability is the CI
+contract; a run may also be rejected on a digest mismatch against the
+committed manifest.
+
+## Output
 
 ## Lean Proofs
 
