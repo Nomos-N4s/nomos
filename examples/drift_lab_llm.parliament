@@ -1,0 +1,26 @@
+# DriftLabLLM configuration: identity coherence against re-negotiation
+# Integrity member dominates with high weight and veto threshold.
+parliament:
+  member reward:
+    class: ExampleRewardMember
+    budget: 3
+    veto_threshold: 0.0
+    weight: 1.0
+
+  member integrity:
+    class: ExampleIntegrityMember
+    budget: 5
+    veto_threshold: 0.8
+    weight: 3.0
+
+  member curiosity:
+    class: ExampleCuriosityMember
+    budget: 2
+    veto_threshold: 0.2
+    weight: 0.8
+
+  speaker:
+    default_action: classify_honestly
+    majority_threshold: 0.5
+    supermajority_threshold: 0.66
+    max_rounds: 3

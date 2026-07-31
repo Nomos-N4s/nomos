@@ -1,0 +1,33 @@
+# TemptationBankLLM configuration: voluntary self-binding against loans
+# Reward seeks short-term gain; Integrity and Safety enforce restraint.
+parliament:
+  member reward:
+    class: ExampleRewardMember
+    budget: 3
+    veto_threshold: 0.0
+    weight: 1.0
+
+  member safety:
+    class: ExampleSafetyMember
+    budget: 5
+    veto_threshold: 0.4
+    weight: 1.2
+
+  member integrity:
+    class: ExampleIntegrityMember
+    budget: 5
+    veto_threshold: 0.6
+    weight: 2.0
+
+  # The runtime-enacted loan ban restricts index 0 ("take_loan").
+  contract ban_loans:
+    restricted_indices: [0]
+    enactment_threshold: 0.66
+    revocation_threshold: 1.0
+    enforcement_mode: hard
+
+  speaker:
+    default_action: work
+    majority_threshold: 0.5
+    supermajority_threshold: 0.66
+    max_rounds: 3
