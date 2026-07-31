@@ -1,0 +1,252 @@
+"""Tests for the agent backend package (base, stub, prompts, adapter)."""
+
+import pytest
+
+from src.governance.agents import AgentAction, AgentBackend, StubBackend
+from src.governance.agents.base import (
+    ACTION_DESCRIPTIONS_KEY,
+    OBSERVATION_KEY,
+)
+from src.governance.agents.prompts import build_context, build_system_prompt, build_user_prompt
+from src.governance.models import Proposal
+from src.governance.speaker import SpeakerStateMachine
+
+# ----------------------------------------------------------------------
+# AgentAction schema
+# ----------------------------------------------------------------------
+
+
+class TestAgentAction:
+    def test_valid_action(self) -> None:
+        action = AgentAction(action_index=3, confidence=0.8, rationale="safe")
+        assert action.action_index == 3
+        assert action.confidence == 0.8
+        assert action.rationale == "safe"
+
+    def test_negative_index_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            AgentAction(action_index=-1, confidence=0.5, rationale="x")
+
+    def test_confidence_above_one_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            AgentAction(action_index=0, confidence=1.5, rationale="x")
+
+    def test_confidence_below_zero_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            AgentAction(action_index=0, confidence=-0.1, rationale="x")
+
+    def test_boundary_values_accepted(self) -> None:
+        AgentAction(action_index=0, confidence=0.0, rationale="x")
+        AgentAction(action_index=0, confidence=1.0, rationale="x")
+
+
+# ----------------------------------------------------------------------
+# AgentBackend protocol
+# ----------------------------------------------------------------------
+
+
+class _FakeBackend(AgentBackend):
+    backend_id = "fake"
+
+    def select_action(self, context: dict) -> AgentAction:
+        return AgentAction(action_index=0, confidence=1.0, rationale="fake")
+
+
+def test_protocol_accepts_subclass() -> None:
+    assert _FakeBackend().select_action({}) == AgentAction(
+        action_index=0, confidence=1.0, rationale="fake"
+    )
+
+
+# ----------------------------------------------------------------------
+# StubBackend
+# ----------------------------------------------------------------------
+
+
+def _context(n_actions: int = 4) -> dict:
+    return {
+        OBSERVATION_KEY: "state",
+        ACTION_DESCRIPTIONS_KEY: [f"action_{i}" for i in range(n_actions)],
+    }
+
+
+class TestStubBackend:
+    def test_scripted_sequence(self) -> None:
+        backend = StubBackend(script=[2, 0, 1])
+        assert backend.select_action(_context()).action_index == 2
+        assert backend.select_action(_context()).action_index == 0
+        assert backend.select_action(_context()).action_index == 1
+
+    def test_script_repeats_last_entry(self) -> None:
+        backend = StubBackend(script=[1])
+        for _ in range(5):
+            assert backend.select_action(_context()).action_index == 1
+
+    def test_same_seed_same_trajectory(self) -> None:
+        a = StubBackend(seed=7)
+        b = StubBackend(seed=7)
+        for _ in range(10):
+            assert (
+                a.select_action(_context()).action_index == b.select_action(_context()).action_index
+            )
+
+    def test_different_seed_different_trajectory(self) -> None:
+        a = StubBackend(seed=1)
+        b = StubBackend(seed=2)
+        actions_a = [a.select_action(_context()).action_index for _ in range(10)]
+        actions_b = [b.select_action(_context()).action_index for _ in range(10)]
+        assert actions_a != actions_b
+
+    def test_fixed_rationale(self) -> None:
+        backend = StubBackend(script=[0])
+        assert backend.select_action(_context()).rationale == "stub"
+
+    def test_actions_within_range(self) -> None:
+        backend = StubBackend(seed=3)
+        for _ in range(50):
+            action = backend.select_action(_context(n_actions=2))
+            assert 0 <= action.action_index <= 1
+
+
+# ----------------------------------------------------------------------
+# Prompt builders
+# ----------------------------------------------------------------------
+
+
+class TestPrompts:
+    def test_system_prompt_mentions_scenario_and_governance(self) -> None:
+        prompt = build_system_prompt("GridWorld")
+        assert "GridWorld" in prompt
+        assert "governance" in prompt
+
+    def test_system_prompt_includes_rules(self) -> None:
+        prompt = build_system_prompt("GridWorld", rules=["do not step on poison"])
+        assert "- do not step on poison" in prompt
+
+    def test_user_prompt_lists_numbered_actions(self) -> None:
+        prompt = build_user_prompt("state=0", ["move left", "move right"])
+        assert "state=0" in prompt
+        assert "0. move left" in prompt
+        assert "1. move right" in prompt
+
+    def test_build_context_contract(self) -> None:
+        context = build_context("state=0", ["a", "b"], extra_key=1)
+        assert context[OBSERVATION_KEY] == build_user_prompt("state=0", ["a", "b"])
+        assert context[ACTION_DESCRIPTIONS_KEY] == ["a", "b"]
+        assert context["extra_key"] == 1
+
+
+# ----------------------------------------------------------------------
+# PydanticAIAdapter (skipped in CI when the optional extra is absent)
+# ----------------------------------------------------------------------
+
+
+pydantic_ai = pytest.importorskip("pydantic_ai", reason="requires the optional 'agent' extra")
+
+from src.governance.agents.pydantic_adapter import (  # noqa: E402
+    PydanticAIAdapter,
+)
+
+
+class TestPydanticAIAdapter:
+    def test_model_defaults_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("GOVERNANCE_LLM_MODEL", "openai:gpt-4o")
+        adapter = PydanticAIAdapter(system_prompt="sys")
+        assert adapter.model == "openai:gpt-4o"
+
+    def test_model_falls_back_to_default(self) -> None:
+        adapter = PydanticAIAdapter(system_prompt="sys")
+        assert adapter.model == "openrouter:anthropic/claude-sonnet-4.6"
+
+    def test_agent_built_lazily(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        adapter = PydanticAIAdapter(system_prompt="sys")
+        assert adapter._agent is None
+        with pytest.raises(Exception):
+            adapter.select_action(_context())
+        assert adapter._agent is None
+
+    def test_select_action_validates_and_converts(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from pydantic import BaseModel, Field
+
+        class _Output(BaseModel):
+            action_index: int = Field(ge=0)
+            confidence: float = Field(ge=0.0, le=1.0)
+            rationale: str
+
+        class _Result:
+            output = _Output(action_index=1, confidence=0.9, rationale="looks safe")
+
+        class _FakeAgent:
+            def __init__(self, *args, **kwargs):
+                self.output_type = kwargs.get("output_type")
+                self.system_prompt = kwargs.get("system_prompt")
+
+            def run_sync(self, prompt):
+                assert "state" in prompt
+                return _Result()
+
+        monkeypatch.setattr("pydantic_ai.Agent", _FakeAgent)
+
+        adapter = PydanticAIAdapter(system_prompt="sys")
+        action = adapter.select_action(_context())
+        assert action == AgentAction(action_index=1, confidence=0.9, rationale="looks safe")
+        assert isinstance(action, AgentAction)
+
+    def test_out_of_range_action_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from pydantic import BaseModel, Field
+
+        class _Output(BaseModel):
+            action_index: int = Field(ge=0)
+            confidence: float = Field(ge=0.0, le=1.0)
+            rationale: str
+
+        class _Result:
+            output = _Output(action_index=99, confidence=0.5, rationale="nope")
+
+        class _FakeAgent:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def run_sync(self, prompt):
+                return _Result()
+
+        monkeypatch.setattr("pydantic_ai.Agent", _FakeAgent)
+
+        adapter = PydanticAIAdapter(system_prompt="sys")
+        with pytest.raises(ValueError):
+            adapter.select_action(_context())
+
+
+# ----------------------------------------------------------------------
+# StubBackend → Speaker end-to-end
+# ----------------------------------------------------------------------
+
+
+class TestAgentSpeakerIntegration:
+    def test_agent_action_flows_through_speaker(self) -> None:
+        from src.governance.committee.members import (
+            ExampleIntegrityMember,
+            ExampleRewardMember,
+            ExampleSafetyMember,
+        )
+
+        speaker = SpeakerStateMachine(
+            members={
+                "reward": ExampleRewardMember(),
+                "safety": ExampleSafetyMember(),
+                "integrity": ExampleIntegrityMember(),
+            },
+            default_action="shutdown",
+        )
+        backend = StubBackend(script=[1])
+
+        action = backend.select_action(_context())
+        proposal = Proposal(
+            member_id="reward",
+            action=f"agent_action_{action.action_index}",
+            metadata={"expected_reward": 0.5, "risk": 0.0, "identity_coherence": 1.0},
+        )
+        decision = speaker.run_governance_cycle(state={"x": 0}, raw_proposals=[proposal])
+        assert decision.action == "agent_action_1"
+        assert not decision.is_default
