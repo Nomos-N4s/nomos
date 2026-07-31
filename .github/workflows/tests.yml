@@ -34,7 +34,7 @@ jobs:
         run: uv sync
 
       - name: Install package in editable mode
-        run: uv pip install -e .
+        run: uv pip install -e ".[agent]"
 
       - name: Run tests with coverage
         run: uv run pytest -v --tb=short --cov=src.governance --cov-report=term-missing
