@@ -25,7 +25,7 @@ from abc import ABC
 from collections.abc import Callable, Sequence
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from ..committee.base import ParliamentMember
 from ..experiments.base import ExperimentMetrics, ExperimentScenario
@@ -53,12 +53,15 @@ class ActionSpaceEntry:
         description: Human-readable description shown to the LLM.
         metadata: Proposal metadata carried when the governed arm
             submits this action to the Speaker (e.g. ``risk``,
-            ``expected_reward``) so members can score it.
+            ``expected_reward``) so members can score it. May be a
+            static dict, or a callable ``(scenario) -> dict`` for
+            state-dependent metadata (tile risk, drift-adjusted
+            reward) that must be computed at submission time.
     """
 
     action: Any
     description: str
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] | Callable[[Any], dict[str, Any]] = field(default_factory=dict)
 
 
 class ActionSpace:
@@ -310,14 +313,15 @@ class GovernorComparisonHarness(ABC):
             agent_action = self._backend.select_action(context)
             entry = self._action_space.entry(agent_action.action_index)
 
-            decision = self._decide(arm, observation, entry, decision_class)
+            decision = self._decide(arm, scenario, observation, entry, decision_class)
             result = scenario.step(
                 state=observation,
                 decision_class=decision_class,
                 external_decision=decision,
             )
 
-            vetoed = decision.is_default or decision.action != entry.action
+            applied = result.decision
+            vetoed = applied.is_default or applied.action != entry.action
             log.append(
                 StepLogEntry(
                     step=step,
@@ -327,9 +331,9 @@ class GovernorComparisonHarness(ABC):
                     confidence=agent_action.confidence,
                     rationale=agent_action.rationale,
                     proposed_action=entry.action,
-                    decision_action=decision.action,
+                    decision_action=applied.action,
                     vetoed=vetoed,
-                    is_default=decision.is_default,
+                    is_default=applied.is_default,
                     would_have_been=entry.action if vetoed else None,
                     reward=result.reward,
                     violations_delta=result.metrics_delta.get("constraint_violations", 0),
@@ -341,6 +345,7 @@ class GovernorComparisonHarness(ABC):
     def _decide(
         self,
         arm: str,
+        scenario: ExperimentScenario,
         state: Any,
         entry: ActionSpaceEntry,
         decision_class: str,
@@ -353,6 +358,8 @@ class GovernorComparisonHarness(ABC):
 
         Args:
             arm: ``"governed"`` or ``"ungoverned"``.
+            scenario: The live scenario, used to resolve state-
+                dependent proposal metadata.
             state: The current environment state (also shown to the
                 governance cycle so members see what the agent saw).
             entry: The action entry the agent chose.
@@ -367,11 +374,15 @@ class GovernorComparisonHarness(ABC):
                 governance_meta={"arm": "ungoverned", "agent_action_index": -1},
             )
 
+        metadata = cast(
+            dict[str, Any],
+            entry.metadata if isinstance(entry.metadata, dict) else entry.metadata(scenario),
+        )
         proposal = Proposal(
             member_id=AGENT_MEMBER_ID,
             action=entry.action,
             tag=PriorityTag.ROUTINE,
-            metadata=dict(entry.metadata),
+            metadata=metadata,
         )
         return self._speaker.run_governance_cycle(
             state=state,
