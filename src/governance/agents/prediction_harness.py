@@ -803,7 +803,11 @@ def run_cross_validation(
                             cache_dir=cache_dir,
                             steps=steps,
                         )
-                        passed, evidence = config.evaluate(pair) if config.evaluate else _evaluate_behavioral(pair)
+                        passed, evidence = (
+                            config.evaluate(pair)
+                            if config.evaluate
+                            else _evaluate_behavioral(pair)
+                        )
                         rows.append(
                             CrossValidationRow(
                                 prediction_id=pred_id,
