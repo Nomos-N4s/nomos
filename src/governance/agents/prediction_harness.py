@@ -804,9 +804,7 @@ def run_cross_validation(
                             steps=steps,
                         )
                         passed, evidence = (
-                            config.evaluate(pair)
-                            if config.evaluate
-                            else _evaluate_behavioral(pair)
+                            config.evaluate(pair) if config.evaluate else _evaluate_behavioral(pair)
                         )
                         rows.append(
                             CrossValidationRow(
