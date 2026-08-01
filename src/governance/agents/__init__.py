@@ -39,6 +39,14 @@ from .metrics import (
     sample_judge_steps,
     summarize_pairs,
 )
+from .prediction_harness import (
+    AdversarialOutcome,
+    CrossValidationResult,
+    CrossValidationRow,
+    PredictionConfig,
+    get_prediction_registry,
+    run_cross_validation,
+)
 from .pipeline import (
     ALL_AGENT_SCENARIOS,
     build_agent_speaker,
@@ -49,6 +57,12 @@ from .report import run_agent_analysis
 from .stub import StubBackend
 
 __all__ = [
+    "AdversarialOutcome",
+    "CrossValidationResult",
+    "CrossValidationRow",
+    "PredictionConfig",
+    "get_prediction_registry",
+    "run_cross_validation",
     "AgentAction",
     "AgentBackend",
     "ActionSpace",
