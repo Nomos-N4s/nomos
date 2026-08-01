@@ -2,8 +2,6 @@
 
 import os
 
-import pytest
-
 from src.governance.env import load_project_env, project_root
 
 
