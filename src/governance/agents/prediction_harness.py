@@ -30,9 +30,6 @@ Real-world analogy:
 
 from __future__ import annotations
 
-import json
-import os
-import statistics
 from collections import defaultdict
 from collections.abc import Callable, Sequence
 from copy import copy
@@ -49,12 +46,10 @@ from ..committee.members import (
     ExampleSocialMember,
 )
 from ..experiments.base import ExperimentScenario
-from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
-from ..tee.watchdog import DeadlockBreaker
 from .cache import DEFAULT_CACHE_DIR
 from .harness import GovernorComparisonHarness, PairResult
-from .pipeline import build_agent_speaker, build_scenario
+from .pipeline import build_scenario
 from .scenarios import (
     DeadlockMazeLLM,
     DriftLabLLM,
@@ -403,7 +398,6 @@ def _run_adversarial_episode(
     Returns:
         An :class:`AdversarialOutcome` describing what happened.
     """
-    from .pipeline import build_scenario
 
     local_speaker = copy(speaker)
     local_speaker.members = dict(speaker.members)
@@ -870,7 +864,6 @@ def _run_prediction_pair(
     Returns:
         The paired :class:`~..harness.PairResult`.
     """
-    from .pipeline import build_scenario
 
     local_speaker = copy(speaker)
     local_speaker.members = dict(speaker.members)

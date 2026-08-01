@@ -19,6 +19,7 @@ Usage:
 import argparse
 import csv
 import importlib
+import json
 import os
 import sys
 import time
@@ -317,7 +318,11 @@ def cmd_prove_agent(args):
     cache_dir = args.cache if args.cache else DEFAULT_CACHE_DIR
     backend_factory = None
     if args.stub:
-        backend_factory = lambda scenario: None  # StubBackend default resolved inside
+
+        def _stub_factory(scenario):
+            return None
+
+        backend_factory = _stub_factory
 
     result: CrossValidationResult = run_cross_validation(
         seeds=args.seeds,
