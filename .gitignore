@@ -14,3 +14,5 @@ results/*
 !results/.gitkeep
 results/agent/cache/
 gov-budget-proof/
+opencode.jsonc
+.kilo/
