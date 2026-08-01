@@ -138,6 +138,21 @@ def render_benchmarks_tab(
         return
 
     agg_df = pd.DataFrame(aggregates)
+    effect_sizes = benchmarks.get("effect_sizes", [])
+
+    if show_statistics:
+        st.subheader("📈 Summary Statistics")
+
+        avg_reward = agg_df["mean_reward"].mean() if not agg_df.empty else None
+        num_scenarios = len(agg_df["scenario"].unique())
+        num_effect_sizes = len(effect_sizes)
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Average Reward", f"{avg_reward:.2f}" if avg_reward is not None else "N/A")
+        c2.metric("Scenarios", str(num_scenarios))
+        c3.metric("Effect-size comparisons", str(num_effect_sizes))
+
+        st.divider()
 
     st.subheader("Per-Scenario Results")
     for scenario in agg_df["scenario"].unique():
@@ -153,6 +168,17 @@ def render_benchmarks_tab(
                     "num_seeds": "Seeds",
                 }
             )
+            if show_statistics:
+                if "ci_lower" in display.columns and "ci_upper" in display.columns:
+                    display["95% CI"] = (
+                        display["ci_lower"].round(2).astype(str)
+                        + " – "
+                        + display["ci_upper"].round(2).astype(str)
+                    )
+            display = display.drop(
+                columns=["ci_lower", "ci_upper"],
+                errors="ignore",
+            )
             st.dataframe(display, use_container_width=True, hide_index=True)
 
     st.divider()
@@ -165,9 +191,63 @@ def render_benchmarks_tab(
     )
     st.dataframe(pivot, use_container_width=True)
 
-    effect_sizes = benchmarks.get("effect_sizes", [])
-    if effect_sizes:
+    if show_statistics:
         st.divider()
-        st.subheader("Effect Sizes (Cohen's d)")
-        es_df = pd.DataFrame(effect_sizes)
-        st.dataframe(es_df, use_container_width=True, hide_index=True)
+        st.subheader("📈 Statistical Analysis")
+
+        if effect_sizes:
+            es_df = pd.DataFrame(effect_sizes)
+
+            def significance_stars(p):
+                if pd.isna(p):
+                    return "N/A"
+                if p < 0.001:
+                    return "***"
+                if p < 0.01:
+                    return "**"
+                if p < 0.05:
+                    return "*"
+                return "ns"
+
+            p_col = None
+            for candidate in (
+                "p_value_corrected",
+                "p_value_holm",
+                "p_value_raw",
+            ):
+                if candidate in es_df.columns:
+                    p_col = candidate
+                    break
+
+            es_df["Significance"] = "N/A"
+            if p_col:
+                es_df["Significance"] = es_df[p_col].apply(significance_stars)
+
+            if "significant" in es_df.columns:
+                es_df["Significant"] = es_df["significant"].map(
+                    {
+                        True: "✅",
+                        False: "❌",
+                    }
+                )
+
+            columns = [
+                c
+                for c in (
+                    "scenario",
+                    "governance_vs",
+                    "cohens_d",
+                    "interpretation",
+                    "Significance",
+                    "Significant",
+                )
+                if c in es_df.columns
+            ]
+
+            st.dataframe(
+                es_df[columns],
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.info("No statistical comparison data available.")

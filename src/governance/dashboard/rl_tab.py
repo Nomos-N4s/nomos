@@ -19,13 +19,14 @@ Real-world analogy:
 
 import contextlib
 import os
+from glob import glob
 
 import altair as alt
 import pandas as pd
 import streamlit as st
 
+from governance.benchmarks.analysis import _bootstrap_ci
 from ..ontology.backend import OntologyBackend
-
 RL_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "results", "rl"
 )
@@ -44,6 +45,50 @@ def _load_csv(*parts: str) -> pd.DataFrame | None:
 
 def _load_metrics(label: str) -> pd.DataFrame | None:
     return _load_csv(f"{label}_metrics.csv")
+
+
+def _load_seed_metrics(label: str) -> list[pd.DataFrame]:
+    """
+    Load all per-seed training CSVs for a condition.
+
+    Example:
+        governed_seed0.csv
+        governed_seed1.csv
+        ...
+    """
+    pattern = _csv_path(f"{label}_seed*.csv")
+    seed_files = sorted(glob(pattern))
+
+    return [pd.read_csv(file) for file in seed_files]
+
+
+def _compute_ci_dataframe(seed_dfs: list[pd.DataFrame], condition: str):
+    if len(seed_dfs) < 2 or any(df.empty for df in seed_dfs):
+        return None
+
+    rows = []
+
+    num_steps = min(len(df) for df in seed_dfs)
+
+    if num_steps == 0:
+        return None
+
+    for step in range(num_steps):
+        rewards = [df.iloc[step]["total_reward"] for df in seed_dfs]
+
+        lower, upper = _bootstrap_ci(rewards)
+
+        rows.append(
+            {
+                "step": step,
+                "condition": condition,
+                "mean_reward": sum(rewards) / len(rewards),
+                "ci_lower": lower,
+                "ci_upper": upper,
+            }
+        )
+
+    return pd.DataFrame(rows)
 
 
 def _load_summary() -> pd.DataFrame | None:
@@ -75,10 +120,51 @@ def _log_rl_to_backend(backend: OntologyBackend | None, label: str, row: dict):
         )
 
 
-def _render_top_level(backend: OntologyBackend | None):
+def _render_top_level(
+    backend: OntologyBackend | None,
+    show_statistics: bool = False,
+):
     summary = _load_summary()
     gov_metrics = _load_metrics("governed")
+    gov_seed_metrics = _load_seed_metrics("governed")
     ung_metrics = _load_metrics("ungoverned")
+    ung_seed_metrics = _load_seed_metrics("ungoverned")
+
+    gov_ci = _compute_ci_dataframe(
+        gov_seed_metrics,
+        "Governed",
+    )
+    ung_ci = _compute_ci_dataframe(
+        ung_seed_metrics,
+        "Ungoverned",
+    )
+
+    if show_statistics:
+        st.subheader("📈 Summary Statistics")
+
+        if summary is None or summary.empty:
+            st.info(
+                "No summary statistics available. Run the RL experiments first."
+            )
+        else:
+            c1, c2, c3 = st.columns(3)
+
+            c1.metric(
+                "Average Reward",
+                f"{summary['mean_reward'].mean():.2f}",
+            )
+
+            c2.metric(
+                "Average Violations",
+                f"{summary['eval_violations'].mean():.2f}",
+            )
+
+            c3.metric(
+                "Average Vetoes",
+                f"{summary['eval_vetoes'].mean():.2f}",
+            )
+
+        st.divider()
 
     if summary is not None and not summary.empty:
         st.subheader("Governed vs Ungoverned — Summary")
@@ -126,11 +212,46 @@ def _render_top_level(backend: OntologyBackend | None):
             .mark_line(opacity=0.8)
             .encode(
                 x=alt.X("step:Q", title="Training Step"),
-                y=alt.Y("total_reward:Q", title="Cumulative Reward"),
-                color=alt.Color("condition:N", title=""),
+                y=alt.Y("reward:Q", title="Reward"),
+                color=alt.Color("condition:N", title="Training"),
+                tooltip=[
+                    alt.Tooltip("step:Q", title="Step"),
+                    alt.Tooltip("reward:Q", title="Reward", format=".2f"),
+                    alt.Tooltip("condition:N", title="Condition"),
+                ],
             )
             .properties(height=200)
         )
+
+        ci_frames = [
+            df for df in [gov_ci, ung_ci] if df is not None and not df.empty
+        ]
+        if show_statistics and ci_frames:
+            ci_combined = pd.concat(ci_frames, ignore_index=True)
+            band = (
+                alt.Chart(ci_combined)
+                .mark_area(opacity=0.2)
+                .encode(
+                    x="step:Q",
+                    y="ci_lower:Q",
+                    y2="ci_upper:Q",
+                    color=alt.Color("condition:N", title="Condition"),
+                    tooltip=[
+                        alt.Tooltip("step:Q", title="Step"),
+                        alt.Tooltip("ci_lower:Q", title="CI Lower", format=".2f"),
+                        alt.Tooltip("ci_upper:Q", title="CI Upper", format=".2f"),
+                        alt.Tooltip("condition:N", title="Condition"),
+                    ],
+                )
+            )
+            reward_chart = band + reward_chart
+        elif show_statistics and (
+            len(gov_seed_metrics) < 2 or len(ung_seed_metrics) < 2
+        ):
+            st.info(
+                "Confidence interval bands require multiple per-seed training runs."
+            )
+
         st.altair_chart(reward_chart, use_container_width=True)
 
         if "violations" in combined_trimmed.columns:
@@ -141,6 +262,11 @@ def _render_top_level(backend: OntologyBackend | None):
                     x=alt.X("step:Q", title="Training Step"),
                     y=alt.Y("violations:Q", title="Constraint Violations"),
                     color=alt.Color("condition:N", title=""),
+                    tooltip=[
+                        alt.Tooltip("step:Q", title="Step"),
+                        alt.Tooltip("violations:Q", title="Violations"),
+                        alt.Tooltip("condition:N", title="Condition"),
+                    ],
                 )
                 .properties(height=200)
             )
@@ -154,12 +280,16 @@ def _render_top_level(backend: OntologyBackend | None):
                 .encode(
                     x=alt.X("step:Q", title="Training Step"),
                     y=alt.Y("veto_count:Q", title="Veto Count"),
+                    tooltip=[
+                        alt.Tooltip("step:Q", title="Step"),
+                        alt.Tooltip("veto_count:Q", title="Veto Count"),
+                    ],
                 )
                 .properties(height=200)
             )
             st.altair_chart(veto_chart, use_container_width=True)
 
-    if summary is None and gov_metrics is None:
+    if summary is None and (gov_metrics is None or ung_metrics is None):
         st.info(
             "No RL results found in `results/rl/`. Run `python scripts/train_governed_agent.py` first."
         )
@@ -267,18 +397,23 @@ def _render_safety(backend: OntologyBackend | None):
 
 def render_rl_tab(
     backend: OntologyBackend | None = None,
-     show_statistics: bool = False,
+    show_statistics: bool = False,
 ):
     st.header("🤖 RL Training Results")
-    st.caption("Comparison between governed (Neural Parliament) and ungoverned (raw PPO) agents.")
+    st.caption(
+        "Comparison between governed (Neural Parliament) and ungoverned (raw PPO) agents."
+    )
 
     if show_statistics:
-     st.info(
-        "Statistical annotations are enabled. Confidence intervals and effect-size "
-        "information will be shown where available."
-    )
-    _render_top_level(backend)
+        st.info(
+            "Statistical annotations are enabled. Confidence intervals and effect-size "
+            "information will be shown where available."
+        )
 
+    _render_top_level(
+        backend,
+        show_statistics=show_statistics,
+    )
     st.divider()
     _render_minigrid(backend)
 
