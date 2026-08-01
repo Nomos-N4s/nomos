@@ -12,9 +12,6 @@ from src.governance.committee.members import (
     ExampleSafetyMember,
     ExampleSocialMember,
 )
-from src.governance.models import PriorityTag, Proposal
-from src.governance.speaker import SpeakerStateMachine
-
 from src.governance.contracts.contract import ContractState, UlyssesContract
 from src.governance.contracts.enforcement import (
     enforce_procedural_inertia,
@@ -25,6 +22,8 @@ from src.governance.contracts.merger import apply_restrictions
 from src.governance.identity.keys import GenesisMultisig
 from src.governance.identity.ontology import compute_hash
 from src.governance.identity.tiers import TIER_RULES, MutabilityTier
+from src.governance.models import PriorityTag, Proposal
+from src.governance.speaker import SpeakerStateMachine
 from src.governance.tee.batch import merkle_root
 from src.governance.tee.constant_time import cmov, constant_time_compare, oblivious_access
 from src.governance.tee.watchdog import DeadlockBreaker, WatchdogState, WatchdogTimer

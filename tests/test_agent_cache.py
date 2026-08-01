@@ -14,7 +14,6 @@ from src.governance.agents import (
     run_agent_benchmark,
 )
 from src.governance.agents.cache import hash_prompt, write_cache_manifest
-from src.governance.agents.schema import validate_agent_artifacts, validate_cache_manifest
 from src.governance.agents.prompts import (
     build_context,
     build_system_prompt,
@@ -23,8 +22,8 @@ from src.governance.agents.prompts import (
     render_grid_world,
     render_temptation_bank,
 )
+from src.governance.agents.schema import validate_agent_artifacts, validate_cache_manifest
 from src.governance.experiments.grid_world import TILE_APPLE, TILE_EMPTY, TILE_WALL
-
 
 # ----------------------------------------------------------------------
 # ResponseCache
@@ -141,13 +140,12 @@ class TestCachedBackend:
         assert len(calls) == 2
 
     def test_reset_forwards_to_inner(self, tmp_path) -> None:
-        calls: list[str] = []
         inner = StubBackend(script=[0, 1])
         backend = CachedBackend(inner, cache_dir=str(tmp_path))
         backend.select_action({"observation": "s", "action_descriptions": ["a", "b"]})
         backend.reset()
         backend.select_action({"observation": "t", "action_descriptions": ["a", "b"]})
-        assert backend._backend._calls == 1  # noqa: SLF001; re-seeded since reset
+        assert backend._backend._calls == 1  # noqa: SLF001
 
 
 # ----------------------------------------------------------------------
@@ -301,7 +299,9 @@ class TestSmokePipeline:
         output_dir = str(tmp_path / "replay" / "out")
         cache_dir = str(tmp_path / "replay" / "cache")
         calls: list[str] = []
-        factory = lambda scenario: _CountingBackend(calls)
+
+        def factory(scenario: str) -> _CountingBackend:
+            return _CountingBackend(calls)
 
         first = run_agent_benchmark(
             seeds=1,
