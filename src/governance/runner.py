@@ -304,6 +304,47 @@ def cmd_prove(args):
         print(f"CSV exported to {csv_path}")
 
 
+def cmd_prove_agent(args):
+    from .agents import DEFAULT_CACHE_DIR, run_cross_validation
+    from .agents.prediction_harness import CrossValidationResult
+
+    models = [m.strip() for m in args.models.split(",") if m.strip()]
+    temperatures = [float(t.strip()) for t in args.temperatures.split(",") if t.strip()]
+    prediction_ids = None
+    if getattr(args, "predictions", None):
+        prediction_ids = [int(p.strip()) for p in args.predictions.split(",") if p.strip()]
+
+    cache_dir = args.cache if args.cache else DEFAULT_CACHE_DIR
+    backend_factory = None
+    if args.stub:
+        backend_factory = lambda scenario: None  # StubBackend default resolved inside
+
+    result: CrossValidationResult = run_cross_validation(
+        seeds=args.seeds,
+        steps=args.steps,
+        backend_factory=backend_factory,
+        models=models,
+        temperatures=temperatures,
+        prediction_ids=prediction_ids,
+        use_cache=not args.no_cache,
+        cache_dir=cache_dir,
+    )
+
+    print(result.to_markdown())
+
+    output_dir = "results/agent"
+    os.makedirs(output_dir, exist_ok=True)
+    md_path = os.path.join(output_dir, "prediction_cross_validation.md")
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(result.to_markdown())
+    json_path = os.path.join(output_dir, "prediction_cross_validation.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(result.to_json(), f, indent=2)
+    print(f"\nReports written to {output_dir}/")
+    print(f"  {md_path}")
+    print(f"  {json_path}")
+
+
 def cmd_adversary(args):
     from .experiments.rl_adversary import main as adversary_main
 
@@ -442,6 +483,59 @@ def main():
         help="Export to CSV (default: results/run_<timestamp>.csv)",
     )
     p_prove.set_defaults(func=cmd_prove)
+
+    p_prove_agent = sub.add_parser(
+        "prove-agent",
+        help="Cross-validate formal predictions against LLM agent benchmark runs",
+    )
+    p_prove_agent.add_argument(
+        "--seeds",
+        type=int,
+        default=1,
+        help="Number of random seeds per prediction-scenario-model-temp (default: 1)",
+    )
+    p_prove_agent.add_argument(
+        "--steps",
+        type=int,
+        default=50,
+        help="Steps per arm per seed (default: 50)",
+    )
+    p_prove_agent.add_argument(
+        "--models",
+        type=str,
+        default="openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
+        help="Comma-separated model strings (default: reference model from REPRODUCIBILITY.md)",
+    )
+    p_prove_agent.add_argument(
+        "--temperatures",
+        type=str,
+        default="0.0",
+        help="Comma-separated sampling temperatures (default: 0.0)",
+    )
+    p_prove_agent.add_argument(
+        "--predictions",
+        type=str,
+        default=None,
+        help="Comma-separated prediction IDs to test (default: all 12)",
+    )
+    p_prove_agent.add_argument(
+        "--csv",
+        nargs="?",
+        const="",
+        default=None,
+        help="Export results to CSV (default: results/agent/prediction_cross_validation.csv)",
+    )
+    p_prove_agent.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable the response cache (each step calls the backend)",
+    )
+    p_prove_agent.add_argument(
+        "--stub",
+        action="store_true",
+        help="Use deterministic StubBackend (CI mode, no API key)",
+    )
+    p_prove_agent.set_defaults(func=cmd_prove_agent)
 
     p_adv = sub.add_parser("adversary", help="RL adversary experiment (needs torch+sb3)")
     p_adv.add_argument("forward_args", nargs=argparse.REMAINDER)
