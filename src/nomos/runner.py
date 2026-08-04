@@ -22,6 +22,7 @@ import importlib
 import json
 import os
 import sys
+import threading
 import time
 from datetime import datetime
 
@@ -190,6 +191,91 @@ def cmd_speaker(args):
     from .speaker import _run_speaker_quick_test
 
     _run_speaker_quick_test()
+
+
+def _build_default_speaker() -> SpeakerStateMachine:
+    """Build a minimal Speaker with the example committee (no config file).
+
+    Used by ``runner serve`` when ``--config`` isn't given. Mirrors the
+    committee set up by ``speaker._run_speaker_quick_test`` so `serve`
+    without flags behaves the same as the existing quick-test path.
+    """
+    from .committee.members import (
+        ExampleIntegrityMember,
+        ExampleRewardMember,
+        ExampleSafetyMember,
+    )
+
+    members = {
+        "reward": ExampleRewardMember(),
+        "safety": ExampleSafetyMember(),
+        "integrity": ExampleIntegrityMember(),
+    }
+    return SpeakerStateMachine(members=members, default_action="emergency_shutdown")
+
+
+def cmd_serve(args):
+    """Start the `runner serve` process: Speaker + health/readyz/metrics only.
+
+    This command never runs a governance decision cycle itself — it just
+    builds a Speaker (from ``--config`` if given, else the default example
+    committee), wires up a watchdog/deadlock breaker/backend, and exposes
+    them read-only over HTTP for ``/healthz``, ``/readyz``, and
+    ``/metrics``. The decision path (``speaker.run_governance_cycle``)
+    stays entirely separate from this process's HTTP surface.
+    """
+    from .ontology.memory_backend import MemoryBackend
+    from .server import ServerState, build_server
+    from .tee.watchdog import DeadlockBreaker, WatchdogTimer
+
+    state = ServerState()
+
+    try:
+        if args.config:
+            state.speaker = build_from_config(args.config)
+        else:
+            state.speaker = _build_default_speaker()
+        state.parliament_loaded = True
+    except Exception as exc:
+        print(f"Failed to load parliament state: {exc}", file=sys.stderr)
+        state.parliament_loaded = False
+
+    state.watchdog = WatchdogTimer(heartbeat_timeout_ms=args.heartbeat_timeout_ms)
+    state.deadlock_breaker = DeadlockBreaker(threshold_cycles=args.deadlock_threshold)
+    state.backend = MemoryBackend()
+    state.watchdog.heartbeat()
+
+    # `serve` mode doesn't run governance cycles itself (those happen in
+    # whatever process actually calls speaker.run_governance_cycle), so
+    # nothing would otherwise feed the watchdog. This background thread
+    # sends heartbeats on the same cadence a live decision loop would, so
+    # /readyz reflects "the process is alive and responsive" rather than
+    # tripping HEARTBEAT_MISSED a few milliseconds after startup. In a
+    # deployment where this process *also* runs decisions, wire real
+    # cycle heartbeats into `state.watchdog` instead of this thread.
+    stop_heartbeat = threading.Event()
+
+    def _heartbeat_loop():
+        interval = max(args.heartbeat_timeout_ms / 1000.0 / 2, 0.01)
+        while not stop_heartbeat.wait(interval):
+            state.watchdog.heartbeat()
+
+    heartbeat_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
+    heartbeat_thread.start()
+
+    server = build_server(state, host=args.host, port=args.port)
+    print(f"runner serve listening on http://{args.host}:{args.port}")
+    print("  GET /healthz  - liveness (process alive, parliament loaded)")
+    print("  GET /readyz   - readiness (speaker, watchdog, deadlock breaker, backend)")
+    print("  GET /metrics  - Prometheus exposition (503 if 'observability' extra missing)")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+    finally:
+        stop_heartbeat.set()
+        server.server_close()
+        state.backend.close()
 
 
 def _optionally_export_csv(args, reports):
@@ -593,6 +679,33 @@ def main():
         help="Disable the response cache (each step calls the backend)",
     )
     p_agent.set_defaults(func=cmd_agent)
+
+    p_serve = sub.add_parser(
+        "serve", help="Start health/readyz/metrics HTTP endpoints (server mode only)"
+    )
+    p_serve.add_argument(
+        "--host", type=str, default="127.0.0.1", help="Bind host (default: 127.0.0.1)"
+    )
+    p_serve.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    p_serve.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to .parliament config file (default: built-in example committee)",
+    )
+    p_serve.add_argument(
+        "--heartbeat-timeout-ms",
+        type=float,
+        default=100.0,
+        help="TEE watchdog heartbeat timeout in ms (default: 100.0)",
+    )
+    p_serve.add_argument(
+        "--deadlock-threshold",
+        type=int,
+        default=100,
+        help="Stalled cycles before the deadlock breaker trips (default: 100)",
+    )
+    p_serve.set_defaults(func=cmd_serve)
 
     args = parser.parse_args()
     if args.command is None:

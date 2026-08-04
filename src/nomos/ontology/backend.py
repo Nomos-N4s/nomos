@@ -62,3 +62,14 @@ class OntologyBackend(ABC):
     @abstractmethod
     def close(self):
         """Release any backend resources (connections, file handles)."""
+
+    def ping(self) -> bool:
+        """Check whether the backend is reachable right now.
+
+        Used by the ``/readyz`` health endpoint (see ``server.py``). The
+        default implementation always returns ``True`` — in-process
+        backends with no external dependency (e.g. :class:`MemoryBackend`)
+        are reachable by definition. Backends with a real network
+        connection (e.g. :class:`Neo4jBackend`) override this.
+        """
+        return True

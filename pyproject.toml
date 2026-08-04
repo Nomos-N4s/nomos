@@ -46,6 +46,9 @@ docs = [
 types = [
     "ty>=0.0.64",
 ]
+observability = [
+    "prometheus-client>=0.20",
+]
 
 [tool.coverage.run]
 source = ["src/nomos"]
