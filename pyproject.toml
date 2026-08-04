@@ -25,6 +25,9 @@ dependencies = [
 agent = [
     "pydantic-ai-slim[openrouter]>=2.21",
 ]
+dashboard = [
+    "streamlit-autorefresh>=1.0",
+]
 rl = [
     "torch>=2.0",
     "stable-baselines3>=2.3",

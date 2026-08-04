@@ -146,7 +146,13 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
     st.caption("Statistical comparison between governance and baselines.")
 
     benchmarks = _load_benchmark()
-    _log_benchmark_to_backend(backend, benchmarks)
+    signature = None
+    path = os.path.join(RESULTS_DIR, "benchmark_results.json")
+    if benchmarks is not None and os.path.exists(path):
+        signature = f"{os.path.getmtime(path)}:{len(benchmarks.get('aggregates', []))}"
+    if signature is not None and signature != st.session_state.get("bench_logged_sig"):
+        _log_benchmark_to_backend(backend, benchmarks)
+        st.session_state["bench_logged_sig"] = signature
 
     if benchmarks is not None:
         # Auto-generated dashboard summary

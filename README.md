@@ -90,6 +90,12 @@ streamlit run src/nomos/dashboard/app.py
 Four tabs: Formal Model reference, step-by-step Parliament replay, benchmark
 comparisons with Cohen's d effect sizes, and RL training results (governed vs ungoverned).
 
+The RL Training tab has an optional **Auto-refresh** toggle for watching a long
+Colab training run land in near-real-time: when enabled, the dashboard polls
+`results/rl/` every 30s, shows a "Last updated" timestamp, and surfaces a
+"🟢 Live from Colab" indicator the moment new CSVs appear. It's off by default
+and safe to leave on — refreshing never triggers a full page reload.
+
 ---
 
 ## Formal Predictions
