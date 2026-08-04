@@ -83,6 +83,7 @@ nav:
     - "Appendix D: Experiment Protocol": book/appendix-d-experiment-protocol.md
     - "Appendix E: RL Adversary": book/appendix-e-rl-adversary.md
   - API Reference: api/index.md
+  - Server Endpoints: server.md
   - Benchmarks: benchmarks/index.md
   - Review Responses:
     - "First Review Panel": book/responses/response-to-review-panel.md

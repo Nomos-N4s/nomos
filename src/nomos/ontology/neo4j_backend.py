@@ -178,3 +178,11 @@ class Neo4jBackend(OntologyBackend):
     def close(self):
         """Close the Neo4j driver connection."""
         self._driver.close()
+
+    def ping(self) -> bool:
+        """Verify the Neo4j connection is alive via the driver's own check."""
+        try:
+            self._driver.verify_connectivity()
+            return True
+        except Exception:
+            return False
