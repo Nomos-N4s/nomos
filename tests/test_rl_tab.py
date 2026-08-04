@@ -1,6 +1,12 @@
 import pandas as pd
+import pytest
 
-from src.nomos.dashboard.rl_tab import _generate_rl_summary
+from src.nomos.dashboard.rl_tab import (
+    _format_last_updated,
+    _generate_rl_summary,
+    _has_new_data,
+    _latest_data_mtime,
+)
 
 
 def _row(label, mean_reward, std_reward=1.0):
@@ -99,3 +105,65 @@ class TestGenerateRlSummaryErrorHandling:
         )
         result = _generate_rl_summary(df)
         assert result == "Unable to generate RL training summary."
+
+
+class TestLatestDataMtime:
+    def test_missing_directory_returns_none(self, tmp_path):
+        missing = tmp_path / "does_not_exist"
+        assert _latest_data_mtime(str(missing)) is None
+
+    def test_empty_directory_returns_none(self, tmp_path):
+        assert _latest_data_mtime(str(tmp_path)) is None
+
+    def test_ignores_non_csv_files(self, tmp_path):
+        (tmp_path / "notes.txt").write_text("hello")
+        assert _latest_data_mtime(str(tmp_path)) is None
+
+    def test_finds_csv_in_nested_subdirectory(self, tmp_path):
+        nested = tmp_path / "minigrid"
+        nested.mkdir()
+        (nested / "comparison_summary.csv").write_text("a,b\n1,2\n")
+        assert _latest_data_mtime(str(tmp_path)) is not None
+
+    def test_returns_newest_mtime_across_multiple_files(self, tmp_path):
+        import os
+        import time
+
+        old_file = tmp_path / "old.csv"
+        old_file.write_text("a\n1\n")
+        old_mtime = time.time() - 1000
+        os.utime(old_file, (old_mtime, old_mtime))
+
+        new_file = tmp_path / "new.csv"
+        new_file.write_text("a\n2\n")
+
+        latest = _latest_data_mtime(str(tmp_path))
+        assert latest == pytest.approx(os.path.getmtime(new_file), abs=0.01)
+
+
+class TestHasNewData:
+    def test_first_check_is_never_new(self):
+        # previous_mtime is None on the very first render - shouldn't flag "new".
+        assert _has_new_data(current_mtime=123.0, previous_mtime=None) is False
+
+    def test_no_data_at_all_is_not_new(self):
+        assert _has_new_data(current_mtime=None, previous_mtime=None) is False
+
+    def test_unchanged_mtime_is_not_new(self):
+        assert _has_new_data(current_mtime=100.0, previous_mtime=100.0) is False
+
+    def test_newer_mtime_is_new(self):
+        assert _has_new_data(current_mtime=200.0, previous_mtime=100.0) is True
+
+    def test_data_disappearing_is_not_new(self):
+        assert _has_new_data(current_mtime=None, previous_mtime=100.0) is False
+
+
+class TestFormatLastUpdated:
+    def test_none_mtime(self):
+        assert _format_last_updated(None) == "No RL results found yet."
+
+    def test_known_mtime_is_formatted(self):
+        result = _format_last_updated(0.0)
+        assert result.startswith("Last updated: ")
+        assert len(result) > len("Last updated: ")

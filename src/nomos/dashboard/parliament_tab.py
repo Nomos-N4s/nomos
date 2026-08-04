@@ -228,8 +228,11 @@ def render_parliament_tab(backend: OntologyBackend | None = None):
             st.rerun()
 
     st.session_state.parliament_step_index = idx
+    last_logged = st.session_state.get("parliament_logged_step")
     step_data = steps[idx]
-    _log_step_to_backend(backend, step_data)
+    if idx != last_logged:
+        _log_step_to_backend(backend, step_data)
+        st.session_state["parliament_logged_step"] = idx
 
     col_grid, col_vote = st.columns([1, 2])
     with col_grid:
