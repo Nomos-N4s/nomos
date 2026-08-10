@@ -13,6 +13,6 @@ site/
 results/*
 !results/.gitkeep
 results/agent/cache/
-gov-budget-proof/
+gov-budget-proof/lake-manifest.json
 opencode.jsonc
 .kilo/
