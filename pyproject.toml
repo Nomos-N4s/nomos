@@ -1,7 +1,7 @@
 [project]
-name = "governance-layer"
+name = "nomos"
 version = "0.1.0"
-description = "The Governance Layer: A Formal Framework for Self-Governing AI"
+description = "Nomos: A Formal Framework for Self-Governing AI"
 authors = [
     {name = "Carlos Pinto", email = "capintobe@gmail.com"},
 ]
@@ -44,19 +44,19 @@ types = [
 ]
 
 [tool.coverage.run]
-source = ["src/governance"]
+source = ["src/nomos"]
 omit = [
-    "src/governance/experiments/*",
-    "src/governance/benchmarks/*",
-    "src/governance/dashboard/*",
-    "src/governance/ontology/*",
-    "src/governance/tee/*",
-    "src/governance/prove/*",
-    "src/governance/identity/extension.py",
-    "src/governance/identity/keys.py",
-    "src/governance/identity/ontology.py",
-    "src/governance/identity/params.py",
-    "src/governance/runner.py",
+    "src/nomos/experiments/*",
+    "src/nomos/benchmarks/*",
+    "src/nomos/dashboard/*",
+    "src/nomos/ontology/*",
+    "src/nomos/tee/*",
+    "src/nomos/prove/*",
+    "src/nomos/identity/extension.py",
+    "src/nomos/identity/keys.py",
+    "src/nomos/identity/ontology.py",
+    "src/nomos/identity/params.py",
+    "src/nomos/runner.py",
 ]
 
 [tool.pytest.ini_options]
@@ -85,20 +85,20 @@ unsupported-operator = "warn"
 invalid-parameter-default = "error"
 
 [tool.ty.src]
-include = ["src/governance/benchmarks", "src/governance/experiments", "src/governance/dsl", "src/governance/agents"]
+include = ["src/nomos/benchmarks", "src/nomos/experiments", "src/nomos/dsl", "src/nomos/agents"]
 exclude = [
-    "src/governance/experiments/minigrid_wrapper.py",
-    "src/governance/experiments/safety_gym_wrapper.py",
-    "src/governance/experiments/safety_grid_world.py",
-    "src/governance/experiments/gym_env.py",
-    "src/governance/experiments/rl_train.py",
-    "src/governance/experiments/rl_adversary.py",
-    "src/governance/agents/pydantic_adapter.py",
+    "src/nomos/experiments/minigrid_wrapper.py",
+    "src/nomos/experiments/safety_gym_wrapper.py",
+    "src/nomos/experiments/safety_grid_world.py",
+    "src/nomos/experiments/gym_env.py",
+    "src/nomos/experiments/rl_train.py",
+    "src/nomos/experiments/rl_adversary.py",
+    "src/nomos/agents/pydantic_adapter.py",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["governance*"]
+include = ["nomos*"]
 
 [build-system]
 requires = ["setuptools>=75.0"]

@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.governance.committee.members import (
+from src.nomos.committee.members import (
     ExampleCuriosityMember,
     ExampleIntegrityMember,
     ExampleMemoryMember,
@@ -11,10 +11,10 @@ from src.governance.committee.members import (
     ExampleSafetyMember,
     ExampleSocialMember,
 )
-from src.governance.contracts.contract import ContractRegistry, UlyssesContract
-from src.governance.contracts.merger import merge_masks
-from src.governance.models import GovernanceDecision, PriorityTag, Proposal
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.contracts.contract import ContractRegistry, UlyssesContract
+from src.nomos.contracts.merger import merge_masks
+from src.nomos.models import GovernanceDecision, PriorityTag, Proposal
+from src.nomos.speaker import SpeakerStateMachine
 
 
 @pytest.fixture

@@ -37,7 +37,7 @@ body:
       label: Steps to Reproduce
       description: Provide a minimal, self-contained code snippet or CLI command that triggers the bug.
       placeholder: |
-        1. Run `python -m src.governance.runner speaker`
+        1. Run `python -m src.nomos.runner speaker`
         2. Submit a proposal with tag `CRITICAL_SAFETY` from a member over budget
         3. Observe that the proposal is not truncated
       render: bash

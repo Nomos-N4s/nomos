@@ -12,13 +12,13 @@ import tempfile
 
 import pytest
 
-from src.governance.benchmarks.analysis import (
+from src.nomos.benchmarks.analysis import (
     export_results_json,
     export_summary_csv,
     run_analysis,
 )
-from src.governance.benchmarks.figures import generate_all_figures
-from src.governance.benchmarks.run_all import (
+from src.nomos.benchmarks.figures import generate_all_figures
+from src.nomos.benchmarks.run_all import (
     run_gridworld_experiments,
     run_temptation_experiments,
 )

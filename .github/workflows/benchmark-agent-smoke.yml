@@ -30,7 +30,7 @@ jobs:
         run: uv pip install -e ".[agent]"
       - name: Run agent benchmark smoke test
         run: |
-          uv run python -m src.governance.runner agent --seeds 1 --steps 30 --backend stub
+          uv run python -m src.nomos.runner agent --seeds 1 --steps 30 --backend stub
           echo "Checking for agent artifacts..."
           ls -la results/agent/
           test -f results/agent/agent_report.md && echo "Report found"
@@ -39,4 +39,4 @@ jobs:
           test -f results/agent/cache_manifest.json && echo "Manifest found"
       - name: Validate artifact contract (schema, not values)
         run: |
-          uv run python -m src.governance.agents.schema check results/agent
+          uv run python -m src.nomos.agents.schema check results/agent

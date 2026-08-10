@@ -1,8 +1,8 @@
 import io
 import sys
 
-from src.governance.benchmarks.report import format_comparison, format_report, print_all_reports
-from src.governance.experiments.metrics import ExperimentReport
+from src.nomos.benchmarks.report import format_comparison, format_report, print_all_reports
+from src.nomos.experiments.metrics import ExperimentReport
 
 
 def _make_report(name="test", reward=100.0, steps=100, deadlocks=0, violations=0, drift=0.0):

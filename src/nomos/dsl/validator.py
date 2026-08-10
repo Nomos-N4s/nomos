@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.governance.dsl.errors import DSLValidationError
-from src.governance.dsl.models import (
+from src.nomos.dsl.errors import DSLValidationError
+from src.nomos.dsl.models import (
     DSLContractConfig,
     DSLMemberConfig,
     DSLSpeakerConfig,

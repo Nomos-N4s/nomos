@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from src.governance.agents import (
+from src.nomos.agents import (
     AgentAction,
     AgentBackend,
     CachedBackend,
@@ -13,8 +13,8 @@ from src.governance.agents import (
     StubBackend,
     run_agent_benchmark,
 )
-from src.governance.agents.cache import hash_prompt, write_cache_manifest
-from src.governance.agents.prompts import (
+from src.nomos.agents.cache import hash_prompt, write_cache_manifest
+from src.nomos.agents.prompts import (
     build_context,
     build_system_prompt,
     render_deadlock_maze,
@@ -22,8 +22,8 @@ from src.governance.agents.prompts import (
     render_grid_world,
     render_temptation_bank,
 )
-from src.governance.agents.schema import validate_agent_artifacts, validate_cache_manifest
-from src.governance.experiments.grid_world import TILE_APPLE, TILE_EMPTY, TILE_WALL
+from src.nomos.agents.schema import validate_agent_artifacts, validate_cache_manifest
+from src.nomos.experiments.grid_world import TILE_APPLE, TILE_EMPTY, TILE_WALL
 
 # ----------------------------------------------------------------------
 # ResponseCache

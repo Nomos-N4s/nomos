@@ -3,7 +3,7 @@ import tempfile
 
 from matplotlib.figure import Figure
 
-from src.governance.benchmarks.figures import (
+from src.nomos.benchmarks.figures import (
     _ci_to_error,
     generate_all_figures,
     plot_deadlock_frequency,
@@ -11,7 +11,7 @@ from src.governance.benchmarks.figures import (
     plot_reward_curves,
     plot_violation_rates,
 )
-from src.governance.experiments.metrics import ExperimentReport
+from src.nomos.experiments.metrics import ExperimentReport
 
 
 def _make_report(name, reward, violations=0, deadlocks=0, drate=0.0, steps=100, scenario="A", strategy="gov"):

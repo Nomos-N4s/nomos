@@ -1,12 +1,12 @@
-from src.governance.dsl.errors import DSLParseError, DSLValidationError
-from src.governance.dsl.models import (
+from src.nomos.dsl.errors import DSLParseError, DSLValidationError
+from src.nomos.dsl.models import (
     DSLContractConfig,
     DSLMemberConfig,
     DSLSpeakerConfig,
     ParliamentConfig,
 )
-from src.governance.dsl.parser import parse_file, parse_string
-from src.governance.dsl.validator import validate
+from src.nomos.dsl.parser import parse_file, parse_string
+from src.nomos.dsl.validator import validate
 
 __all__ = [
     "DSLContractConfig",

@@ -10,9 +10,9 @@ Provides three subcommands:
 Requires ``stable-baselines3`` (install with ``uv sync --extra rl``).
 
 Usage:
-  ``python -m src.governance.experiments.rl_adversary train --mode governance --timesteps 100000``
-  ``python -m src.governance.experiments.rl_adversary benchmark --timesteps 100000 --seeds 42 43 44``
-  ``python -m src.governance.experiments.rl_adversary eval --model results/ppo_governance.zip --episodes 5``
+  ``python -m src.nomos.experiments.rl_adversary train --mode governance --timesteps 100000``
+  ``python -m src.nomos.experiments.rl_adversary benchmark --timesteps 100000 --seeds 42 43 44``
+  ``python -m src.nomos.experiments.rl_adversary eval --model results/ppo_nomos.zip --episodes 5``
 """
 
 import argparse

@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from src.governance.dsl.errors import DSLParseError
-from src.governance.dsl.models import (
+from src.nomos.dsl.errors import DSLParseError
+from src.nomos.dsl.models import (
     DSLContractConfig,
     DSLMemberConfig,
     DSLSpeakerConfig,

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from src.governance.dsl import ParliamentConfig, parse_file, validate
-from src.governance.runner import (
+from src.nomos.dsl import ParliamentConfig, parse_file, validate
+from src.nomos.runner import (
     _build_contracts,
     _import_member_class,
     build_from_config,
@@ -75,7 +75,7 @@ def test_build_from_config_invalid_config_raises() -> None:
     path = Path("examples/_bad_test.parliament")
     try:
         path.write_text(text, encoding="utf-8")
-        from src.governance.dsl.errors import DSLValidationError
+        from src.nomos.dsl.errors import DSLValidationError
 
         with pytest.raises(DSLValidationError, match="budget must be positive"):
             build_from_config(str(path))
@@ -95,7 +95,7 @@ def test_import_member_class_without_example_prefix() -> None:
 
 
 def test_import_member_class_fully_qualified() -> None:
-    cls = _import_member_class("governance.committee.members.ExampleSafetyMember")
+    cls = _import_member_class("nomos.committee.members.ExampleSafetyMember")
     assert cls.__name__ == "ExampleSafetyMember"
 
 

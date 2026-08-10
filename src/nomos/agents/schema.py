@@ -18,7 +18,7 @@ Validated artifacts:
 
 CLI:
 
-    python -m src.governance.agents.schema check results/agent
+    python -m src.nomos.agents.schema check results/agent
 
 Exits 0 when every artifact conforms, 1 otherwise. This is the
 command the ``benchmark-agent-smoke`` CI job runs.
@@ -211,7 +211,7 @@ def validate_cache_manifest(manifest_path: str, cache_dir: str) -> list[str]:
 
 
 def main() -> None:
-    """CLI entry point: ``python -m src.governance.agents.schema check [dir]``."""
+    """CLI entry point: ``python -m src.nomos.agents.schema check [dir]``."""
     output_dir = "results/agent"
     args = [a for a in sys.argv[1:] if a not in ("check",)]
     if args:

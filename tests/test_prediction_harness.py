@@ -5,16 +5,16 @@ import os
 
 import pytest
 
-from src.governance.agents import (
+from src.nomos.agents import (
     CrossValidationResult,
     CrossValidationRow,
     PredictionConfig,
     get_prediction_registry,
     run_cross_validation,
 )
-from src.governance.agents.harness import ArmResult, PairResult, StepLogEntry
-from src.governance.agents.pipeline import ALL_AGENT_SCENARIOS
-from src.governance.agents.prediction_harness import (
+from src.nomos.agents.harness import ArmResult, PairResult, StepLogEntry
+from src.nomos.agents.pipeline import ALL_AGENT_SCENARIOS
+from src.nomos.agents.prediction_harness import (
     _PREDICTION_REGISTRY,
     _classify_adversarial_outcome,
     _compute_sensitivity,
@@ -25,9 +25,9 @@ from src.governance.agents.prediction_harness import (
     _run_adversarial_episode,
     _run_prediction_pair,
 )
-from src.governance.agents.scenarios import DeadlockMazeLLM, DriftLabLLM, GridWorldLLM, TemptationBankLLM
-from src.governance.experiments.base import ExperimentMetrics
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.agents.scenarios import DeadlockMazeLLM, DriftLabLLM, GridWorldLLM, TemptationBankLLM
+from src.nomos.experiments.base import ExperimentMetrics
+from src.nomos.speaker import SpeakerStateMachine
 
 
 # ----------------------------------------------------------------------
@@ -316,7 +316,7 @@ class TestSerialisation:
         assert "Budget cap" in md
 
     def test_to_markdown_contains_catalog_when_present(self) -> None:
-        from src.governance.agents.prediction_harness import AdversarialOutcome
+        from src.nomos.agents.prediction_harness import AdversarialOutcome
 
         result = CrossValidationResult(
             rows=[],

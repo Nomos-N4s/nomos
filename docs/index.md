@@ -50,7 +50,7 @@ flowchart LR
 
 ```bash
 pip install -e ".[rl,minigrid]"
-python -m src.governance.runner speaker
+python -m src.nomos.runner speaker
 ```
 
 ---

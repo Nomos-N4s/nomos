@@ -3,7 +3,7 @@ import hashlib
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
-from src.governance.committee.members import (
+from src.nomos.committee.members import (
     ExampleCuriosityMember,
     ExampleIntegrityMember,
     ExampleMemoryMember,
@@ -12,21 +12,21 @@ from src.governance.committee.members import (
     ExampleSafetyMember,
     ExampleSocialMember,
 )
-from src.governance.contracts.contract import ContractState, UlyssesContract
-from src.governance.contracts.enforcement import (
+from src.nomos.contracts.contract import ContractState, UlyssesContract
+from src.nomos.contracts.enforcement import (
     enforce_procedural_inertia,
     enforce_timelock,
     stacked_enforcement,
 )
-from src.governance.contracts.merger import apply_restrictions
-from src.governance.identity.keys import GenesisMultisig
-from src.governance.identity.ontology import compute_hash
-from src.governance.identity.tiers import TIER_RULES, MutabilityTier
-from src.governance.models import PriorityTag, Proposal
-from src.governance.speaker import SpeakerStateMachine
-from src.governance.tee.batch import merkle_root
-from src.governance.tee.constant_time import cmov, constant_time_compare, oblivious_access
-from src.governance.tee.watchdog import DeadlockBreaker, WatchdogState, WatchdogTimer
+from src.nomos.contracts.merger import apply_restrictions
+from src.nomos.identity.keys import GenesisMultisig
+from src.nomos.identity.ontology import compute_hash
+from src.nomos.identity.tiers import TIER_RULES, MutabilityTier
+from src.nomos.models import PriorityTag, Proposal
+from src.nomos.speaker import SpeakerStateMachine
+from src.nomos.tee.batch import merkle_root
+from src.nomos.tee.constant_time import cmov, constant_time_compare, oblivious_access
+from src.nomos.tee.watchdog import DeadlockBreaker, WatchdogState, WatchdogTimer
 
 ALL_MEMBERS = {
     "reward": ExampleRewardMember(),
@@ -403,7 +403,7 @@ class TestPropertyTimelockDecrement:
             contract_id="time_test", restricted_indices={1},
             timelock_blocks=blocks, state=ContractState.ACTIVE,
         )
-        from src.governance.contracts.contract import ContractRegistry
+        from src.nomos.contracts.contract import ContractRegistry
         reg = ContractRegistry()
         reg.add(contract)
         for cycle in range(blocks + 2):

@@ -2,14 +2,14 @@
 
 import pytest
 
-from src.governance.agents import AgentAction, AgentBackend, StubBackend
-from src.governance.agents.base import (
+from src.nomos.agents import AgentAction, AgentBackend, StubBackend
+from src.nomos.agents.base import (
     ACTION_DESCRIPTIONS_KEY,
     OBSERVATION_KEY,
 )
-from src.governance.agents.prompts import build_context, build_system_prompt, build_user_prompt
-from src.governance.models import Proposal
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.agents.prompts import build_context, build_system_prompt, build_user_prompt
+from src.nomos.models import Proposal
+from src.nomos.speaker import SpeakerStateMachine
 
 # ----------------------------------------------------------------------
 # AgentAction schema
@@ -143,7 +143,7 @@ class TestPrompts:
 
 pydantic_ai = pytest.importorskip("pydantic_ai", reason="requires the optional 'agent' extra")
 
-from src.governance.agents.pydantic_adapter import (  # noqa: E402
+from src.nomos.agents.pydantic_adapter import (  # noqa: E402
     PydanticAIAdapter,
 )
 
@@ -225,7 +225,7 @@ class TestPydanticAIAdapter:
 
 class TestAgentSpeakerIntegration:
     def test_agent_action_flows_through_speaker(self) -> None:
-        from src.governance.committee.members import (
+        from src.nomos.committee.members import (
             ExampleIntegrityMember,
             ExampleRewardMember,
             ExampleSafetyMember,
@@ -267,16 +267,16 @@ class TestGovernorComparisonHarness:
         assert backend.select_action(_context()).action_index == 2
 
     def test_action_space_rejects_out_of_range(self) -> None:
-        from src.governance.agents import ActionSpace
-        from src.governance.agents.harness import ActionSpaceEntry
+        from src.nomos.agents import ActionSpace
+        from src.nomos.agents.harness import ActionSpaceEntry
 
         space = ActionSpace([ActionSpaceEntry("a", "desc", {})])
         with pytest.raises(IndexError):
             space.entry(1)
 
     def test_action_space_descriptions_index_aligned(self) -> None:
-        from src.governance.agents import ActionSpace
-        from src.governance.agents.harness import ActionSpaceEntry
+        from src.nomos.agents import ActionSpace
+        from src.nomos.agents.harness import ActionSpaceEntry
 
         space = ActionSpace(
             [
@@ -294,13 +294,13 @@ class TestGovernorComparisonHarnessTemptation:
 
     @pytest.fixture()
     def harness(self) -> tuple:
-        from src.governance.agents import ActionSpace, GovernorComparisonHarness
-        from src.governance.agents.harness import ActionSpaceEntry
-        from src.governance.committee.members import (
+        from src.nomos.agents import ActionSpace, GovernorComparisonHarness
+        from src.nomos.agents.harness import ActionSpaceEntry
+        from src.nomos.committee.members import (
             ExampleRewardMember,
             ExampleSafetyMember,
         )
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
 
         space = ActionSpace(
             [
@@ -369,8 +369,8 @@ class TestGovernorComparisonHarnessTemptation:
         assert governed_choices == ungoverned_choices
 
     def test_first_observation_identical_across_arms(self, harness) -> None:
-        from src.governance.agents import GovernorComparisonHarness
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.agents import GovernorComparisonHarness
+        from src.nomos.experiments.temptation_bank import TemptationBank
 
         h = GovernorComparisonHarness(
             scenario_factory=lambda spk: TemptationBank(spk),
@@ -389,8 +389,8 @@ class TestGovernorComparisonHarnessTemptation:
         assert list(harness[2].members) == ["reward", "safety"]
 
     def test_pair_result_ratio_guard(self) -> None:
-        from src.governance.agents.harness import ArmResult, PairResult
-        from src.governance.experiments.base import ExperimentMetrics
+        from src.nomos.agents.harness import ArmResult, PairResult
+        from src.nomos.experiments.base import ExperimentMetrics
 
         zero = ArmResult(arm="ungoverned", log=[], metrics=ExperimentMetrics(total_reward=0.0))
         some = ArmResult(arm="governed", log=[], metrics=ExperimentMetrics(total_reward=5.0))

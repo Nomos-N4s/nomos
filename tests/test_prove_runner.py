@@ -4,8 +4,8 @@ import os
 import sys
 import tempfile
 
-from src.governance.prove.predictions import PredictionResult
-from src.governance.prove.runner import (
+from src.nomos.prove.predictions import PredictionResult
+from src.nomos.prove.runner import (
     export_json,
     filter_by_chapter,
     main,

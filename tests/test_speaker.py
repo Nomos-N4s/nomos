@@ -1,12 +1,12 @@
 import time
 
-from src.governance.committee.members import (
+from src.nomos.committee.members import (
     ExampleIntegrityMember,
     ExampleRewardMember,
     ExampleSafetyMember,
 )
-from src.governance.models import PriorityTag, Proposal
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.models import PriorityTag, Proposal
+from src.nomos.speaker import SpeakerStateMachine
 
 
 def _make_proposal(member_id: str, tag: int = PriorityTag.ROUTINE,

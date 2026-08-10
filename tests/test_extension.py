@@ -1,12 +1,12 @@
 import pytest
 
-from src.governance.identity.extension import (
+from src.nomos.identity.extension import (
     ExtensionCandidate,
     ExtensionPhase,
     ExtensionSandbox,
 )
-from src.governance.identity.keys import GenesisMultisig
-from src.governance.identity.ontology import Ontology
+from src.nomos.identity.keys import GenesisMultisig
+from src.nomos.identity.ontology import Ontology
 
 
 class TestExtensionCandidate:

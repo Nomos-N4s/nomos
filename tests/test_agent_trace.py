@@ -2,9 +2,9 @@
 
 import pytest
 
-from src.governance.agents import GovernorComparisonHarness, StubBackend
-from src.governance.agents.scenarios import TemptationBankLLM
-from src.governance.agents.trace import (
+from src.nomos.agents import GovernorComparisonHarness, StubBackend
+from src.nomos.agents.scenarios import TemptationBankLLM
+from src.nomos.agents.trace import (
     TRACE_KEYS,
     build_run_viewer_html,
     build_viewer_data,
@@ -13,8 +13,8 @@ from src.governance.agents.trace import (
     write_run_viewer_html,
     write_trace_jsonl,
 )
-from src.governance.committee.members import ExampleRewardMember, ExampleSafetyMember
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.committee.members import ExampleRewardMember, ExampleSafetyMember
+from src.nomos.speaker import SpeakerStateMachine
 
 
 def _run_pair(script=(0, 2, 1, 1)):

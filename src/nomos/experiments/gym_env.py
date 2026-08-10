@@ -80,7 +80,7 @@ DIRECTION_VECTORS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
 
 class GovernanceGridWorld(*BASES):
-    """Gymnasium grid-world environment with pluggable Neural Parliament governance.
+    """Gymnasium grid-world environment with pluggable Neural Parliament nomos.
 
     The environment creates a :class:`~..models.Proposal` for each agent action
     with metadata (expected reward, risk, identity coherence, etc.) derived from

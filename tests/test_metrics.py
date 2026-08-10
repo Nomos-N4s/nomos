@@ -1,6 +1,6 @@
 import json
 
-from src.governance.experiments.metrics import (
+from src.nomos.experiments.metrics import (
     ExperimentReport,
     compare_reports,
     generate_report,

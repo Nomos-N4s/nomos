@@ -5,20 +5,20 @@ description: "Reference for the Python governance package: Speaker, Parliament m
 
 # API Reference
 
-::: governance.speaker
-::: governance.models
-::: governance.committee.base
-::: governance.committee.members
-::: governance.identity.core
-::: governance.identity.tiers
-::: governance.identity.keys
-::: governance.contracts.contract
-::: governance.contracts.enforcement
-::: governance.contracts.merger
-::: governance.tee.enclave
-::: governance.tee.batch
-::: governance.tee.watchdog
-::: governance.tee.constant_time
-::: governance.experiments.base
-::: governance.benchmarks.baselines
-::: governance.benchmarks.analysis
+::: nomos.speaker
+::: nomos.models
+::: nomos.committee.base
+::: nomos.committee.members
+::: nomos.identity.core
+::: nomos.identity.tiers
+::: nomos.identity.keys
+::: nomos.contracts.contract
+::: nomos.contracts.enforcement
+::: nomos.contracts.merger
+::: nomos.tee.enclave
+::: nomos.tee.batch
+::: nomos.tee.watchdog
+::: nomos.tee.constant_time
+::: nomos.experiments.base
+::: nomos.benchmarks.baselines
+::: nomos.benchmarks.analysis

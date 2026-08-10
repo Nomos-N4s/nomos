@@ -1,17 +1,17 @@
-from src.governance.contracts.contract import (
+from src.nomos.contracts.contract import (
     ContractRegistry,
     ContractState,
     UlyssesContract,
 )
-from src.governance.contracts.enforcement import (
+from src.nomos.contracts.enforcement import (
     DistributedMonitor,
     enforce_distributed_monitors,
     enforce_procedural_inertia,
     enforce_timelock,
     stacked_enforcement,
 )
-from src.governance.contracts.merger import apply_restrictions, merge_masks
-from src.governance.models import GovernanceDecision
+from src.nomos.contracts.merger import apply_restrictions, merge_masks
+from src.nomos.models import GovernanceDecision
 
 
 class TestContractLifecycle:
@@ -215,7 +215,7 @@ class TestMaskMerger:
         assert merged.governance_meta["final_action_count"] == 3
 
     def test_extract_mask_empty(self):
-        from src.governance.contracts.merger import _extract_mask
+        from src.nomos.contracts.merger import _extract_mask
         decision = GovernanceDecision(action="test")
         mask = _extract_mask(decision)
         assert mask == set()

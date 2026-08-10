@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from src.governance.benchmarks.analysis import (
+from src.nomos.benchmarks.analysis import (
     StrategyAggregate,
     _bonferroni_correct,
     _bootstrap_ci,
@@ -20,8 +20,8 @@ from src.governance.benchmarks.analysis import (
     export_summary_csv,
     run_analysis,
 )
-from src.governance.experiments.base import ExperimentMetrics
-from src.governance.experiments.metrics import ExperimentReport
+from src.nomos.experiments.base import ExperimentMetrics
+from src.nomos.experiments.metrics import ExperimentReport
 
 
 def _make_report(name, reward, deadlocks=0, violations=0, steps=100, drift=0.0, step_records=None):

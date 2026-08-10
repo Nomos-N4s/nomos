@@ -1,11 +1,11 @@
-from src.governance.identity.core import (
+from src.nomos.identity.core import (
     CommitmentThreshold,
     CommitmentType,
     CoreCommitment,
     EnforcementMode,
     IdentityCore,
 )
-from src.governance.identity.tiers import (
+from src.nomos.identity.tiers import (
     TIER_RULES,
     MutabilityTier,
     TieredMutability,

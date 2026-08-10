@@ -2,7 +2,7 @@
 
 import os
 
-from src.governance.env import load_project_env, project_root
+from src.nomos.env import load_project_env, project_root
 
 
 def _write_env(tmp_path, lines: list[str]) -> str:

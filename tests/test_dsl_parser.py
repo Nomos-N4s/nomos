@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.governance.dsl import (
+from src.nomos.dsl import (
     DSLContractConfig,
     DSLMemberConfig,
     DSLParseError,

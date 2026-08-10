@@ -1,10 +1,10 @@
-from src.governance.benchmarks.baselines import (
+from src.nomos.benchmarks.baselines import (
     MonolithicRL,
     RandomBaseline,
     StaticMasking,
     VetoOnly,
 )
-from src.governance.benchmarks.run_all import (
+from src.nomos.benchmarks.run_all import (
     _get_baseline,
     _run_experiment_set,
     _run_scenario,
@@ -15,10 +15,10 @@ from src.governance.benchmarks.run_all import (
     run_gridworld_experiments,
     run_temptation_experiments,
 )
-from src.governance.experiments.deadlock_maze import DeadlockMaze
-from src.governance.experiments.drift_lab import DriftLab
-from src.governance.experiments.grid_world import GridWorld
-from src.governance.experiments.temptation_bank import TemptationBank
+from src.nomos.experiments.deadlock_maze import DeadlockMaze
+from src.nomos.experiments.drift_lab import DriftLab
+from src.nomos.experiments.grid_world import GridWorld
+from src.nomos.experiments.temptation_bank import TemptationBank
 
 
 class TestBuildGovernanceLayer:

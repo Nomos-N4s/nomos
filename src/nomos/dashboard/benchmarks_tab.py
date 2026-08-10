@@ -162,7 +162,7 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
         st.info(
             "No benchmark results found in `results/`. "
             "Run the benchmark on Colab first:\n\n"
-            "```\npython -m src.governance.experiments.rl_adversary benchmark --seeds 42 43 44\n```\n\n"
+            "```\npython -m src.nomos.experiments.rl_adversary benchmark --seeds 42 43 44\n```\n\n"
             "Or upload `benchmark_results.json` to the `results/` directory."
         )
         st.divider()
