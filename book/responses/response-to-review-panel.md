@@ -459,7 +459,7 @@ This provides deterministic, auditable, cryptographically guaranteed separation 
 
 The reviewers provided a Python code sketch showing the vulnerability (timestamp-based agenda sorting). We deliver the hardened implementation below, along with a reply to their structural challenge.
 
-The MVP is at [`src/governance/speaker.py`](../../src/governance/speaker.py). It implements:
+The MVP is at [`src/nomos/speaker.py`](../../src/nomos/speaker.py). It implements:
 - Proposal budget enforcement (hard cap per member per cycle)
 - Priority-tag-based agenda sorting (deterministic, no semantic inference)
 - Range-based scoring and voting
@@ -486,7 +486,7 @@ This is not a simulation — it is a reference implementation of the architectur
 2. ✅ **Retracted stochastic simulation** — removed from Chapter 2 architectural notes
 3. ✅ **Anti-SDoS specification** — proposal budgets + priority tags added to Chapter 2, §2.4 and DSL
 4. ✅ **Gradient-barrier analysis** — added to Chapter 2 as new §3.7
-5. ✅ **MVP code** — `src/governance/speaker.py` delivered, hardened against SDoS
+5. ✅ **MVP code** — `src/nomos/speaker.py` delivered, hardened against SDoS
 6. 🔲 **TEE isolation spec** — to be formalized in Chapter 3
 
 We go to the mat with anyone who takes our ideas seriously enough to tear them apart. The framework is stronger for every round.

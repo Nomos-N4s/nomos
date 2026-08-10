@@ -16,3 +16,8 @@ results/agent/cache/
 gov-budget-proof/lake-manifest.json
 opencode.jsonc
 .kilo/
+
+# tool caches
+.entire/
+.opencode/plugins/
+zips/

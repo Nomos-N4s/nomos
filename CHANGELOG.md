@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Aligned all four benchmark figures with analysis pipeline: reward curves use bootstrap CIs instead of parametric error; violation rate and deadlock frequency bar charts use bootstrap CI error bars instead of stdev; Pareto frontier overlay added; color palette unified across all figure types (#101)
+- Rebrand `governance-layer` → **Nomos** (#86): Python package renamed `governance` → `nomos` (`src/nomos`, 82 files), all imports/docs/config updated, mkdocs `site_name`/`site_url`/`repo_url` retargeted, README/docs/AGENTS/ROADMAP brand pass, citation key updated. Implemented as three stacked PRs (#202 package+imports, #204 docs/brand, #203 tooling/config) so each merge stays green. Repo rename on GitHub (`xcoder-es/nomos`) pending
 
 ## [0.7.0] — 2026-07-26
 

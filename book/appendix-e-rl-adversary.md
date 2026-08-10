@@ -21,7 +21,7 @@ This appendix documents the adversary training setup, the attack patterns discov
 
 ### E.2.1 Environment
 
-The adversary operates in `GovernanceGridWorld` (`src/governance/experiments/gym_env.py`), a modified GridWorld where the agent selects cardinal directions and the environment routes actions through the Parliament.
+The adversary operates in `GovernanceGridWorld` (`src/nomos/experiments/gym_env.py`), a modified GridWorld where the agent selects cardinal directions and the environment routes actions through the Parliament.
 
 | Parameter | Value |
 |-----------|-------|
@@ -130,9 +130,9 @@ All adversary code lives in:
 
 | File | Purpose |
 |------|---------|
-| `src/governance/experiments/gym_env.py` | Gymnasium environment with pluggable governance |
-| `src/governance/experiments/rl_train.py` | PPO training, evaluation, benchmarking |
-| `src/governance/experiments/rl_adversary.py` | CLI for train/eval/benchmark commands |
+| `src/nomos/experiments/gym_env.py` | Gymnasium environment with pluggable governance |
+| `src/nomos/experiments/rl_train.py` | PPO training, evaluation, benchmarking |
+| `src/nomos/experiments/rl_adversary.py` | CLI for train/eval/benchmark commands |
 
 Run the adversary yourself:
 
@@ -141,11 +141,11 @@ Run the adversary yourself:
 uv sync --extra rl
 
 # Train PPO with governance
-python -m src.governance.runner adversary train --mode governance --timesteps 100000
+python -m src.nomos.runner adversary train --mode governance --timesteps 100000
 
 # Train without governance
-python -m src.governance.runner adversary train --mode no_governance --timesteps 100000
+python -m src.nomos.runner adversary train --mode no_governance --timesteps 100000
 
 # Evaluate a trained model
-python -m src.governance.runner adversary eval --model results/ppo_governance.zip --episodes 10
+python -m src.nomos.runner adversary eval --model results/ppo_governance.zip --episodes 10
 ```

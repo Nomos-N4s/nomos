@@ -1,9 +1,9 @@
-site_name: Governance Layer
+site_name: Nomos
 site_description: A Formal Framework for Self-Governing AI
 site_author: Carlos Pinto (xcoder-es)
-site_url: https://xcoder-es.github.io/governance-layer/
-repo_url: https://github.com/xcoder-es/governance-layer
-repo_name: xcoder-es/governance-layer
+site_url: https://xcoder-es.github.io/nomos/
+repo_url: https://github.com/xcoder-es/nomos
+repo_name: xcoder-es/nomos
 copyright: Created by Carlos Pinto (xcoder-es)
 
 theme:
@@ -70,7 +70,7 @@ nav:
   - Home: index.md
   - Theory:
     - Preface: book/00-preface.md
-    - "Chapter 1: Why AI Needs a Governance Layer": book/chapter-01/01-why-ai-needs-a-governance-layer.md
+    - "Chapter 1: Why AI Needs a Governance Layer": book/chapter-01/01-why-ai-needs-a-nomos.md
     - "Chapter 2: The Neural Parliament": book/chapter-02/02-neural-parliament.md
     - "Chapter 3: Ulysses Contracts": book/chapter-03/03-ulysses-contracts.md
     - "Chapter 4: The Identity Layer": book/chapter-04/04-identity-layer.md

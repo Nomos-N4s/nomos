@@ -7,7 +7,7 @@ description: "Cross-validates the 12 formal predictions from the Governance Laye
 
 > **Status:** Implemented  
 > **Branch:** `feat/144-prediction-cross-validation`  
-> **Issue:** [#144](https://github.com/xcoder-es/governance-layer/issues/144)  
+> **Issue:** [#144](https://github.com/xcoder-es/nomos/issues/144)  
 > **Epic:** Phase D — AI Agent Validation (#145)
 
 ## Overview
@@ -228,7 +228,7 @@ sequenceDiagram
 
 ## Extending the Registry
 
-Adding a new prediction or re-mapping an existing one requires no changes to the runner logic. Edit `src/governance/agents/prediction_harness.py` and add a `PredictionConfig` to `_register_all_predictions()`:
+Adding a new prediction or re-mapping an existing one requires no changes to the runner logic. Edit `src/nomos/agents/prediction_harness.py` and add a `PredictionConfig` to `_register_all_predictions()`:
 
 ```python
 _register_prediction(
