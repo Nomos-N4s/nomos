@@ -87,3 +87,9 @@ nav:
   - Review Responses:
     - "First Review Panel": book/responses/response-to-review-panel.md
     - "Harder Review Panel": book/responses/response-to-expert-panel-harder-review.md
+  - Changelog:
+    - changelog/index.md
+    - changelog/2026-08-10.md
+    - changelog/2026-08-02.md
+    - changelog/2026-07-29.md
+    - changelog/2026-07-28.md
