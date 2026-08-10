@@ -87,35 +87,36 @@ def chainRoot (bs : List ActionBinding) : Nat :=
 /-- Auxiliary: the fold accumulator is a function of the accumulator —
     equal fold results over the same suffix force equal accumulators
     (the combine step is injective on its first argument). -/
-theorem foldl_combine_acc_determines_result (suffix : List ActionBinding)
-    (a₁ a₂ : Nat) :
-    suffix.foldl (fun acc b => hashImpl b.implementation + acc) a₁ =
-    suffix.foldl (fun acc b => hashImpl b.implementation + acc) a₂ → a₁ = a₂ := by
-  induction suffix generalizing a₁ a₂ with
+theorem foldl_combine_acc_determines_result (suffix : List ActionBinding) :
+    ∀ (a₁ a₂ : Nat),
+      suffix.foldl (fun acc b => hashImpl b.implementation + acc) a₁ =
+      suffix.foldl (fun acc b => hashImpl b.implementation + acc) a₂ → a₁ = a₂ := by
+  induction suffix with
   | nil =>
-      intro h
+      intro a₁ a₂ h
       simpa using h
   | cons b rest ih =>
-      intro h
-      have h' : hashImpl b.implementation + a₁ = hashImpl b.implementation + a₂ := by
-        exact ih (by simpa [List.foldl_cons] using h)
+      intro a₁ a₂ h
+      have h' : hashImpl b.implementation + a₁ = hashImpl b.implementation + a₂ :=
+        ih (hashImpl b.implementation + a₁) (hashImpl b.implementation + a₂)
+          (by simpa [List.foldl_cons] using h)
       omega
 
 /-- Claim 2 (tamper evidence): modifying any past binding — the candidate
     alone, prefix and suffix untouched — changes the chain root, provided
     the hash of the modified implementation differs (collision-resistance
     assumption, explicit hypothesis `hImpl`). -/
-theorem tamper_changes_chain_root (prefix suffix : List ActionBinding)
+theorem tamper_changes_chain_root (pre suf : List ActionBinding)
     (orig new : ActionBinding)
     (hImpl : hashImpl orig.implementation ≠ hashImpl new.implementation) :
-    chainRoot (prefix ++ orig :: suffix) ≠ chainRoot (prefix ++ new :: suffix) := by
+    chainRoot (pre ++ orig :: suf) ≠ chainRoot (pre ++ new :: suf) := by
   intro hEq
   unfold chainRoot at hEq
   simp [List.foldl_append] at hEq
   have hAcc :
-      hashImpl orig.implementation + prefix.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH
-        = hashImpl new.implementation + prefix.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH := by
-    exact foldl_combine_acc_determines_result suffix _ _ (by simpa [List.foldl_cons] using hEq)
+      hashImpl orig.implementation + pre.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH
+        = hashImpl new.implementation + pre.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH := by
+    exact foldl_combine_acc_determines_result suf _ _ (by simpa [List.foldl_cons] using hEq)
   have hSame : hashImpl orig.implementation = hashImpl new.implementation := by
     omega
   exact hImpl hSame
@@ -143,7 +144,7 @@ def verifyRuntime (runtime : String) (b : ActionBinding) : Bool :=
 theorem verify_accepts_matching_implementation (runtime : String) (b : ActionBinding)
     (h : hashImpl runtime = b.bindingHash) : verifyRuntime runtime b = true := by
   unfold verifyRuntime
-  exact of_decide_eq_true h
+  simp [h]
 
 /-- §6.1 REJECT path: an implementation whose runtime hash differs from the
     committed hash is rejected with a binding violation, exactly as
@@ -155,7 +156,7 @@ theorem verify_rejects_changed_implementation (runtime : String) (b : ActionBind
   unfold verifyRuntime
   by_cases hEq : hashImpl runtime = b.bindingHash
   · exact False.elim (hChanged (by rw [hCommitted] at hEq; exact hEq))
-  · exact of_decide_eq_false hEq
+  · simp [hEq]
 
 /-- Channel for §2.1: TEE independently recomputes the hash at batch time
     rather than trusting the proposed binding's own claim. -/
@@ -165,23 +166,26 @@ theorem tee_recomputes_hash_independently (runtime : String) (b : ActionBinding)
 
 /-- A benign binding passes verification when runtime matches the binding
     commitment. -/
-example : verifyRuntime "benign_impl" { implementation := "benign_impl",
-      bindingHash := 11, prevHash := 0 } = true := by
+example : verifyRuntime "benign_impl"
+      { implementation := "benign_impl",
+        bindingHash := 11, prevHash := 0 } = true := by
   apply verify_accepts_matching_implementation
-  simp [hashImpl]
+  native_decide
 
 /-- Swapping the runtime implementation changes the hash, so the rejected
     action index logs a binding violation. -/
-example : verifyRuntime "attack_impl" { implementation := "benign_impl",
-      bindingHash := 11, prevHash := 0 } = false := by
+example : verifyRuntime "evil_impl"
+      { implementation := "benign_impl",
+        bindingHash := 11, prevHash := 0 } = false := by
   apply verify_rejects_changed_implementation
-  · simp [hashImpl]
-  · simp [hashImpl]
+  · native_decide
+  · native_decide
 
 /-- Tampering with a bound action's past implementation changes the root of
     its chain ('benign_impl' → 'tampered_impl'). -/
-example : chainRoot [{ implementation := "tampered_impl", bindingHash := 12,
-      prevHash := 0 }] ≠ chainRoot [{ implementation := "benign_impl",
-      bindingHash := 11, prevHash := 0 }] := by
+example : chainRoot
+      [{ implementation := "tampered_impl", bindingHash := 12, prevHash := 0 }]
+    ≠ chainRoot
+      [{ implementation := "benign_impl", bindingHash := 11, prevHash := 0 }] := by
   apply tamper_evidence_single_binding
-  simp [hashImpl]
+  native_decide
