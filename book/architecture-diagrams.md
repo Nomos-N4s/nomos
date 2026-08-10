@@ -414,7 +414,7 @@ graph TB
 
 ```mermaid
 graph TB
-    subgraph SRC[src/governance]
+    subgraph SRC[src/nomos]
         MOD[models.py — Core types]
         SP[speaker.py — State machine]
         

@@ -56,13 +56,13 @@ That said, the panel is correct that the **repository's self-description** overs
 
 **Critique:** *"`speaker.run_governance_cycle` is never called in the experiment loop. The governance layer is instantiated but not used."*
 
-This was a **genuine bug** in `src/governance/benchmarks/run_all.py`. The `baseline.decide()` method was called as a bare expression, its return value discarded, and `scenario.step()` always ran the full governance layer underneath.
+This was a **genuine bug** in `src/nomos/benchmarks/run_all.py`. The `baseline.decide()` method was called as a bare expression, its return value discarded, and `scenario.step()` always ran the full governance layer underneath.
 
 #### Fix applied
 
-In `src/governance/experiments/base.py` and all 4 concrete scenario classes (grid_world.py, temptation_bank.py, drift_lab.py, deadlock_maze.py), `step()` now accepts an optional `external_decision` parameter. When provided, the governance cycle is skipped and the external decision is used instead.
+In `src/nomos/experiments/base.py` and all 4 concrete scenario classes (grid_world.py, temptation_bank.py, drift_lab.py, deadlock_maze.py), `step()` now accepts an optional `external_decision` parameter. When provided, the governance cycle is skipped and the external decision is used instead.
 
-In `src/governance/benchmarks/run_all.py`, the loop now passes the baseline's decision:
+In `src/nomos/benchmarks/run_all.py`, the loop now passes the baseline's decision:
 
 ```python
 decision = baseline.decide(state, proposals)
@@ -137,7 +137,7 @@ This was fixed before the review, likely in a commit the panel did not have acce
 
 **Critique:** *"Interface with a real RL agent. Show that your governance layer modifies behavior in a non-trivial environment."*
 
-The codebase already contains **`src/governance/experiments/gym_env.py`** (407 lines) — a full Gymnasium-compatible environment (`GovernanceGridWorld`) that routes agent actions through the Neural Parliament. It:
+The codebase already contains **`src/nomos/experiments/gym_env.py`** (407 lines) — a full Gymnasium-compatible environment (`GovernanceGridWorld`) that routes agent actions through the Neural Parliament. It:
 
 - Inherits from `gymnasium.Env` (with fallback to `gym.Env`)
 - Produces 402-dim Box observations (flattened grid + position)
@@ -162,7 +162,7 @@ The theoretical framework is documented in `book/chapter-02/`, `chapter-03/`, an
 - Gradients-through-discrete-operations analysis
 - Four-tier mutability with monotonic thresholds
 
-The 12 formal predictions in `src/governance/prove/predictions.py` map directly to these chapters, serving as executable specification checks.
+The 12 formal predictions in `src/nomos/prove/predictions.py` map directly to these chapters, serving as executable specification checks.
 
 What the codebase does **not** have:
 - Proof-assistant formalization (Lean, Coq, or Isabelle)
@@ -203,7 +203,7 @@ The `book/` directory contains:
 | Chapter | File | Content |
 |---|---|---|
 | Preface | `00-preface.md` | Motivation and scope |
-| Chapter 1 | `chapter-01/01-why-ai-needs-a-governance-layer.md` | Problem statement |
+| Chapter 1 | `chapter-01/01-why-ai-needs-a-nomos.md` | Problem statement |
 | Chapter 2 | `chapter-02/02-neural-parliament.md` | Neural Parliament (560 lines) |
 | Chapter 3 | `chapter-03/03-ulysses-contracts.md` | Ulysses Contracts (359 lines) |
 | Chapter 4 | `chapter-04/04-identity-layer.md` | Identity Layer (573 lines) |
@@ -229,10 +229,10 @@ The panel's criticism that `book/` was "inaccessible" during their review is not
 
 The current TEE module is explicitly labeled as `Simulated` in the code:
 
-- `src/governance/tee/enclave.py` — Simulated enclave (Python class, no hardware isolation)
-- `src/governance/tee/batch.py` — Merkle root computation (correct algorithm)
-- `src/governance/tee/watchdog.py` — Heartbeat + deadlock breaker (deterministic counter)
-- `src/governance/tee/constant_time.py` — Data-oblivious loops (correct bitwise operations)
+- `src/nomos/tee/enclave.py` — Simulated enclave (Python class, no hardware isolation)
+- `src/nomos/tee/batch.py` — Merkle root computation (correct algorithm)
+- `src/nomos/tee/watchdog.py` — Heartbeat + deadlock breaker (deterministic counter)
+- `src/nomos/tee/constant_time.py` — Data-oblivious loops (correct bitwise operations)
 
 This is documented in Appendix A as a **theoretical specification** with a simulated implementation. The panel is correct that this is not a real TEE. We do not claim hardware attestation capabilities. The threat model is aspirational.
 
