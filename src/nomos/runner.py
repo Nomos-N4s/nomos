@@ -1,5 +1,5 @@
 """
-CLI entry point for the Governance Layer reference implementation.
+CLI entry point for the Nomos reference implementation.
 
 Provides commands for running experiments, verifying formal predictions,
 and exporting results.
@@ -451,7 +451,7 @@ def _add_shared_args(parser):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Governance Layer Reference Implementation")
+    parser = argparse.ArgumentParser(description="Nomos Reference Implementation")
     sub = parser.add_subparsers(dest="command")
 
     p_speaker = sub.add_parser("speaker", help="Run quick speaker sanity test")

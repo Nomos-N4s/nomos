@@ -54,7 +54,7 @@ def _load_env() -> dict[str, str]:
 
 
 class Neo4jBackend(OntologyBackend):
-    """Neo4j Aura graph-database backend for the Governance Layer ontology.
+    """Neo4j Aura graph-database backend for the Nomos ontology.
 
     Entities are stored as labelled ``:Entity`` nodes with a ``properties``
     JSON attribute. Relationships are stored as ``[:RELATES]`` edges with

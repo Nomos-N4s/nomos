@@ -8,7 +8,7 @@ from src.nomos.benchmarks.run_all import (
     _get_baseline,
     _run_experiment_set,
     _run_scenario,
-    build_governance_layer,
+    build_governed_pipeline,
     run_all,
     run_deadlock_experiments,
     run_drift_experiments,
@@ -23,7 +23,7 @@ from src.nomos.experiments.temptation_bank import TemptationBank
 
 class TestBuildGovernanceLayer:
     def test_returns_speaker(self):
-        speaker = build_governance_layer()
+        speaker = build_governed_pipeline()
         assert speaker is not None
         assert "reward" in speaker.members
         assert "safety" in speaker.members
