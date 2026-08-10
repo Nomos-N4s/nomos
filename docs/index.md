@@ -1,9 +1,9 @@
 ---
-title: "Governance Layer: bounded autonomy for autonomous AI"
-description: "Governance Layer is a formal framework that bounds autonomous AI with a Neural Parliament, Ulysses Contracts, and a verifiable Identity Layer."
+title: "Nomos: bounded autonomy for autonomous AI"
+description: "Nomos is a formal framework that bounds autonomous AI with a Neural Parliament, Ulysses Contracts, and a verifiable Identity Layer."
 ---
 
-# Governance Layer
+# Nomos
 
 ## Provably Bounded Governance for Autonomous AI
 
@@ -18,13 +18,13 @@ A formal framework for bounded autonomous decision-making.
 - [Theory](book/00-preface.md)
 - [API](api/index.md)
 - [Benchmarks](benchmarks/index.md)
-- [GitHub](https://github.com/xcoder-es/governance-layer)
+- [GitHub](https://github.com/xcoder-es/nomos)
 
 ---
 
 ## Why
 
-Optimization pressure erodes constraints that are not formally enforced. Governance Layer bounds autonomous behavior through deliberation, contracts, and a verifiable identity model before actions are executed.
+Optimization pressure erodes constraints that are not formally enforced. Nomos bounds autonomous behavior through deliberation, contracts, and a verifiable identity model before actions are executed.
 
 ## Architecture at a Glance
 
@@ -60,7 +60,7 @@ python -m src.nomos.runner speaker
 - [Theory](book/00-preface.md)
 - [API](api/index.md)
 - [Benchmarks](benchmarks/index.md)
-- [GitHub](https://github.com/xcoder-es/governance-layer)
+- [GitHub](https://github.com/xcoder-es/nomos)
 
 ## License
 

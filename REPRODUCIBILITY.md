@@ -26,8 +26,8 @@ a container, eliminating environment differences.
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/xcoder-es/governance-layer.git
-cd governance-layer
+git clone https://github.com/xcoder-es/nomos.git
+cd nomos
 pip install -e .
 
 # 2. Run the full benchmark suite
@@ -205,11 +205,11 @@ with the release version (e.g., `v0.1.0`).
 ## Citation
 
 ```bibtex
-@software{governance_layer,
+@software{nomos,
   author    = {Carlos Pinto (xcoder-es)},
   title     = {The Governance Layer: A Formal Framework for Self-Governing AI},
   year      = {2026},
-  url       = {https://github.com/xcoder-es/governance-layer},
+  url       = {https://github.com/xcoder-es/nomos},
   doi       = {<OSF DOI pending>},
 }
 ```

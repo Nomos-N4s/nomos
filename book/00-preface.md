@@ -1,5 +1,5 @@
 ---
-title: "Preface: why I am building the Governance Layer"
+title: "Preface: why I am building Nomos"
 description: "Author Carlos Pinto explains why modern AI systems need governance mechanisms, not just optimization, to make trustworthy autonomous decisions."
 ---
 

@@ -1,5 +1,5 @@
 """
-CLI entry point for the Governance Layer reference implementation.
+CLI entry point for the Nomos reference implementation.
 
 Provides commands for running experiments, verifying formal predictions,
 and exporting results.

@@ -5,8 +5,8 @@ description: "Summary of benchmark results and figures comparing five strategies
 
 # Benchmark Results
 
-See the [benchmark results summary](https://github.com/xcoder-es/governance-layer/blob/main/results/benchmark_summary.csv) and
-[detailed figures](https://github.com/xcoder-es/governance-layer/blob/main/results/figures/) for the latest comparison across
+See the [benchmark results summary](https://github.com/xcoder-es/nomos/blob/main/results/benchmark_summary.csv) and
+[detailed figures](https://github.com/xcoder-es/nomos/blob/main/results/figures/) for the latest comparison across
 all four experiment scenarios and five strategies.
 
 ## Running Benchmarks

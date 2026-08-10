@@ -1,9 +1,9 @@
-site_name: Governance Layer
+site_name: Nomos
 site_description: A Formal Framework for Self-Governing AI
 site_author: Carlos Pinto (xcoder-es)
-site_url: https://xcoder-es.github.io/governance-layer/
-repo_url: https://github.com/xcoder-es/governance-layer
-repo_name: xcoder-es/governance-layer
+site_url: https://xcoder-es.github.io/nomos/
+repo_url: https://github.com/xcoder-es/nomos
+repo_name: xcoder-es/nomos
 copyright: Created by Carlos Pinto (xcoder-es)
 
 theme:

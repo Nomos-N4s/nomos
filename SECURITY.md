@@ -37,7 +37,7 @@ for the full discussion.
 ## Reporting a Vulnerability
 
 If you discover a vulnerability in the reference implementation, please open a
-[GitHub Issue](https://github.com/xcoder-es/governance-layer/issues)
+[GitHub Issue](https://github.com/xcoder-es/nomos/issues)
 with the label `security`. Do not disclose the vulnerability publicly until it
 has been addressed.
 

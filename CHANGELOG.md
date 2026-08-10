@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Aligned all four benchmark figures with analysis pipeline: reward curves use bootstrap CIs instead of parametric error; violation rate and deadlock frequency bar charts use bootstrap CI error bars instead of stdev; Pareto frontier overlay added; color palette unified across all figure types (#101)
+- **Rebrand live (#86).** Package renamed `governance` → `nomos` in #205; this PR ports the docs/brand state to the published surface: `mkdocs.yml` now presents the site as **Nomos** with `site_url`/`repo_url` pointing at `xcoder-es/nomos` (repo renamed from `xcoder-es/governance-layer`, old URLs redirect). README headline, badges, and citation updated; API reference, book responses, and changelog index swept of stale `governance-layer` references; page-visible module docstrings (runner, prove, ontology) updated.
 
 ## [0.7.0] — 2026-07-26
 
