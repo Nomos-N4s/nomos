@@ -5,3 +5,4 @@ import GovBudgetProof.IdentityTiers
 import GovBudgetProof.IdentityGenesis
 import GovBudgetProof.IdentityBuffer
 import GovBudgetProof.IdentityHashes
+import GovBudgetProof.IdentityCoherence
