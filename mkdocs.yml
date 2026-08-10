@@ -74,6 +74,7 @@ nav:
     - "Chapter 2: The Neural Parliament": book/chapter-02/02-neural-parliament.md
     - "Chapter 3: Ulysses Contracts": book/chapter-03/03-ulysses-contracts.md
     - "Chapter 4: The Identity Layer": book/chapter-04/04-identity-layer.md
+    - "Formal Verification (Lean)": book/formal-verification-lean.md
   - Architecture: book/architecture-diagrams.md
   - Appendices:
     - "Appendix A: TEE Isolation": book/appendix-a/tee-isolation.md

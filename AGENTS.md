@@ -43,6 +43,7 @@
   - DriftLab: 0 reward, 0 violations — identity coherence wins via higher priority tag
   - DeadlockMaze: 999 deadlocks — tighten_quorum passes, deadlock breaker fires, but cycle repeats
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
+- **Lean 4 formalization of the Identity Layer completed** (epic #69 closed 2026-08-10): five proof modules in `gov-budget-proof/` — IdentityTiers (Ch4 §3), IdentityGenesis (Ch4 §4), IdentityBuffer (Ch4 §5.2), IdentityHashes (Ch4 §2.1/§6.1), IdentityCoherence (Ch4 §6.1). Merged to main via stacked PRs #195–#199 (stack #200, main `f56efa4`); all CI green with `lean-build` enforced on every PR. Inventory page: `book/formal-verification-lean.md`.
 
 ### Active
 - **PRs in review**: #181 (auto-refresh, closes #75) and #182 (health endpoints, closes #163) — maintainer review posted change requests as inline comments only. Awaiting author updates. Track A of ROADMAP.md.
@@ -63,7 +64,7 @@ Ordered execution plan lives in **`ROADMAP.md`** (board-backed, https://github.c
 4. **Track D** — rebrand #86 (`governance-layer` → `nomos`) before SDK/observability land.
 5. **Track E** — observability (#158): #161 → #162 → #167 → #166 → #164 → #165 → #168.
 6. **Track F** — SDK (#159): #169 → #170 → #171 → #172 → #174 → #173 (PyPI as `nomos-n4s`).
-7. **Track G (parallel)** — Lean proofs #69 (Identity) and #70 (TEE).
+7. **Track G (parallel)** — Lean proofs: Identity Layer done (epic #69 closed 2026-08-10, stack #200 merged); TEE isolation model (#70) next.
 8. **Track H (gated)** — commercialization (#160): #175 legal gate → #176/#177; #180 anytime; #179 deferred.
 
 Phase D (validation) status: DSL ✅ (#131), AI Agent Validation ✅ (epic #145, all of #138–#144 closed 2026-08-01), website build in nomos-website repo, language-agnostic protocol = #172 (Track F).
@@ -82,6 +83,13 @@ Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration
 - `book/appendix-a/tee-isolation.md`: TEE threat model, hardware watchdog, constant-time, Merkle-tree batching, single-enclave architecture, deadlock breaker
 - `book/responses/response-to-review-panel.md`: all 5 phases of review responses (accepts all three Phase 5.2 fixes)
 - `book/responses/response-to-expert-panel-harder-review.md`: response to second harder review (baseline bug fix, 11-point rebuttal)
+- `book/formal-verification-lean.md`: Lean 4 proof inventory — all five Identity Layer modules plus build instructions
+- `gov-budget-proof/GovBudgetProof.lean`: Lean 4 manifest importing Basic, BudgetEnforcement, VoteAndFalsification, and the five Identity modules
+- `gov-budget-proof/GovBudgetProof/IdentityTiers.lean`: tier mutability rules (Ch4 §3)
+- `gov-budget-proof/GovBudgetProof/IdentityGenesis.lean`: 3-of-5 multisig genesis (Ch4 §4)
+- `gov-budget-proof/GovBudgetProof/IdentityBuffer.lean`: sandboxed isolation buffer protocol (Ch4 §5.2)
+- `gov-budget-proof/GovBudgetProof/IdentityHashes.lean`: runtime integrity hash chains, tamper evidence (Ch4 §2.1/§6.1)
+- `gov-budget-proof/GovBudgetProof/IdentityCoherence.lean`: coherence threshold guard (Ch4 §6.1)
 - `src/governance/speaker.py`: Speaker state machine reference implementation
 - `src/governance/models.py`: Core data types
 - `src/governance/committee/members.py`: 7 Parliament members
