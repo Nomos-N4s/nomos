@@ -12,8 +12,9 @@ def _write_env(tmp_path, lines: list[str]) -> str:
 
 
 def test_project_root_points_at_repository_root() -> None:
-    assert project_root().name == "governance-layer"
-    assert (project_root() / "pyproject.toml").is_file()
+    root = project_root()
+    assert (root / "pyproject.toml").is_file()
+    assert (root / "src" / "nomos").is_dir()
 
 
 def test_loads_simple_key_values(tmp_path, monkeypatch) -> None:
