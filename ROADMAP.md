@@ -60,11 +60,19 @@ Gate: nothing else starts until these merge — they touch `runner.py`,
 21. **#173** plugin architecture (F5) — Phase E item, land last.
     → Epic #159 Done.
 
-## Track G — Lean proofs (#69, #70) — parallel track
+## Track G — Lean proofs (#69 done, #70 next) — parallel track
 
 Independent of all tracks; can be picked up any time. Extends the proven
 budget/threshold invariants (#43/#44) to the Identity Layer (#69) and the TEE
 isolation model (#70).
+
+- **#69 Identity Layer — DONE (2026-08-10).** Five Lean 4 modules merged to
+  `main` via stacked PRs #195-#199 (stack #200, commit `f56efa4`):
+  IdentityTiers (Ch4 §3), IdentityGenesis (Ch4 §4), IdentityBuffer (Ch4 §5.2),
+  IdentityHashes (Ch4 §2.1/§6.1), IdentityCoherence (Ch4 §6.1). Sub-issues
+  #190-#194 and epic #69 closed; `lean-build` CI job enforced on every PR.
+- **#70 TEE isolation model — next.** Formalize Appendix A (enclave
+  invariants, Merkle batch verification, watchdog, deadlock breaker).
 
 ## Track H — Commercialization (#160) — gated
 
