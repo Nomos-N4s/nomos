@@ -42,9 +42,6 @@ def OPERATIONAL_QUORUM : Nat := 2
 def OPERATIONAL_COOLDOWN : Nat := 7
 def DYNAMIC_QUORUM : Nat := 1
 
-/-- The genesis bar: 3-of-5 signatures (Chapter 4 §4.2). -/
-def GENESIS_QUORUM : Nat := 3
-
 /-- A proposed governance change, carrying the quorum and cooling-off period
     it actually met. -/
 structure Change where
@@ -148,10 +145,9 @@ theorem operational_bar_suffices_for_dynamic (c : Change)
   omega
 
 /-- §3.5: the bar to modify a constitutional parameter is at least the bar
-    used to establish it at genesis (both are 3-of-5). -/
-theorem modification_bar_at_least_genesis_bar :
-    GENESIS_QUORUM ≤ CONSTITUTIONAL_QUORUM := by
-  unfold GENESIS_QUORUM CONSTITUTIONAL_QUORUM
+    used to establish it at genesis (both are 3-of-5, Chapter 4 §4.2). -/
+theorem modification_bar_at_least_genesis_bar : 3 ≤ CONSTITUTIONAL_QUORUM := by
+  unfold CONSTITUTIONAL_QUORUM
   decide
 
 /-- Tier strictness order: immutable ≻ constitutional ≻ operational ≻ dynamic. -/
