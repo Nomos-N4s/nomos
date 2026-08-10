@@ -3,7 +3,7 @@
 - Register the framework on OSF for timestamp provenance and DOI.
 
 ## Important Details
-- Author: **Carlos Pinto (xcoder-es)** — solo software builder, not an academic. Repo is `xcoder-es/nomos`. All inquiries to capintobe@gmail.com.
+- Author: **Carlos Pinto (xcoder-es)** — solo software builder, not an academic. Repo is `xcoder-es/governance-layer`. All inquiries to capintobe@gmail.com.
 - All Mermaid diagrams and LaTeX must avoid HTML tags (`<br/>`), custom `classDef` styling, and nested `\text{}` for GitHub compatibility. Use `\mathrm{}` instead.
 - **First review panel** (5 rounds) completed theoretical vetting across all three layers. All accepted fixes executed. Panel signed off. Three residual risks acknowledged (social engineering, hardware supply chain, adaptive proxy gap) as unavoidable physical-world limits.
 - **Second harder review panel** (2026-07-26) evaluated the implementation with grade C-. One genuine bug found (baseline decoupling in benchmarks) and fixed. Full response at `book/responses/response-to-expert-panel-harder-review.md`.
@@ -61,7 +61,7 @@ Ordered execution plan lives in **`ROADMAP.md`** (board-backed, https://github.c
 1. **Track A (now)** — merge #181 (auto-refresh → #75) and #182 (health endpoints → #163).
 2. **Track B** — close Phase C (#58): #73 → #74 → Streamlit Cloud deploy.
 3. **Track C** — Phase D dashboard narrative (#59): #77 → #76 → #78.
-4. **Track D** — rebrand #86 (`governance-layer` → `nomos`) — **DONE** (stacked slices: package rename + docs/brand + tooling). Repo rename on GitHub itself is the only remaining repo-level action.
+4. **Track D** — rebrand #86 (`governance-layer` → `nomos`) before SDK/observability land.
 5. **Track E** — observability (#158): #161 → #162 → #167 → #166 → #164 → #165 → #168.
 6. **Track F** — SDK (#159): #169 → #170 → #171 → #172 → #174 → #173 (PyPI as `nomos-n4s`).
 7. **Track G (parallel)** — Lean proofs: Identity Layer done (epic #69 closed 2026-08-10, stack #200 merged); TEE isolation model (#70) next.
@@ -76,7 +76,7 @@ Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration
 2. In parallel: pick up #73 (cloud-compat), #77 (annotations), #161 (JSON logging) — all P0.
 
 ## Relevant Files
-- `book/chapter-01/01-why-ai-needs-a-nomos.md`: Chapter 1 — problem statement
+- `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
 - `book/chapter-02/02-neural-parliament.md`: Chapter 2 — Neural Parliament architecture (560 lines)
 - `book/chapter-03/03-ulysses-contracts.md`: Chapter 3 — Ulysses Contracts formalism (359 lines)
 - `book/chapter-04/04-identity-layer.md`: Chapter 4 — Identity Layer (573 lines)

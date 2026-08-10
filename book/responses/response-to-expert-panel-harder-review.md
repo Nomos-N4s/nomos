@@ -203,7 +203,7 @@ The `book/` directory contains:
 | Chapter | File | Content |
 |---|---|---|
 | Preface | `00-preface.md` | Motivation and scope |
-| Chapter 1 | `chapter-01/01-why-ai-needs-a-nomos.md` | Problem statement |
+| Chapter 1 | `chapter-01/01-why-ai-needs-a-governance-layer.md` | Problem statement |
 | Chapter 2 | `chapter-02/02-neural-parliament.md` | Neural Parliament (560 lines) |
 | Chapter 3 | `chapter-03/03-ulysses-contracts.md` | Ulysses Contracts (359 lines) |
 | Chapter 4 | `chapter-04/04-identity-layer.md` | Identity Layer (573 lines) |

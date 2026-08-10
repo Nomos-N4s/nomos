@@ -1,4 +1,4 @@
-# Nomos
+# Governance Layer
 
 **A formal framework and reference implementation for self-governing AI.**
 
@@ -6,8 +6,8 @@ The Neural Parliament, Ulysses Contracts, and Identity Layer —
 a complete architecture for constraining autonomous agents through deliberation,
 pre-commitment, and identity coherence.
 
-[![Tests](https://github.com/xcoder-es/nomos/actions/workflows/tests.yml/badge.svg)](https://github.com/xcoder-es/nomos/actions/workflows/tests.yml)
-[![Docs](https://github.com/xcoder-es/nomos/actions/workflows/docs.yml/badge.svg)](https://xcoder-es.github.io/nomos/)
+[![Tests](https://github.com/xcoder-es/governance-layer/actions/workflows/tests.yml/badge.svg)](https://github.com/xcoder-es/governance-layer/actions/workflows/tests.yml)
+[![Docs](https://github.com/xcoder-es/governance-layer/actions/workflows/docs.yml/badge.svg)](https://xcoder-es.github.io/governance-layer/)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 [![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
@@ -23,8 +23,8 @@ critical failure mode shifts from *alignment* (did I learn the right objective?)
 to *governance* (should I be pursuing this objective at all?).
 
 This framework proposes that intelligence requires **two capabilities**: optimising
-decisions and *governing the space of possible decisions*. Nomos (formerly the
-Governance Layer) implements the latter through three interoperable layers.
+decisions and *governing the space of possible decisions*. The Governance Layer
+implements the latter through three interoperable layers.
 
 ---
 
@@ -35,7 +35,7 @@ flowchart TB
     subgraph Agent["Capability Layer"]
         A["Policy / Planner / LLM"]
     end
-    subgraph Nomos["Nomos"]
+    subgraph Governance["Governance Layer"]
         direction TB
         S["Speaker State Machine"]
         NP["Neural Parliament<br/>7 members · weighted voting · vetoes"]
@@ -151,11 +151,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). By submitting a PR you accept the
 ## Citation
 
 ```bibtex
-@software{nomos,
+@software{governance_layer,
   author    = {Carlos Pinto (xcoder-es)},
-  title     = {Nomos: A Formal Framework for Self-Governing AI},
+  title     = {The Governance Layer: A Formal Framework for Self-Governing AI},
   year      = {2026},
-  url       = {https://github.com/xcoder-es/nomos},
+  url       = {https://github.com/xcoder-es/governance-layer},
 }
 ```
 

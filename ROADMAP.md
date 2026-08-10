@@ -34,14 +34,10 @@ Gate: nothing else starts until these merge — they touch `runner.py`,
 ## Track D — Rebrand to Nomos (#86)
 
 8. **#86** rename repo/package `governance-layer` → `nomos` (`src/nomos`,
-   imports, docs, mkdocs `site_url`, pyproject). **DONE** — implemented as a
-   three-PR stacked slice (package+imports, docs/brand, tooling/config) to
-   keep each PR independently green. Remaining: rename the GitHub repo itself
-   `xcoder-es/governance-layer` → `xcoder-es/nomos` (repo-level action, not
-   covered by this file). Note: this ran **after** the SDK/observability
-   additions were already on top of #86's branch, the final slash of the
-   old pip-visible name is gone; nothing publishes under the old name
-   (`nomos-n4s` PyPI release in Track F is unblocked).
+   imports, docs, mkdocs `site_url`, pyproject). Do this **before** the SDK
+   and remaining observability features land, so new PRs are written against
+   the final namespace and nothing publishes under the old name (blocks
+   `nomos-n4s` PyPI release in Track F).
 
 ## Track E — Observability (#158)
 

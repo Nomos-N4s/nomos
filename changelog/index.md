@@ -5,7 +5,7 @@ description: "Weekly release notes for Governance Layer, covering new features, 
 
 # Changelog
 
-Weekly updates to the Governance Layer product. For the full version history, see the repository [CHANGELOG](https://github.com/xcoder-es/nomos/blob/main/CHANGELOG.md).
+Weekly updates to the Governance Layer product. For the full version history, see the repository [CHANGELOG](https://github.com/xcoder-es/governance-layer/blob/main/CHANGELOG.md).
 
 ## Posts
 
