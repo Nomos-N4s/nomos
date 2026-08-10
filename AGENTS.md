@@ -32,10 +32,11 @@
   | CLI | `runner.py` (320 lines) | Full argparse: `--baselines`, `--strategies`, `--steps`, `--seeds`, `--csv` export, `--config` (DSL) |
 | DSL | `dsl/` (5 files, ~550 lines) | Indentation-based parser, validator, models, errors |
   | Ontology | `ontology/` (246 lines) | ABC + MemoryBackend (default) + Neo4jBackend (when .env configured) |
-  | Dashboard | `dashboard/` (550 lines) | Streamlit app with 4 tabs: Formal Model, Parliament Live, Benchmarks, RL Training |
+  | Dashboard | `dashboard/` (550+ lines) | Streamlit app with 5 tabs: Formal Model, Parliament Live, Benchmarks, RL Training, Agent Traces |
 
 - **Neo4j integration**: `Neo4jBackend` in `src/governance/ontology/neo4j_backend.py` is fully wired into the Streamlit dashboard. When `NEO4J_URI` is present in `.env`, the dashboard auto-detects and uses Neo4j Aura for persistent ontology storage and decision logging. Falls back to `MemoryBackend` otherwise. Decision logging records each replayed step's scores, vetoes, and metadata as ontology entities. (Issue #21 — Integrated into dashboard per Option A.)
 
+- **Phase D: AI Agent Validation completed** (epic #145, all of #138–#144 closed 2026-08-01): PydanticAI/OpenRouter adapter, governed-vs-ungoverned harness, 4 LLM-native scenarios, metrics/reports, trace viewer, repro+CI smoke, 12-prediction cross-validation.
 - **Benchmark results** (4 scenarios × 5 strategies × 20 seeds × 1,000 steps = 400 runs, 6.3s wall-clock):
   - GridWorld: 3.0 reward, 0 violations across all strategies — sparsity limits poison encounters
   - TemptationBank: 1998.0 reward, 0 violations — ban_loans contract enacts by step 30, steady 2/step thereafter
@@ -44,32 +45,34 @@
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 
 ### Active
-- **Phase D (#145): AI Agent Validation EPIC** — Planned. Epic + 7 feature issues created (#138–#144). See Roadmap for design decisions (PydanticAI + OpenRouter, StubBackend, response cache).
-- External contributors engaging (RISO525 on #67). Need watchful review on any PRs.
-- **#71** OSF preregistration — content ready, needs manual upload at https://osf.io/
+- **PRs in review**: #181 (auto-refresh, closes #75) and #182 (health endpoints, closes #163) — maintainer review posted change requests as inline comments only. Awaiting author updates. Track A of ROADMAP.md.
+- **Boards+roadmap normalized** (2026-08-10): board statuses now evidence-based (Backlog/Ready/In progress/In review/Done), priorities P0/P1/P2 assigned per ROADMAP.md. 21 stale nomos-website items removed from project board.
+- External contributors engaging (shree24-06 on #75/#163; RISO525 on #67). Watchful review on all PRs.
+- **#71** OSF registration closed as done — AGENTS.md line above should be reconciled against https://osf.io/ status before relying on it.
 
 ### Blocked
 - (none)
 
 ## Roadmap
 
-### Phase D (now): Validation & Consumability
-1. ✅ **DSL Implementation (#131)** — Indentation-based .parliament parser, validator, examples, runner integration.
-   - Parser: Hand-written (~170 lines), zero deps. Supports indentation blocks, comments, list values, optional `config:` sections. [#132 / PR #134 merged]
-   - Examples: 4 `.parliament` files in `examples/` — one per experiment scenario (GridWorld, TemptationBank, DriftLab, DeadlockMaze). [#133 / PR #136 merged]
-   - Runner: `build_from_config()` + `--config` flag threads config-built Speaker through all experiment functions.
-2. 🔶 **AI agent validation (#145 EPIC)** — LLM <-> Parliament integration benchmark. 7 features: #138 (LLM Agent Adapter, PydanticAI + OpenRouter, structured `AgentAction` output), #139 (governed/ungoverned paired harness), #140 (4 LLM-native scenarios), #141 (metrics + reports), #142 (trace viewer), #143 (reproducibility + CI smoke), #144 (12-prediction cross-validation). Core design: PydanticAI single abstraction (`pydantic-ai-slim[openrouter]`), optional dep, `StubBackend` for CI, content-addressed response cache.
-3. Website build (separate repo, Astro)
-4. Language-agnostic API for governance protocol
+Ordered execution plan lives in **`ROADMAP.md`** (board-backed, https://github.com/users/xcoder-es/projects/3). Tracks:
 
-### Phase E (enterprise-readiness)
-- Plugin architecture for committee members
-- TEE integration beyond simulation
-- Expand Lean proofs to full protocol
+1. **Track A (now)** — merge #181 (auto-refresh → #75) and #182 (health endpoints → #163).
+2. **Track B** — close Phase C (#58): #73 → #74 → Streamlit Cloud deploy.
+3. **Track C** — Phase D dashboard narrative (#59): #77 → #76 → #78.
+4. **Track D** — rebrand #86 (`governance-layer` → `nomos`) before SDK/observability land.
+5. **Track E** — observability (#158): #161 → #162 → #167 → #166 → #164 → #165 → #168.
+6. **Track F** — SDK (#159): #169 → #170 → #171 → #172 → #174 → #173 (PyPI as `nomos-n4s`).
+7. **Track G (parallel)** — Lean proofs #69 (Identity) and #70 (TEE).
+8. **Track H (gated)** — commercialization (#160): #175 legal gate → #176/#177; #180 anytime; #179 deferred.
+
+Phase D (validation) status: DSL ✅ (#131), AI Agent Validation ✅ (epic #145, all of #138–#144 closed 2026-08-01), website build in nomos-website repo, language-agnostic protocol = #172 (Track F).
+
+Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration = #176, expanded Lean proofs = Track G.
 
 ## Next Move
-1. Implement #138 (LLM Agent Adapter) — first feature of the #145 epic.
-2. Website build (#D3).
+1. Track A: merge #181/#182 once authors address the inline change requests.
+2. In parallel: pick up #73 (cloud-compat), #77 (annotations), #161 (JSON logging) — all P0.
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
