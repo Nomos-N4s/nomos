@@ -1,11 +1,11 @@
 ---
 title: "Changelog"
-description: "Weekly release notes for Governance Layer, covering new features, updates, and bug fixes across the Parliament, contracts, and experiments."
+description: "Weekly release notes for Nomos, covering new features, updates, and bug fixes across the Parliament, contracts, and experiments."
 ---
 
 # Changelog
 
-Weekly updates to the Governance Layer product. For the full version history, see the repository [CHANGELOG](https://github.com/xcoder-es/governance-layer/blob/main/CHANGELOG.md).
+Weekly updates to the Nomos product. For the full version history, see the repository [CHANGELOG](https://github.com/xcoder-es/nomos/blob/main/CHANGELOG.md).
 
 ## Posts
 

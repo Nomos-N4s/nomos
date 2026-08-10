@@ -1,5 +1,5 @@
 ---
-title: "Architecture diagrams for the Governance Layer stack"
+title: "Architecture diagrams for the Nomos stack"
 description: "Mermaid diagrams showing the three-layer capability, governance, and identity stack, plus the Parliament, contract, and TEE isolation control flows."
 ---
 

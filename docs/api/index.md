@@ -1,6 +1,6 @@
 ---
-title: "API reference for the Governance Layer Python package"
-description: "Reference for the Python governance package: Speaker, Parliament members, identity core, Ulysses contracts, TEE modules, experiments, and benchmark utilities."
+title: "API reference for the Nomos Python package"
+description: "Reference for the Nomos Python package: Speaker, Parliament members, identity core, Ulysses contracts, TEE modules, experiments, and benchmark utilities."
 ---
 
 # API Reference

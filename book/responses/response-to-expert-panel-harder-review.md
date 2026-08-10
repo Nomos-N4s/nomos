@@ -338,4 +338,4 @@ The gap between the theory and the implementation remains. Closing it is the wor
 ---
 
 **Author**  
-*Governance Layer, xcoder-es*
+*Nomos, xcoder-es*

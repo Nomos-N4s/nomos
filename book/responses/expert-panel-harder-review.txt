@@ -11,8 +11,8 @@
                                              
 ---
 
-# Expert Panel Review: `governance-layer`
-## Repository: https://github.com/xcoder-es/governance-layer
+# Expert Panel Review: `nomos`
+## Repository: https://github.com/xcoder-es/nomos
 
 *Review Date: 2026-07-26 | Panel Composition: AI Systems, Political Philosophy, Software Engineering, Experimental Design, Security*
 
