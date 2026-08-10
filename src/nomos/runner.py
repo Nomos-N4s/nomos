@@ -5,15 +5,15 @@ Provides commands for running experiments, verifying formal predictions,
 and exporting results.
 
 Usage:
-    ``python -m src.governance.runner all``
-    ``python -m src.governance.runner all --baselines --steps 1000 --seeds 20``
-    ``python -m src.governance.runner all --baselines --csv results/run.csv``
-    ``python -m src.governance.runner gridworld --baselines --strategies governance,monolithic_rl``
-    ``python -m src.governance.runner gridworld --config examples/grid_world.parliament``
-    ``python -m src.governance.runner prove --all``
-    ``python -m src.governance.runner prove --ch4``
-    ``python -m src.governance.runner agent --seeds 20 --model openrouter:nvidia/nemotron-3-ultra-550b-a55b:free``
-    ``python -m src.governance.runner agent --seeds 1 --steps 30 --stub``
+    ``python -m src.nomos.runner all``
+    ``python -m src.nomos.runner all --baselines --steps 1000 --seeds 20``
+    ``python -m src.nomos.runner all --baselines --csv results/run.csv``
+    ``python -m src.nomos.runner gridworld --baselines --strategies governance,monolithic_rl``
+    ``python -m src.nomos.runner gridworld --config examples/grid_world.parliament``
+    ``python -m src.nomos.runner prove --all``
+    ``python -m src.nomos.runner prove --ch4``
+    ``python -m src.nomos.runner agent --seeds 20 --model openrouter:nvidia/nemotron-3-ultra-550b-a55b:free``
+    ``python -m src.nomos.runner agent --seeds 1 --steps 30 --stub``
 """
 
 import argparse
@@ -53,7 +53,7 @@ def build_from_config(config_path: str) -> SpeakerStateMachine:
         and parameters configured from the file.
 
     Usage:
-        ``python -m src.governance.runner gridworld --config examples/grid_world.parliament``
+        ``python -m src.nomos.runner gridworld --config examples/grid_world.parliament``
     """
     config = parse_file(config_path)
     validate(config)
@@ -83,7 +83,7 @@ def _build_members(config: ParliamentConfig) -> dict[str, ParliamentMember]:
 
 
 def _import_member_class(class_name: str) -> type[ParliamentMember]:
-    mod = importlib.import_module("governance.committee.members")
+    mod = importlib.import_module("nomos.committee.members")
     if hasattr(mod, class_name):
         return getattr(mod, class_name)
     example_name = f"Example{class_name}"

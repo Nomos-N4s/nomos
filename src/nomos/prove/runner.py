@@ -9,16 +9,16 @@ Usage:
 .. code-block:: bash
 
     # Run all 12 predictions
-    python -m src.governance.prove.runner --all
+    python -m src.nomos.prove.runner --all
 
     # Chapter 2 only
-    python -m src.governance.prove.runner --ch2
+    python -m src.nomos.prove.runner --ch2
 
     # Single prediction
-    python -m src.governance.prove.runner --single 5
+    python -m src.nomos.prove.runner --single 5
 
     # Export to JSON
-    python -m src.governance.prove.runner --all --json results/prove_results.json
+    python -m src.nomos.prove.runner --all --json results/prove_results.json
 """
 
 import argparse

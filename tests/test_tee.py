@@ -1,21 +1,21 @@
 import hashlib
 import time
 
-from src.governance.identity.keys import GenesisManifest
-from src.governance.tee.batch import (
+from src.nomos.identity.keys import GenesisManifest
+from src.nomos.tee.batch import (
     BatchProposal,
     BatchVerifier,
     compute_diversity,
     merkle_root,
 )
-from src.governance.tee.constant_time import (
+from src.nomos.tee.constant_time import (
     cmov,
     constant_time_compare,
     fixed_iteration_map,
     oblivious_access,
 )
-from src.governance.tee.enclave import AttestationReport, SimulatedEnclave
-from src.governance.tee.watchdog import (
+from src.nomos.tee.enclave import AttestationReport, SimulatedEnclave
+from src.nomos.tee.watchdog import (
     DeadlockBreaker,
     WatchdogState,
     WatchdogTimer,

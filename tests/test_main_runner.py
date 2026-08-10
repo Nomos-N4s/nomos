@@ -5,8 +5,8 @@ import tempfile
 
 import pytest
 
-from src.governance.experiments.metrics import ExperimentReport
-from src.governance.runner import (
+from src.nomos.experiments.metrics import ExperimentReport
+from src.nomos.runner import (
     _build_baseline_flags,
     _export_csv,
     _resolve_csv_path,

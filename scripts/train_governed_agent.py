@@ -21,7 +21,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.governance.experiments.gym_env import GovernanceGridWorld
+from src.nomos.experiments.gym_env import GovernanceGridWorld
 
 
 def make_env(governed: bool = True, seed: int = 42):

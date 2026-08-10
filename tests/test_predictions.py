@@ -1,4 +1,4 @@
-from src.governance.prove.predictions import (
+from src.nomos.prove.predictions import (
     ALL_PREDICTIONS,
     PredictionResult,
     _build_speaker,
@@ -83,7 +83,7 @@ class TestPred01BudgetEnforcement:
         budget = speaker.members["reward"].budget
         import time
 
-        from src.governance.models import PriorityTag, Proposal
+        from src.nomos.models import PriorityTag, Proposal
         proposals = [
             Proposal(member_id="reward", action=f"a_{i}", tag=PriorityTag.ROUTINE,
                      timestamp=time.time(), metadata={})
@@ -115,7 +115,7 @@ class TestPred04TagCompliance:
         initial = speaker.members["reward"].budget
         import time
 
-        from src.governance.models import PriorityTag, Proposal
+        from src.nomos.models import PriorityTag, Proposal
         proposals = [
             Proposal(member_id="reward", action=f"good_{i}", tag=PriorityTag.ROUTINE,
                      timestamp=time.time(),
@@ -132,7 +132,7 @@ class TestPred05ContractRestricts:
         assert result.passed, result.evidence
 
     def test_contract_only_restricts_specified_indices(self):
-        from src.governance.contracts.contract import UlyssesContract
+        from src.nomos.contracts.contract import UlyssesContract
         c = UlyssesContract("test", {7}, 0.66, 1.0)
         c.enact()
         assert c.applies_to(7) is True
@@ -146,7 +146,7 @@ class TestPred06RevocationHarder:
         assert result.passed, result.evidence
 
     def test_default_thresholds(self):
-        from src.governance.contracts.contract import UlyssesContract
+        from src.nomos.contracts.contract import UlyssesContract
         c = UlyssesContract("t", {7}, 0.66, 1.0)
         assert c.revocation_threshold > c.enactment_threshold
 
@@ -163,11 +163,11 @@ class TestPred08MaskComposition:
         assert result.passed, result.evidence
 
     def test_empty_restrictions(self):
-        from src.governance.contracts.merger import apply_restrictions
+        from src.nomos.contracts.merger import apply_restrictions
         assert apply_restrictions({1, 2, 3}, set()) == {1, 2, 3}
 
     def test_all_restricted(self):
-        from src.governance.contracts.merger import apply_restrictions
+        from src.nomos.contracts.merger import apply_restrictions
         assert apply_restrictions({1, 2}, {1, 2}) == set()
 
 
@@ -183,7 +183,7 @@ class TestPred10Tier4Multisig:
         assert result.passed, result.evidence
 
     def test_tier_rules_structure(self):
-        from src.governance.identity.tiers import TIER_RULES, MutabilityTier
+        from src.nomos.identity.tiers import TIER_RULES, MutabilityTier
         assert TIER_RULES[MutabilityTier.CONSTITUTIONAL].requires_external_multisig is True
         assert TIER_RULES[MutabilityTier.OPERATIONAL].requires_external_multisig is False
         assert TIER_RULES[MutabilityTier.DYNAMIC].requires_external_multisig is False
@@ -201,7 +201,7 @@ class TestPred12DeadlockBreaker:
         assert result.passed, result.evidence
 
     def test_breaker_does_not_fire_before_threshold(self):
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.nomos.tee.watchdog import DeadlockBreaker
         breaker = DeadlockBreaker(threshold_cycles=5)
         for _ in range(4):
             breaker.record_cycle(decision_produced=False)

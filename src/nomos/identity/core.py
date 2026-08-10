@@ -93,7 +93,7 @@ class CoreCommitment:
 
     Commitments are immutable once added (frozen dataclass). They
     can only be modified through the TieredMutability system (see
-    :mod:`governance.identity.tiers`).
+    :mod:`nomos.identity.tiers`).
 
     Real-world example:
         An agent deployed in healthcare might have::

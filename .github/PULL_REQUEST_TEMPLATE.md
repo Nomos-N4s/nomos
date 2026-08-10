@@ -18,8 +18,8 @@ Fixes # (issue)
 - [ ] I have performed a self-review of my code
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally (`python -m pytest tests/ -v`)
-- [ ] I have run the benchmark suite if this affects experiments (`python -m src.governance.runner all --baselines`)
-- [ ] I have run the formal prediction suite if this affects core logic (`python -m src.governance.runner prove --all`)
+- [ ] I have run the benchmark suite if this affects experiments (`python -m src.nomos.runner all --baselines`)
+- [ ] I have run the formal prediction suite if this affects core logic (`python -m src.nomos.runner prove --all`)
 - [ ] I have made corresponding changes to the documentation (book chapters, README, docstrings)
 - [ ] My changes generate no new warnings
 - [ ] I have updated the [CHANGELOG.md](../CHANGELOG.md) if this is a user-facing change

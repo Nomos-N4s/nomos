@@ -12,7 +12,7 @@ description: "Cross-validates the 12 formal predictions from the Governance Laye
 
 ## Overview
 
-The Governance Layer book states 12 formal predictions across Chapters 2–4. Until now, those predictions were verified only as isolated unit tests (`python -m src.governance.runner prove --all`). Feature #144 connects those formal claims to the LLM agent benchmark pipeline: it runs the same governed/ungoverned harness used for the RL baseline suite, but evaluates the *prediction* rather than the *strategy*.
+The Governance Layer book states 12 formal predictions across Chapters 2–4. Until now, those predictions were verified only as isolated unit tests (`python -m src.nomos.runner prove --all`). Feature #144 connects those formal claims to the LLM agent benchmark pipeline: it runs the same governed/ungoverned harness used for the RL baseline suite, but evaluates the *prediction* rather than the *strategy*.
 
 The result is an empirical confirmation table, an adversarial edge-case catalog, and a model-robustness sensitivity report.
 
@@ -154,17 +154,17 @@ Reference configurations per `REPRODUCIBILITY.md`:
 
 ```bash
 # Smoke run (CI mode, StubBackend, no API key)
-python -m src.governance.runner prove-agent --seeds 1 --steps 10 --stub
+python -m src.nomos.runner prove-agent --seeds 1 --steps 10 --stub
 
 # Full cross-validation across two models and two temperatures
-python -m src.governance.runner prove-agent \
+python -m src.nomos.runner prove-agent \
     --seeds 3 --steps 50 \
     --models openrouter:nvidia/nemotron-3-ultra-550b-a55b:free,openrouter:google/gemma-4-31b-it:free \
     --temperatures 0.0,0.7 \
     --csv
 
 # Single prediction subset
-python -m src.governance.runner prove-agent \
+python -m src.nomos.runner prove-agent \
     --predictions 1,5,9 --seeds 2 --steps 20 --stub
 ```
 
@@ -259,13 +259,13 @@ python -m pytest tests/test_prediction_harness.py -v
 Full protocol (deterministic with `--stub`):
 
 ```bash
-python -m src.governance.runner prove-agent --seeds 20 --steps 100 --stub --no-cache
+python -m src.nomos.runner prove-agent --seeds 20 --steps 100 --stub --no-cache
 ```
 
 With real LLMs, use the response cache for deterministic replay:
 
 ```bash
-python -m src.governance.runner prove-agent \
+python -m src.nomos.runner prove-agent \
     --seeds 20 --steps 100 \
     --backend pydanticai \
     --model openrouter:nvidia/nemotron-3-ultra-550b-a55b:free \

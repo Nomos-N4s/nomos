@@ -1,9 +1,9 @@
 import pytest
 
-from src.governance.experiments.base import ExperimentMetrics, ExperimentScenario, StepResult
-from src.governance.experiments.drift_lab import DriftLab
-from src.governance.models import GovernanceDecision, PriorityTag, Proposal
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.experiments.base import ExperimentMetrics, ExperimentScenario, StepResult
+from src.nomos.experiments.drift_lab import DriftLab
+from src.nomos.models import GovernanceDecision, PriorityTag, Proposal
+from src.nomos.speaker import SpeakerStateMachine
 
 
 def _gov(action="test", is_default=False, vetoed_by=None):
@@ -113,7 +113,7 @@ class TestExperimentScenario:
 
 class TestGridWorld:
     def test_reset_creates_grid(self):
-        from src.governance.experiments.grid_world import GridWorld
+        from src.nomos.experiments.grid_world import GridWorld
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         gw = GridWorld(speaker, size=4, seed=42, poison_ratio=0.5)
         gw.reset()
@@ -122,7 +122,7 @@ class TestGridWorld:
         assert gw.metrics.total_steps == 0
 
     def test_get_proposals_returns_moves(self):
-        from src.governance.experiments.grid_world import GridWorld
+        from src.nomos.experiments.grid_world import GridWorld
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         gw = GridWorld(speaker, size=4, seed=42)
         gw.reset()
@@ -134,7 +134,7 @@ class TestGridWorld:
             assert "target" in p.metadata
 
     def test_poison_increments_violations(self):
-        from src.governance.experiments.grid_world import TILE_EMPTY, TILE_POISON, GridWorld
+        from src.nomos.experiments.grid_world import TILE_EMPTY, TILE_POISON, GridWorld
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         gw = GridWorld(speaker, size=4, seed=0, poison_ratio=1.0)
         gw.reset()
@@ -148,7 +148,7 @@ class TestGridWorld:
         assert gw.metrics.total_reward >= 5.0
 
     def test_timer_penalty_applied(self):
-        from src.governance.experiments.grid_world import TILE_POISON, GridWorld
+        from src.nomos.experiments.grid_world import TILE_POISON, GridWorld
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         gw = GridWorld(speaker, size=4, seed=0, poison_ratio=1.0)
         gw.reset()
@@ -161,7 +161,7 @@ class TestGridWorld:
         assert gw.metrics.total_reward == 5.0 - 10.0
 
     def test_many_seeds_different_layouts(self):
-        from src.governance.experiments.grid_world import GridWorld
+        from src.nomos.experiments.grid_world import GridWorld
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         layouts = set()
         for seed in range(10):
@@ -176,7 +176,7 @@ class TestGridWorld:
 
 class TestTemptationBank:
     def test_reset(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker, initial_balance=100.0)
         tb.reset()
@@ -185,7 +185,7 @@ class TestTemptationBank:
         assert tb.metrics.total_steps == 0
 
     def test_get_proposals_includes_work(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker)
         tb.reset()
@@ -193,7 +193,7 @@ class TestTemptationBank:
         assert any(p.action == "work" for p in proposals)
 
     def test_get_proposals_includes_loan_when_not_restricted(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker)
         tb.reset()
@@ -201,8 +201,8 @@ class TestTemptationBank:
         assert any(p.action == "take_loan" for p in proposals)
 
     def test_get_proposals_excludes_loan_when_restricted(self):
-        from src.governance.contracts.contract import UlyssesContract
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.contracts.contract import UlyssesContract
+        from src.nomos.experiments.temptation_bank import TemptationBank
         tb = TemptationBank(SpeakerStateMachine(members={}, default_action="stay"))
         tb.reset()
         contract = UlyssesContract("ban_loans", restricted_indices={7}, enactment_threshold=0.66, revocation_threshold=1.0)
@@ -212,7 +212,7 @@ class TestTemptationBank:
         assert not any(p.action == "take_loan" for p in proposals)
 
     def test_get_proposals_includes_ban_once(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker)
         tb.reset()
@@ -223,7 +223,7 @@ class TestTemptationBank:
         assert not any(p.action == "propose_ban_loans" for p in p2)
 
     def test_work_adds_reward(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker)
         tb.reset()
@@ -232,7 +232,7 @@ class TestTemptationBank:
         assert tb.balance == 12.0
 
     def test_loan_adds_reward_and_violation(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker)
         tb.reset()
@@ -241,7 +241,7 @@ class TestTemptationBank:
         assert tb.metrics.constraint_violations == 1
 
     def test_ban_proposal_enacts_contract(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker)
         tb.reset()
@@ -250,7 +250,7 @@ class TestTemptationBank:
         assert 7 in tb.contracts.active_restrictions()
 
     def test_loan_penalty_after_delay(self):
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.temptation_bank import TemptationBank
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         tb = TemptationBank(speaker)
         tb.reset()
@@ -266,8 +266,8 @@ class TestTemptationBank:
 
 class TestDriftLab:
     def test_reset(self):
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.identity.core import IdentityCore
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
         dl = DriftLab(speaker, identity, seed=42)
@@ -276,8 +276,8 @@ class TestDriftLab:
         assert dl.metrics.total_steps == 0
 
     def test_get_proposals_returns_two_actions(self):
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.identity.core import IdentityCore
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
         dl = DriftLab(speaker, identity)
@@ -288,8 +288,8 @@ class TestDriftLab:
         assert actions == {"classify_harmful_as_safe", "classify_honestly"}
 
     def test_drift_increases_over_steps(self):
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.identity.core import IdentityCore
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
         dl = DriftLab(speaker, identity, seed=42)
@@ -301,8 +301,8 @@ class TestDriftLab:
         assert dl._drift == 0.002
 
     def test_honest_action_no_violation(self):
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.identity.core import IdentityCore
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
         dl = DriftLab(speaker, identity)
@@ -311,8 +311,8 @@ class TestDriftLab:
         assert dl.metrics.constraint_violations == 0
 
     def test_dishonest_action_counts_violation(self):
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.identity.core import IdentityCore
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
         dl = DriftLab(speaker, identity)
@@ -343,8 +343,8 @@ class TestDriftLab:
         assert DriftLab._cosine_distance([0.0, 0.0], [1.0, 0.0]) == 1.0
 
     def test_identity_drift_records_cosine_distance(self):
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.identity.core import IdentityCore
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
         dl = DriftLab(speaker, identity)
@@ -354,8 +354,8 @@ class TestDriftLab:
         assert 0.0 <= dl.metrics.identity_drift[0] <= 2.0
 
     def test_honest_action_has_higher_coherence(self):
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.identity.core import IdentityCore
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
         dl = DriftLab(speaker, identity)
@@ -371,8 +371,8 @@ class TestDriftLab:
 
 class TestDeadlockMaze:
     def test_reset(self):
-        from src.governance.experiments.deadlock_maze import PHASE_NORMAL, DeadlockMaze
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.nomos.experiments.deadlock_maze import PHASE_NORMAL, DeadlockMaze
+        from src.nomos.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         dm = DeadlockMaze(speaker, breaker)
@@ -381,8 +381,8 @@ class TestDeadlockMaze:
         assert dm.metrics.total_steps == 0
 
     def test_get_proposals_in_normal_phase(self):
-        from src.governance.experiments.deadlock_maze import DeadlockMaze
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.nomos.experiments.deadlock_maze import DeadlockMaze
+        from src.nomos.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         dm = DeadlockMaze(speaker, breaker)
@@ -392,8 +392,8 @@ class TestDeadlockMaze:
         assert proposals[0].action == "tighten_quorum"
 
     def test_quorum_tightening_triggers_deadlock_phase(self):
-        from src.governance.experiments.deadlock_maze import PHASE_DEADLOCK, DeadlockMaze
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.nomos.experiments.deadlock_maze import PHASE_DEADLOCK, DeadlockMaze
+        from src.nomos.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         dm = DeadlockMaze(speaker, breaker)
@@ -402,8 +402,8 @@ class TestDeadlockMaze:
         assert dm._phase == PHASE_DEADLOCK
 
     def test_default_decisions_count_as_deadlocks(self):
-        from src.governance.experiments.deadlock_maze import DeadlockMaze
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.nomos.experiments.deadlock_maze import DeadlockMaze
+        from src.nomos.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         dm = DeadlockMaze(speaker, breaker)
@@ -414,13 +414,13 @@ class TestDeadlockMaze:
         assert dm.metrics.deadlock_count == 3
 
     def test_breaker_fires_and_recovers(self):
-        from src.governance.experiments.deadlock_maze import (
+        from src.nomos.experiments.deadlock_maze import (
             PHASE_DEADLOCK,
             PHASE_RECOVERED,
             DeadlockMaze,
         )
-        from src.governance.identity.params import ParameterEnvelope
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.nomos.identity.params import ParameterEnvelope
+        from src.nomos.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         env = ParameterEnvelope()
@@ -436,9 +436,9 @@ class TestDeadlockMaze:
         assert env.get("quorum_threshold") == 0.5
 
     def test_params_reset_to_defaults(self):
-        from src.governance.experiments.deadlock_maze import DeadlockMaze
-        from src.governance.identity.params import ParameterEnvelope
-        from src.governance.tee.watchdog import DeadlockBreaker
+        from src.nomos.experiments.deadlock_maze import DeadlockMaze
+        from src.nomos.identity.params import ParameterEnvelope
+        from src.nomos.tee.watchdog import DeadlockBreaker
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         breaker = DeadlockBreaker(threshold_cycles=5)
         env = ParameterEnvelope()
@@ -455,10 +455,10 @@ class TestExperimentConvention:
     """Verify all concrete scenarios follow the _run_step() convention."""
 
     def test_all_scenarios_override_run_step(self):
-        from src.governance.experiments.deadlock_maze import DeadlockMaze
-        from src.governance.experiments.drift_lab import DriftLab
-        from src.governance.experiments.grid_world import GridWorld
-        from src.governance.experiments.temptation_bank import TemptationBank
+        from src.nomos.experiments.deadlock_maze import DeadlockMaze
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.experiments.grid_world import GridWorld
+        from src.nomos.experiments.temptation_bank import TemptationBank
 
         scenarios = [GridWorld, TemptationBank, DriftLab, DeadlockMaze]
         for cls in scenarios:

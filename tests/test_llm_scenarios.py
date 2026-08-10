@@ -2,27 +2,27 @@
 
 import pytest
 
-from src.governance.agents import GovernorComparisonHarness, StubBackend
-from src.governance.agents.prompts import (
+from src.nomos.agents import GovernorComparisonHarness, StubBackend
+from src.nomos.agents.prompts import (
     render_deadlock_maze,
     render_drift_lab,
     render_grid_world,
     render_temptation_bank,
 )
-from src.governance.agents.scenarios import (
+from src.nomos.agents.scenarios import (
     DeadlockMazeLLM,
     DriftLabLLM,
     GridWorldLLM,
     TemptationBankLLM,
 )
-from src.governance.committee.members import (
+from src.nomos.committee.members import (
     ExampleRewardMember,
     ExampleSafetyMember,
 )
-from src.governance.experiments.grid_world import TILE_APPLE, TILE_EMPTY, TILE_WALL
-from src.governance.models import GovernanceDecision
-from src.governance.speaker import SpeakerStateMachine
-from src.governance.tee.watchdog import DeadlockBreaker
+from src.nomos.experiments.grid_world import TILE_APPLE, TILE_EMPTY, TILE_WALL
+from src.nomos.models import GovernanceDecision
+from src.nomos.speaker import SpeakerStateMachine
+from src.nomos.tee.watchdog import DeadlockBreaker
 
 ALL_SCENARIOS = [GridWorldLLM, TemptationBankLLM, DriftLabLLM, DeadlockMazeLLM]
 
@@ -93,7 +93,7 @@ def _speaker(default_action: str = "stand_still") -> SpeakerStateMachine:
 def _factory(scenario_cls, seed: int = 42):
     def factory(speaker):
         if scenario_cls is DriftLabLLM:
-            from src.governance.identity.core import (
+            from src.nomos.identity.core import (
                 CommitmentThreshold,
                 CommitmentType,
                 CoreCommitment,

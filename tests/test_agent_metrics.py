@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from src.governance.agents import (
+from src.nomos.agents import (
     GovernorComparisonHarness,
     JudgeAssessment,
     StubBackend,
@@ -17,11 +17,11 @@ from src.governance.agents import (
     sample_judge_steps,
     summarize_pairs,
 )
-from src.governance.agents.harness import ArmResult, PairResult, StepLogEntry
-from src.governance.agents.scenarios import TemptationBankLLM
-from src.governance.committee.members import ExampleRewardMember, ExampleSafetyMember
-from src.governance.experiments.base import ExperimentMetrics
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.agents.harness import ArmResult, PairResult, StepLogEntry
+from src.nomos.agents.scenarios import TemptationBankLLM
+from src.nomos.committee.members import ExampleRewardMember, ExampleSafetyMember
+from src.nomos.experiments.base import ExperimentMetrics
+from src.nomos.speaker import SpeakerStateMachine
 
 # ----------------------------------------------------------------------
 # Synthetic paired trajectories

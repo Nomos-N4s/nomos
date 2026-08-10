@@ -1,6 +1,6 @@
 import pytest
 
-from src.governance.committee.members import (
+from src.nomos.committee.members import (
     ExampleCuriosityMember,
     ExampleIntegrityMember,
     ExampleMemoryMember,
@@ -9,7 +9,7 @@ from src.governance.committee.members import (
     ExampleSafetyMember,
     ExampleSocialMember,
 )
-from src.governance.models import PriorityTag, Proposal
+from src.nomos.models import PriorityTag, Proposal
 
 
 class TestMemberRegistration:

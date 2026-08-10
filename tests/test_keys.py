@@ -1,4 +1,4 @@
-from src.governance.identity.keys import GenesisManifest, GenesisMultisig, KeyHolder
+from src.nomos.identity.keys import GenesisManifest, GenesisMultisig, KeyHolder
 
 
 class TestKeyHolder:

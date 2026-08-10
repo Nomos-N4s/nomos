@@ -6,7 +6,7 @@ Parliament decisions, viewing benchmark comparisons, and inspecting RL
 training results.
 
 Usage:
-    ``streamlit run src/governance/dashboard/app.py``
+    ``streamlit run src/nomos/dashboard/app.py``
 
 Auto-detects Neo4j Aura if ``NEO4J_URI`` is present in ``.env``;
 falls back to in-memory storage.
@@ -28,7 +28,7 @@ if _src not in sys.path:
 
 import streamlit as st
 
-from governance.ontology.memory_backend import MemoryBackend
+from nomos.ontology.memory_backend import MemoryBackend
 
 st.set_page_config(
     page_title="Governance Layer — Formal Framework",
@@ -56,7 +56,7 @@ def _neo4j_available() -> bool:
 def get_ontology_backend():
     if _neo4j_available():
         try:
-            from governance.ontology.neo4j_backend import Neo4jBackend
+            from nomos.ontology.neo4j_backend import Neo4jBackend
 
             backend = Neo4jBackend()
             backend.get_identity_vector()
@@ -90,27 +90,27 @@ def main():
     tab_model, tab_parliament, tab_benchmarks, tab_rl, tab_agent = st.tabs(tab_names)
 
     with tab_model:
-        from governance.dashboard.model_tab import render_model_tab
+        from nomos.dashboard.model_tab import render_model_tab
 
         render_model_tab(backend)
 
     with tab_parliament:
-        from governance.dashboard.parliament_tab import render_parliament_tab
+        from nomos.dashboard.parliament_tab import render_parliament_tab
 
         render_parliament_tab(backend)
 
     with tab_benchmarks:
-        from governance.dashboard.benchmarks_tab import render_benchmarks_tab
+        from nomos.dashboard.benchmarks_tab import render_benchmarks_tab
 
         render_benchmarks_tab(backend)
 
     with tab_rl:
-        from governance.dashboard.rl_tab import render_rl_tab
+        from nomos.dashboard.rl_tab import render_rl_tab
 
         render_rl_tab(backend)
 
     with tab_agent:
-        from governance.dashboard.agent_tab import render_agent_tab
+        from nomos.dashboard.agent_tab import render_agent_tab
 
         render_agent_tab(backend)
 

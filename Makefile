@@ -1,7 +1,7 @@
 .PHONY: test build docs docker-build docker-test lint clean reproduce
 
 test:
-	python -m pytest tests/ -v --tb=short --cov=src.governance --cov-report=term-missing
+	python -m pytest tests/ -v --tb=short --cov=src.nomos --cov-report=term-missing
 
 build:
 	pip install -e .

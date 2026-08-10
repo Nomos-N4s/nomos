@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.governance.dashboard.rl_tab import _generate_rl_summary
+from src.nomos.dashboard.rl_tab import _generate_rl_summary
 
 
 def _row(label, mean_reward, std_reward=1.0):

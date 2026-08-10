@@ -1,4 +1,4 @@
-from src.governance.identity.params import (
+from src.nomos.identity.params import (
     DEFAULT_PARAMETER_ENVELOPE,
     BoundedParameter,
     ParameterEnvelope,

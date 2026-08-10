@@ -1,14 +1,14 @@
 import math
 import time
 
-from src.governance.committee.base import ParliamentMember
-from src.governance.committee.members import (
+from src.nomos.committee.base import ParliamentMember
+from src.nomos.committee.members import (
     ExampleIntegrityMember,
     ExampleRewardMember,
     ExampleSafetyMember,
 )
-from src.governance.models import GovernanceDecision, PriorityTag, Proposal
-from src.governance.speaker import SpeakerStateMachine
+from src.nomos.models import GovernanceDecision, PriorityTag, Proposal
+from src.nomos.speaker import SpeakerStateMachine
 
 
 def _proposal(member_id="reward", tag=PriorityTag.ROUTINE, **meta):

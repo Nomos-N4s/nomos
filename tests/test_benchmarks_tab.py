@@ -1,4 +1,4 @@
-from src.governance.dashboard.benchmarks_tab import _generate_benchmark_summary
+from src.nomos.dashboard.benchmarks_tab import _generate_benchmark_summary
 
 
 def _agg(strategy, scenario, mean_reward, mean_violations=0.0):

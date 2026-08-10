@@ -13,7 +13,7 @@ corresponding test here. Run them with:
 
 .. code-block:: bash
 
-    python -m src.governance.prove.runner --all
+    python -m src.nomos.prove.runner --all
 
 .. list-table:: Prediction Registry
    :widths: auto

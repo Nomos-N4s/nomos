@@ -83,7 +83,7 @@ class UlyssesContract:
             — unanimity). Revocation is intentionally harder than enactment.
         enforcement_mode: One of ``"procedural_inertia"``,
             ``"distributed_monitors"``, or ``"timelock"`` (see
-            :mod:`governance.contracts.enforcement`).
+            :mod:`nomos.contracts.enforcement`).
         state: Current lifecycle state (see :class:`ContractState`).
         timelock_blocks: Number of governance cycles before an enacted
             contract becomes active (for timelock enforcement mode).

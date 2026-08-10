@@ -2,9 +2,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.governance.dashboard import model_tab
-from src.governance.dashboard.model_tab import _generate_model_summary
-from src.governance.identity.params import DEFAULT_PARAMETER_ENVELOPE
+from src.nomos.dashboard import model_tab
+from src.nomos.dashboard.model_tab import _generate_model_summary
+from src.nomos.identity.params import DEFAULT_PARAMETER_ENVELOPE
 
 
 class _StubBackend:

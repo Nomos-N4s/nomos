@@ -12,7 +12,7 @@ all four experiment scenarios and five strategies.
 ## Running Benchmarks
 
 ```bash
-python -m src.governance.runner all --baselines --steps 1000 --seeds 20
+python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 ```
 
 ## Interpreting Results

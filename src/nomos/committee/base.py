@@ -36,7 +36,7 @@ class ParliamentMember(ABC):
 
     Subclass this to create a member with a specific governance concern.
     The framework ships with seven concrete implementations (see
-    :mod:`governance.committee.members`).
+    :mod:`nomos.committee.members`).
 
     Attributes:
         member_id: Unique identifier (e.g. ``"safety"``, ``"curiosity"``).

@@ -8,7 +8,7 @@ content-addressed response cache, and writes the full artifact set
 
 The pipeline is the single entry point shared by three consumers:
 
-- the CLI (``python -m src.governance.runner agent``)
+- the CLI (``python -m src.nomos.runner agent``)
 - the ``benchmark-agent-smoke`` CI job
 - the test suite (smoke-pipeline tests)
 

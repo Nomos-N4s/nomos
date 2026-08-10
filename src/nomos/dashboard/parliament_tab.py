@@ -173,7 +173,7 @@ def render_parliament_tab(backend: OntologyBackend | None = None):
 
         st.subheader("Or: Run a quick local demo")
 
-        from governance.experiments.gym_env import GovernanceGridWorld
+        from nomos.experiments.gym_env import GovernanceGridWorld
 
         env = GovernanceGridWorld(size=6, seed=42)
         obs, _ = env.reset()

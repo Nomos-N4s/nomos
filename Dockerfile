@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -e .
 
 RUN python -m pytest tests/ -x -q
 
-ENTRYPOINT ["python", "-m", "src.governance.runner"]
+ENTRYPOINT ["python", "-m", "src.nomos.runner"]
 
 FROM base AS with-rl
 COPY requirements-rl.txt .

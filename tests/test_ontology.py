@@ -1,6 +1,6 @@
 import pytest
 
-from src.governance.identity.ontology import ActionBinding, Ontology, compute_hash
+from src.nomos.identity.ontology import ActionBinding, Ontology, compute_hash
 
 
 class TestComputeHash:
