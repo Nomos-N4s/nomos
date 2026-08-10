@@ -228,7 +228,7 @@ sequenceDiagram
 
 ## Extending the Registry
 
-Adding a new prediction or re-mapping an existing one requires no changes to the runner logic. Edit `src/governance/agents/prediction_harness.py` and add a `PredictionConfig` to `_register_all_predictions()`:
+Adding a new prediction or re-mapping an existing one requires no changes to the runner logic. Edit `src/nomos/agents/prediction_harness.py` and add a `PredictionConfig` to `_register_all_predictions()`:
 
 ```python
 _register_prediction(

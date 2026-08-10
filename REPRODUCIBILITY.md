@@ -31,7 +31,7 @@ cd governance-layer
 pip install -e .
 
 # 2. Run the full benchmark suite
-python -m src.governance.runner all --baselines --steps 1000 --seeds 20
+python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 ```
 
 ### Expected Runtime
@@ -81,7 +81,7 @@ table below. Mean rewards should match within ±0.1.
 
 ```bash
 # Verify all 12 formal predictions pass
-python -m src.governance.runner prove --all
+python -m src.nomos.runner prove --all
 ```
 
 Expected output: `12/12 PASS`
@@ -97,7 +97,7 @@ response cache**.
 ### Quick smoke run (CI, no API key)
 
 ```bash
-python -m src.governance.runner agent --seeds 1 --steps 30 --backend stub
+python -m src.nomos.runner agent --seeds 1 --steps 30 --backend stub
 ```
 
 The stub backend is deterministic and exercises the identical pipeline
@@ -105,13 +105,13 @@ The stub backend is deterministic and exercises the identical pipeline
 plus the artifact contract check:
 
 ```bash
-python -m src.governance.agents.schema check results/agent
+python -m src.nomos.agents.schema check results/agent
 ```
 
 ### Full protocol run
 
 ```bash
-python -m src.governance.runner agent --seeds 20 --steps 100 \
+python -m src.nomos.runner agent --seeds 20 --steps 100 \
     --backend pydanticai \
     --model openrouter:nvidia/nemotron-3-ultra-550b-a55b:free \
     --temperature 0.0
@@ -156,10 +156,10 @@ Verification steps:
 
 ```bash
 # 1. Re-run with the same cache; expect "Cache: {'hits': N, 'misses': 0}"
-python -m src.governance.runner agent --seeds 20 --steps 100 --backend pydanticai
+python -m src.nomos.runner agent --seeds 20 --steps 100 --backend pydanticai
 
 # 2. Check the committed manifest against the cache directory
-python -m src.governance.agents.schema check results/agent
+python -m src.nomos.agents.schema check results/agent
 
 # 3. Manual digest comparison (Linux/macOS)
 (cd results/agent && sha256sum -c cache_manifest.json 2>/dev/null || true)
@@ -173,7 +173,7 @@ git-ignored.
 ### Artifact contract
 
 The committed reference for the agent artifacts is the schema contract
-in `src/governance/agents/schema.py`. CI compares new runs against
+in `src/nomos/agents/schema.py`. CI compares new runs against
 this contract (keys, types, non-emptiness) — **never values**, which
 change when model versions change. Schema stability is the CI
 contract; a run may also be rejected on a digest mismatch against the

@@ -75,15 +75,15 @@ Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual r
 
 ```bash
 pip install -e .
-python -m src.governance.runner speaker
-python -m src.governance.runner prove --all
-python -m src.governance.runner all --baselines --steps 1000 --seeds 5
+python -m src.nomos.runner speaker
+python -m src.nomos.runner prove --all
+python -m src.nomos.runner all --baselines --steps 1000 --seeds 5
 ```
 
 ## Dashboard
 
 ```bash
-streamlit run src/governance/dashboard/app.py
+streamlit run src/nomos/dashboard/app.py
 ```
 
 Four tabs: Formal Model reference, step-by-step Parliament replay, benchmark
@@ -110,14 +110,14 @@ Every formal claim in the book chapters has a corresponding executable test:
 | 11 | Ch4 §3.1 | Genesis 3-of-5: 2 sigs insufficient, 3 sigs authorises | ✓ |
 | 12 | Ch4 §3.6 | Deadlock breaker fires after N defaults, resets | ✓ |
 
-Run them yourself: `python -m src.governance.runner prove --all`
+Run them yourself: `python -m src.nomos.runner prove --all`
 
 ---
 
 ## Project Structure
 
 ```
-src/governance/
+src/nomos/
 ├── speaker.py          # State machine orchestrating the full governance cycle
 ├── models.py           # PriorityTag, Action, Proposal, GovernanceDecision
 ├── runner.py           # CLI: benchmarks, prove, speaker, RL adversary

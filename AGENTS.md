@@ -16,7 +16,7 @@
 - **Chapters 1-4** — All written. Ch1 (motivation), Ch2 (Neural Parliament, 560 lines), Ch3 (Ulysses Contracts, 359 lines), Ch4 (Identity Layer, 573 lines). Ch4 includes: formal tuple $\mathcal{I} = \langle \mathcal{O}, \mathcal{C}_{\text{core}}, \mathcal{K}, \mathcal{P} \rangle$, four-tier mutability, genesis bootstrapping with 3-of-5 multisig, ontology extension with sandboxed isolation buffer (empirical property measurement via independent monitors), runtime integrity hashes for action bindings, liveness exception for hardware deadlock breaker, constitutional contracts.
 - **Appendix A** — TEE threat model, SGX/SEV/TrustZone, hardware watchdog, constant-time execution, Merkle-tree batch verification, single-enclave architecture with multi-enclave consensus addendum, deadlock breaker cold-boot recovery (§A.9.5).
 - **Response to review panel** — `book/responses/response-to-review-panel.md`. All 5 phases documented. Phase 5.2 concedes all three Chapter 4 Identity Layer attacks: isolation buffer sandbox (§5.2 fix), runtime integrity hashes (§2.1/§6.1 fix), deadlock breaker (§A.9.5 fix).
-- **MVP code** — `src/governance/speaker.py`. Reference implementation with deterministic falsification counter. Runs successfully.
+- **MVP code** — `src/nomos/speaker.py`. Reference implementation with deterministic falsification counter. Runs successfully.
 - **Full modular reference implementation** — 50+ Python files across 10 subpackages (~2800 lines total):
 
   | Module | Files | Key Contents |
@@ -34,7 +34,7 @@
   | Ontology | `ontology/` (246 lines) | ABC + MemoryBackend (default) + Neo4jBackend (when .env configured) |
   | Dashboard | `dashboard/` (550+ lines) | Streamlit app with 5 tabs: Formal Model, Parliament Live, Benchmarks, RL Training, Agent Traces |
 
-- **Neo4j integration**: `Neo4jBackend` in `src/governance/ontology/neo4j_backend.py` is fully wired into the Streamlit dashboard. When `NEO4J_URI` is present in `.env`, the dashboard auto-detects and uses Neo4j Aura for persistent ontology storage and decision logging. Falls back to `MemoryBackend` otherwise. Decision logging records each replayed step's scores, vetoes, and metadata as ontology entities. (Issue #21 — Integrated into dashboard per Option A.)
+- **Neo4j integration**: `Neo4jBackend` in `src/nomos/ontology/neo4j_backend.py` is fully wired into the Streamlit dashboard. When `NEO4J_URI` is present in `.env`, the dashboard auto-detects and uses Neo4j Aura for persistent ontology storage and decision logging. Falls back to `MemoryBackend` otherwise. Decision logging records each replayed step's scores, vetoes, and metadata as ontology entities. (Issue #21 — Integrated into dashboard per Option A.)
 
 - **Phase D: AI Agent Validation completed** (epic #145, all of #138–#144 closed 2026-08-01): PydanticAI/OpenRouter adapter, governed-vs-ungoverned harness, 4 LLM-native scenarios, metrics/reports, trace viewer, repro+CI smoke, 12-prediction cross-validation.
 - **Benchmark results** (4 scenarios × 5 strategies × 20 seeds × 1,000 steps = 400 runs, 6.3s wall-clock):
@@ -90,17 +90,17 @@ Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration
 - `gov-budget-proof/GovBudgetProof/IdentityBuffer.lean`: sandboxed isolation buffer protocol (Ch4 §5.2)
 - `gov-budget-proof/GovBudgetProof/IdentityHashes.lean`: runtime integrity hash chains, tamper evidence (Ch4 §2.1/§6.1)
 - `gov-budget-proof/GovBudgetProof/IdentityCoherence.lean`: coherence threshold guard (Ch4 §6.1)
-- `src/governance/speaker.py`: Speaker state machine reference implementation
-- `src/governance/models.py`: Core data types
-- `src/governance/committee/members.py`: 7 Parliament members
-- `src/governance/identity/`: Ontology, commitments, tiers, keys, params, extension sandbox
-- `src/governance/contracts/`: Contract lifecycle, three enforcement modes, mask merger
-- `src/governance/tee/`: Simulated enclave, Merkle batch verification, watchdog, deadlock breaker
-- `src/governance/experiments/`: Grid world, temptation bank, identity drift, deadlock maze
-- `src/governance/benchmarks/baselines.py`: 4 comparison strategies (MonolithicRL, Random, StaticMasking, VetoOnly)
-- `src/governance/benchmarks/analysis.py`: Statistical pipeline — bootstrap CIs, Cohen's d, reward-hacking detection
-- `src/governance/benchmarks/figures.py`: Publication-ready plots — reward curves, violation rates, deadlock frequency, Pareto frontier
-- `src/governance/runner.py`: CLI entry point (`python -m src.governance.runner all --baselines --steps 1000 --seeds 20`)
-- `src/governance/dsl/`: Parser (`parser.py`), validator (`validator.py`), models (`models.py`), errors (`errors.py`)
+- `src/nomos/speaker.py`: Speaker state machine reference implementation
+- `src/nomos/models.py`: Core data types
+- `src/nomos/committee/members.py`: 7 Parliament members
+- `src/nomos/identity/`: Ontology, commitments, tiers, keys, params, extension sandbox
+- `src/nomos/contracts/`: Contract lifecycle, three enforcement modes, mask merger
+- `src/nomos/tee/`: Simulated enclave, Merkle batch verification, watchdog, deadlock breaker
+- `src/nomos/experiments/`: Grid world, temptation bank, identity drift, deadlock maze
+- `src/nomos/benchmarks/baselines.py`: 4 comparison strategies (MonolithicRL, Random, StaticMasking, VetoOnly)
+- `src/nomos/benchmarks/analysis.py`: Statistical pipeline — bootstrap CIs, Cohen's d, reward-hacking detection
+- `src/nomos/benchmarks/figures.py`: Publication-ready plots — reward curves, violation rates, deadlock frequency, Pareto frontier
+- `src/nomos/runner.py`: CLI entry point (`python -m src.nomos.runner all --baselines --steps 1000 --seeds 20`)
+- `src/nomos/dsl/`: Parser (`parser.py`), validator (`validator.py`), models (`models.py`), errors (`errors.py`)
 - `.gitignore`: excludes `*brainstorm.txt` and `reviews.txt`
 - `examples/`: Example `.parliament` config files for all four experiment scenarios

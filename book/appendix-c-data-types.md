@@ -11,7 +11,7 @@ description: "Type signatures, field semantics, and invariants for the core data
 
 ## C.1 `PriorityTag`
 
-File: `src/governance/models.py:16`
+File: `src/nomos/models.py:16`
 
 Defines the five-tier priority hierarchy used for agenda sorting.
 
@@ -29,7 +29,7 @@ Defines the five-tier priority hierarchy used for agenda sorting.
 
 ## C.2 `Action`
 
-File: `src/governance/models.py:41`
+File: `src/nomos/models.py:41`
 
 ```python
 @dataclass(frozen=True)
@@ -51,7 +51,7 @@ class Action:
 
 ## C.3 `Proposal`
 
-File: `src/governance/models.py:55`
+File: `src/nomos/models.py:55`
 
 ```python
 @dataclass
@@ -84,7 +84,7 @@ class Proposal:
 
 ## C.4 `GovernanceDecision`
 
-File: `src/governance/models.py:72`
+File: `src/nomos/models.py:72`
 
 ```python
 @dataclass
@@ -116,7 +116,7 @@ def is_default(self) -> bool:
 
 ## C.5 `GovernanceContext`
 
-File: `src/governance/models.py:91`
+File: `src/nomos/models.py:91`
 
 ```python
 @dataclass
@@ -140,7 +140,7 @@ class GovernanceContext:
 
 ## C.6 `UlyssesContract`
 
-File: `src/governance/contracts/contract.py`
+File: `src/nomos/contracts/contract.py`
 
 ```python
 @dataclass
@@ -166,7 +166,7 @@ class UlyssesContract:
 
 ## C.7 `IdentityClaim`
 
-File: `src/governance/identity/core.py`
+File: `src/nomos/identity/core.py`
 
 ```python
 @dataclass
@@ -190,7 +190,7 @@ class CoreCommitment:
 
 ## C.8 `MutabilityTier`
 
-File: `src/governance/identity/tiers.py`
+File: `src/nomos/identity/tiers.py`
 
 | Tier | Name | Modifiable By | Examples |
 |------|------|--------------|----------|
@@ -203,7 +203,7 @@ File: `src/governance/identity/tiers.py`
 
 ## C.9 `ExperimentReport`
 
-File: `src/governance/experiments/metrics.py:12`
+File: `src/nomos/experiments/metrics.py:12`
 
 ```python
 @dataclass
