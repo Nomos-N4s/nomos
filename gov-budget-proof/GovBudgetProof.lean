@@ -3,3 +3,4 @@ import GovBudgetProof.BudgetEnforcement
 import GovBudgetProof.VoteAndFalsification
 import GovBudgetProof.IdentityTiers
 import GovBudgetProof.IdentityGenesis
+import GovBudgetProof.IdentityBuffer
