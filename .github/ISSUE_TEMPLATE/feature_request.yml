@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for contributing ideas to the Governance Layer. Please describe the feature and its motivation clearly.
+        Thanks for contributing ideas to Nomos. Please describe the feature and its motivation clearly.
 
   - type: checkboxes
     id: prerequisites

@@ -29,7 +29,7 @@ from ..speaker import SpeakerStateMachine
 from .baselines import MonolithicRL, RandomBaseline, StaticMasking, VetoOnly
 
 
-def build_governance_layer(config_path: str | None = None) -> SpeakerStateMachine:
+def build_governed_pipeline(config_path: str | None = None) -> SpeakerStateMachine:
     """Construct a Speaker with the four standard committee members.
 
     Args:
@@ -83,7 +83,7 @@ def _run_scenario(
     Returns:
         An :class:`~..experiments.metrics.ExperimentReport`.
     """
-    speaker = build_governance_layer(config_path)
+    speaker = build_governed_pipeline(config_path)
 
     if scenario_class.__name__ == "DriftLab":
         from ..identity.core import (

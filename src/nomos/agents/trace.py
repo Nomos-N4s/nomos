@@ -270,7 +270,7 @@ footer{color:#9ca3af;font-size:.75rem;margin-top:32px;}
   <div class="panel" id="replay-ung"></div>
 </div>
 
-<footer>Governance Layer — self-contained trace viewer (schema v__SCHEMA__)</footer>
+<footer>Nomos — self-contained trace viewer (schema v__SCHEMA__)</footer>
 <script id="trace-data" type="application/json">__DATA__</script>
 <script>
 "use strict";
