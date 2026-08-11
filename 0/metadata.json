@@ -1,0 +1,65 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KZRHTNQ9NW64P8HTCJ14D4K4",
+  "session_id": "ses_014b0b466ffebdk7LnpCZQJse3",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-11T13:57:48.5219956Z",
+  "branch": "docs/github-page-polish",
+  "checkpoints_count": 4,
+  "save_step_count": 3,
+  "files_touched": [
+    "AGENTS.md",
+    "src/nomos/agents/trace.py",
+    "src/nomos/dashboard/app.py",
+    "src/nomos/runner.py"
+  ],
+  "agent": "OpenCode",
+  "model": "deepseek-v4-flash-free",
+  "turn_id": "56d3a6678755",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 3400509,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 54342144,
+    "output_tokens": 503735,
+    "api_call_count": 566
+  },
+  "session_metrics": {
+    "turn_count": 14
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-11T13:57:48.0906256Z",
+    "agent_lines": 0,
+    "agent_removed": 6,
+    "human_added": 18,
+    "human_modified": 1258,
+    "human_removed": 0,
+    "total_committed": 1276,
+    "total_lines_changed": 1300,
+    "agent_percentage": 0.46153846153846156,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 349,
+      "agent_lines_removed": 0
+    }
+  ]
+}
