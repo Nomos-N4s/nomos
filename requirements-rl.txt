@@ -1,4 +1,4 @@
-# RL pinned dependencies for the Governance Layer (optional)
+# RL pinned dependencies for Nomos (optional)
 # Install with: pip install -r requirements-rl.txt
 
 etils==1.14.0
