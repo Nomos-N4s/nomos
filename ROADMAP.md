@@ -22,16 +22,11 @@ Priorities: **P0** = in flight or immediate next · **P1** = next track ·
 5. **Rebrand complete (2026-08-11).** #86 and slices #202/#203/#204 closed;
    residue sweep in `8ef6e7f`.
 
-## Track A — Land the open PRs (now)
+## Track A — Land the open PRs — DONE (2026-08-11)
 
-1. **#181** auto-refresh toggle → PR #181 in review (maintainer change requests
-   outstanding) → closes #75.
-2. **#182** `/healthz`, `/readyz`, `/metrics` → PR #182 in review (change
-   requests outstanding) → closes #163 (Observability F3). **#182 is also the
-   probe prerequisite for Track J (ACA health checks).**
-
-Gate: nothing else starts until these merge — they touch `runner.py`,
-`pyproject.toml`, and `CHANGELOG.md` (merge-conflict risk).
+1. **#181** auto-refresh toggle — MERGED 15:05Z (`77f355b`) → closes #75.
+2. **#182** `/healthz`, `/readyz`, `/metrics` — MERGED 15:44Z (`a4126a2`) →
+   closes #163 (Observability F3) and unlocks the Track J probe prerequisite.
 
 ## Track B — Close Phase C (#58)
 
@@ -55,11 +50,11 @@ checkbox-by-checkbox audit + residue sweep (`8ef6e7f`).
 
 ## Track E — Observability (#158) — deploy-first order
 
-8. **#161** structured JSON logging (F1) — **P0, starts now**, also consumed
-   by Track J (Log Analytics) and Track F.
-9. *(Track J deployment happens here — #161 + #182 gate it.)*
-10. **#164** tamper-evident hash-chained audit log (F4) — P1, moved earlier
-    (core value, no deployment needed).
+8. **#161** structured JSON logging (F1) — **DONE** (merged 2026-08-11), also
+   consumed by Track J (Log Analytics) and Track F.
+9. *(Track J deployment happens here — gate #161+#182 is now OPEN.)*
+10. **#164** tamper-evident hash-chained audit log (F4) — **NEXT** (P1, moved
+    earlier: core value, no deployment needed).
 11. **#165** SLOs + alerting (F5) — after first deployment; consumes the
     E2 verification run's metrics handoff (Track J-F3, #222).
 12. **#162** OpenTelemetry instrumentation (F2) && **#167** observability CI
@@ -103,20 +98,29 @@ isolation model (#70).
 24. **#180** funding readiness (F6) — anytime (OSF traction, metrics).
 25. **#179** Nomos Cloud (F5) — **DEFERRED** until funding/legal signal.
 
-## Track I — Release & delivery (#213) — P0
+## Track I — Release & delivery (#213) — DONE (2026-08-11)
 
 Every merge yields a versioned, runnable artifact; Track J consumes GHCR
 images instead of building in-cluster.
 
-26. **#217** CI: publish multi-arch Docker image to GHCR on tag push (F1).
-27. **#218** adopt release-please for semver/tag/changelog automation (F2).
-28. **#219** code coverage gate in CI (F3) — 30-day report-only, then enforced.
+26. **#217** CI: publish multi-arch Docker image to GHCR on tag push (F1) —
+    MERGED; trigger reworked to `release: [published]` + `workflow_dispatch`
+    (release-please creates tags via the REST API, which fires no `push`
+    event — the original trigger never ran, zero images until 2026-08-11).
+    v0.10.0 backfilled via dispatch; artifacts live at
+    `ghcr.io/nomos-n4s/nomos` (`0.10.0`, `latest`, `with-rl`).
+27. **#218** adopt release-please for semver/tag/changelog automation (F2) —
+    MERGED; v0.10.0 released, release PRs auto-created.
+28. **#219** code coverage gate in CI (F3) — MERGED via PR #237 (gate at 90%,
+    report-only until 2026-09-11).
     → Epic #213 Done.
 
 ## Track J — One-cloud deployment: Azure-first (#214) — P1
 
-Gate: **#161 + #182 merged** (probes + structured logs). Runs parallel with
-Track B (Streamlit Cloud = lite path). Reference IaC for Track K forks.
+Gate: **#161 + #182 merged** (probes + structured logs) — both landed
+2026-08-11, gate is **OPEN**. GHCR artifacts exist (v0.10.0 backfilled).
+Runs parallel with Track B (Streamlit Cloud = lite path). Reference IaC for
+Track K forks. Starts after #164.
 
 29. **#220** ADR: modular-monolith topology + atomic governance gate (F1).
 30. **#221** Pulumi IaC: Azure Container Apps (F2) — consumes GHCR artifacts,
@@ -149,8 +153,7 @@ this epic's sign-off (decision #4).
 
 ## Next move
 
-1. Track A: merge #181 and #182 after the authors address the inline change
-   requests — #182 unlocks Track J.
-2. In parallel, P0 batch: #161 (JSON logging), #217 (GHCR), #218
-   (release-please), #219 (coverage gate), plus lowest-hanging Track B/C items
-   (#73, #77).
+1. **#164** tamper-evident audit log (the only pre-deployment Track E item).
+2. Track J: **#220** ADR → #221 Pulumi ACA → #222 verification (gate open).
+3. Track B in parallel (lite path): #73 → #74 Streamlit Cloud deploy.
+4. Rest of Track E after the first deployment: #165 → #162/#167 → #166 → #168.

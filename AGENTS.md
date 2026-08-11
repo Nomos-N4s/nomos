@@ -50,7 +50,8 @@
 - **Lean 4 formalization of the Identity Layer completed** (epic #69 closed 2026-08-10): five proof modules in `gov-budget-proof/` — IdentityTiers (Ch4 §3), IdentityGenesis (Ch4 §4), IdentityBuffer (Ch4 §5.2), IdentityHashes (Ch4 §2.1/§6.1), IdentityCoherence (Ch4 §6.1). Merged to main via stacked PRs #195–#199 (stack #200, main `f56efa4`); all CI green with `lean-build` enforced on every PR. Inventory page: `book/formal-verification-lean.md`.
 
 ### Active
-- **PRs in review**: #181 (auto-refresh, closes #75) and #182 (health endpoints, closes #163) — maintainer review posted change requests as inline comments only. Awaiting author updates. Track A of ROADMAP.md.
+- **Track A done (2026-08-11)**: #181 (auto-refresh → #75) and #182 (health endpoints → #163) both merged; Track J probe prerequisite unlocked.
+- **Track I done (2026-08-11)**: #217/#218/#219 all merged; v0.10.0 released via release-please. GHCR publish now triggers on `release: [published]` + `workflow_dispatch` (API-created tags fire no `push` event — the original trigger never ran); v0.10.0 image backfilled (`ghcr.io/nomos-n4s/nomos:0.10.0`, `:latest`, `:with-rl`).
 - **Boards+roadmap normalized** (2026-08-10): board statuses now evidence-based (Backlog/Ready/In progress/In review/Done), priorities P0/P1/P2 assigned per ROADMAP.md. 21 stale nomos-website items removed from project board.
 - External contributors engaging (shree24-06 on #75/#163; RISO525 on #67). Watchful review on all PRs.
 - **#71** OSF registration closed as done — AGENTS.md line above should be reconciled against https://osf.io/ status before relying on it.
@@ -62,16 +63,16 @@
 
 Ordered execution plan lives in **`ROADMAP.md`** (board-backed, https://github.com/users/xcoder-es/projects/3). Execution-plan decisions 2026-08-11: Azure-first deployment (one cloud green before multi-cloud), release-please automation, deploy-first Track E reorder (#161 → first deployment → #164 → #165 → #162/#167 → #166/#168), native components evidence-gated. Tracks:
 
-1. **Track A (now)** — merge #181 (auto-refresh → #75) and #182 (health endpoints → #163 + Track J probe prerequisite).
+1. **Track A — DONE (2026-08-11)** — #181 (auto-refresh → #75) and #182 (health endpoints → #163 + Track J probe prerequisite) merged.
 2. **Track B** — close Phase C (#58): #73 → #74 → Streamlit Cloud deploy (lite path, parallel with Track J).
 3. **Track C** — Phase D dashboard narrative (#59): #77 → #76 → #78.
 4. **Track D — DONE** — rebrand #86 closed 2026-08-11 (with slices #202/#203/#204 + residue sweep `8ef6e7f`).
-5. **Track E** — observability (#158), deploy-first order: #161 (P0, now) → #164 → #165 → #162/#167 → #166 → #168.
+5. **Track E** — observability (#158), deploy-first order: #161 (DONE) → #164 (tamper-evident audit, next) → Track J deployment → #165 → #162/#167 → #166 → #168.
 6. **Track F** — SDK (#159): #169 → #170 → #171 → #172 → #174 → #173 (PyPI as `nomos-n4s`); #172 gates Track L.
 7. **Track G (parallel)** — Lean proofs: Identity Layer done (epic #69 closed 2026-08-10, stack #200 merged); TEE isolation model (#70) next.
 8. **Track H (gated)** — commercialization (#160): #175 legal gate → #176/#177; #180 anytime; #179 deferred.
-9. **Track I (P0)** — release & delivery (#213): #217 GHCR publish → #218 release-please → #219 coverage gate.
-10. **Track J (P1, gate #161+#182)** — one-cloud Azure (#214): #220 ADR → #221 Pulumi ACA IaC → #222 verification run.
+9. **Track I — DONE (2026-08-11)** — release & delivery (#213): #217 GHCR publish (trigger fixed: `release: [published]` + dispatch; v0.10.0 image backfilled) → #218 release-please (v0.10.0 released) → #219 coverage gate (PR #237, 90%).
+10. **Track J (P1, gate #161+#182 now OPEN)** — one-cloud Azure (#214): #220 ADR → #221 Pulumi ACA IaC → #222 verification run. GHCR artifacts available (v0.10.0).
 11. **Track K (P2, gate J green)** — multi-cloud (#215): #223 AWS → #224 GCP → #225 parity matrix.
 12. **Track L (P2, gates #172 + #226 evidence)** — native & performance (#216): #226 perf budget → #227 Rust feasibility → #228 Go feasibility → #229 atomicity ADR.
 
@@ -80,8 +81,8 @@ Phase D (validation) status: DSL ✅ (#131), AI Agent Validation ✅ (epic #145,
 Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration = #176, expanded Lean proofs = Track G.
 
 ## Next Move
-1. Track A: merge #181/#182 once authors address the inline change requests (#182 unlocks Track J probes).
-2. In parallel, P0 batch: #161 (JSON logging), #217 (GHCR publish), #218 (release-please), #219 (coverage gate), plus #73/#77.
+1. Track E-F4: **#164** tamper-evident audit log (the only pre-deployment E item).
+2. Track J: #220 ADR → #221 Pulumi ACA → #222 verification (gate open; parallel Track B lite path #73 → #74).
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
