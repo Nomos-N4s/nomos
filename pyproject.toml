@@ -52,6 +52,7 @@ observability = [
 
 [tool.coverage.run]
 source = ["src/nomos"]
+relative_files = true
 omit = [
     "src/nomos/experiments/*",
     "src/nomos/benchmarks/*",
