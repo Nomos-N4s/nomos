@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.10.1](https://github.com/Nomos-N4s/nomos/compare/v0.10.0...v0.10.1) (2026-08-11)
+
+
+### Documentation
+
+* add CodeRabbit review badge to README ([87b7683](https://github.com/Nomos-N4s/nomos/commit/87b7683af607cf037e654b6de7636375fc00012b))
+* update roadmap state (Tracks A and I done, GHCR gap resolved) ([0574155](https://github.com/Nomos-N4s/nomos/commit/0574155b9e836db402458dcee4d10373a408b9ea))
+
 ## [0.10.0](https://github.com/Nomos-N4s/nomos/compare/v0.9.0...v0.10.0) (2026-08-11)
 
 
