@@ -1,0 +1,71 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KZRAYTA1GWQSBA2PCNYT6NK1",
+  "session_id": "ses_014b0b466ffebdk7LnpCZQJse3",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-11T11:57:44.8985043Z",
+  "branch": "release/v0.8.0",
+  "checkpoints_count": 4,
+  "save_step_count": 2,
+  "files_touched": [],
+  "agent": "OpenCode",
+  "model": "deepseek-v4-flash-free",
+  "turn_id": "54a1025a25b7",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 2574467,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 47588096,
+    "output_tokens": 442868,
+    "api_call_count": 500
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 336,
+      "user_lines_removed": 479,
+      "agent_lines_added": 446,
+      "agent_lines_removed": 446,
+      "user_added_per_file": {
+        ".dockerignore": 21,
+        "CHANGELOG.md": 5,
+        "CLA.md": 1,
+        "Dockerfile": 12,
+        "LICENSE": 180,
+        "README.md": 2,
+        "docs/index.md": 1,
+        "pyproject.toml": 2,
+        "requirements-rl.txt": 10,
+        "requirements.txt": 102
+      },
+      "user_removed_per_file": {
+        "CHANGELOG.md": 1,
+        "CLA.md": 1,
+        "Dockerfile": 10,
+        "LICENSE": 351,
+        "README.md": 2,
+        "docs/index.md": 1,
+        "pyproject.toml": 1,
+        "requirements-rl.txt": 10,
+        "requirements.txt": 102
+      }
+    }
+  ]
+}
