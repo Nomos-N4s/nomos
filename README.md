@@ -14,6 +14,7 @@ pre-commitment, and identity coherence.
 [![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 [![Lean 4](https://img.shields.io/badge/Lean%204-verified-2ea44f)](gov-budget-proof/)
 [![Types](https://img.shields.io/badge/types-ty-blue)](https://docs.astral.sh/ty/)
+[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Nomos-N4s/nomos?utm_source=oss&utm_medium=github&utm_campaign=Nomos-N4s%2Fnomos&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
 
 ---
 
