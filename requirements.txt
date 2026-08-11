@@ -1,4 +1,4 @@
-# Core pinned dependencies for the Governance Layer
+# Core pinned dependencies for Nomos
 # Generated: 2026-07-27
 # Install with: pip install -r requirements.txt
 
