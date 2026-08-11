@@ -1,4 +1,4 @@
-.PHONY: test build docs docker-build docker-test lint clean reproduce
+.PHONY: test build docs docker-build docker-build-rl docker-test lint clean reproduce
 
 test:
 	python -m pytest tests/ -v --tb=short --cov=src.nomos --cov-report=term-missing
@@ -9,14 +9,16 @@ build:
 docs:
 	mkdocs build --strict
 
+NOMOS_IMAGE ?= ghcr.io/nomos-n4s/nomos
+
 docker-build:
-	docker build -t nomos --target base .
+	docker build -t $(NOMOS_IMAGE):dev --target base .
 
 docker-build-rl:
-	docker build -t nomos:rl --target with-rl .
+	docker build -t $(NOMOS_IMAGE):dev-rl --target with-rl .
 
 docker-test:
-	docker run --rm nomos python -m pytest tests/ -x -q
+	docker run --rm $(NOMOS_IMAGE):dev python -m pytest tests/ -x -q
 
 lint:
 	ruff check src/
@@ -24,7 +26,7 @@ lint:
 
 reproduce: docker-build
 	mkdir -p results
-	docker run --rm -v "$(CURDIR)/results:/app/results" nomos all --baselines --steps 1000 --seeds 20
+	docker run --rm -v "$(CURDIR)/results:/app/results" $(NOMOS_IMAGE):dev all --baselines --steps 1000 --seeds 20
 	@echo "=== Reproducibility check complete ==="
 
 clean:

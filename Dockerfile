@@ -18,7 +18,7 @@ RUN uv sync --frozen --no-dev && .venv/bin/python -m pytest tests/ -x -q
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-ENTRYPOINT ["python", "-m", "src.nomos.runner"]
+ENTRYPOINT ["python", "-m", "nomos.runner"]
 
 FROM base AS with-rl
 
