@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KZRS99S4HE3TKWFPQB9NW7YK",
+  "session_id": "ses_014b0b466ffebdk7LnpCZQJse3",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-11T16:08:32.5562448Z",
+  "branch": "chore/codeql-workflow",
+  "checkpoints_count": 3,
+  "save_step_count": 1,
+  "files_touched": [
+    "src/nomos/runner.py",
+    "src/nomos/speaker.py"
+  ],
+  "agent": "OpenCode",
+  "model": "deepseek-v4-flash-free",
+  "turn_id": "cb8fb1185dbd",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 4258035,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 79902464,
+    "output_tokens": 690420,
+    "api_call_count": 833
+  },
+  "session_metrics": {
+    "turn_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-11T16:08:31.0360718Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 499,
+    "human_modified": 1188,
+    "human_removed": 0,
+    "total_committed": 1687,
+    "total_lines_changed": 1687,
+    "agent_percentage": 0,
+    "metric_version": 2
+  }
+}
