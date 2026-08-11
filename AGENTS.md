@@ -14,6 +14,7 @@
 ## Conventions
 - **Package management**: uv is the project's package manager. `uv.lock` is the source of truth — never edit by hand; regenerate with `uv lock` and install with `uv sync --frozen`. Docker builds are uv-native (`--frozen`). Note: `uv` may not be on PATH in non-interactive shells — use `python -m uv`.
 - **Atomic commits**: commit in small, focused units with conventional prefixes (`feat:`, `fix:`, `docs:`, `chore:`, `build:`, `test:`). Frequent atomic commits keep entire.io checkpoint refs flowing — the history is the telemetry.
+- **PR lifecycle — HARD RULE**: the agent may create PRs and push to their branches, but may **NEVER merge, close, or otherwise finalize any PR** without the user's explicit authorization. Wait for the user (or their AI reviewers) to merge. Always pass `--head <branch>` explicitly to `gh pr create` (head inference from local checkouts is unreliable).
 
 ## Work State
 ### Completed
