@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.9.0](https://github.com/Nomos-N4s/nomos/compare/v0.8.0...v0.9.0) (2026-08-11)
+
+
+### Features
+
+* /healthz, /readyz, /metrics endpoints for runner serve ([#163](https://github.com/Nomos-N4s/nomos/issues/163)) ([23ad445](https://github.com/Nomos-N4s/nomos/commit/23ad445fc4e748964787254501b1de3bf39747a6))
+* auto-refresh toggle for live Colab-to-dashboard updates ([#75](https://github.com/Nomos-N4s/nomos/issues/75)) ([05f6791](https://github.com/Nomos-N4s/nomos/commit/05f6791881a61339b65233a4607cac872bbf9919))
+* publish multi-arch OCI images to GHCR on version tags ([#217](https://github.com/Nomos-N4s/nomos/issues/217)) ([a04ef0d](https://github.com/Nomos-N4s/nomos/commit/a04ef0db50e4ce3d9af006657071a0f8528cb2f2))
+* structured JSON logging foundation ([#161](https://github.com/Nomos-N4s/nomos/issues/161)) ([1c56550](https://github.com/Nomos-N4s/nomos/commit/1c56550ada7e795a19d688abe41d5ea796be5e3f))
+
+
+### Bug Fixes
+
+* rebrand paths in server docs, ruff-format readyz test (review [#182](https://github.com/Nomos-N4s/nomos/issues/182)) ([a4126a2](https://github.com/Nomos-N4s/nomos/commit/a4126a27da2029dcd5ffc46d0eb4f524a02f6121))
+* remove duplicate changelog heading (review [#181](https://github.com/Nomos-N4s/nomos/issues/181)) ([8f2aec1](https://github.com/Nomos-N4s/nomos/commit/8f2aec1c67572955886a5b17a5e5ac6fbabcc977))
+
+
+### Documentation
+
+* add CHANGELOG entry for [#163](https://github.com/Nomos-N4s/nomos/issues/163) health endpoints ([a0b7b2b](https://github.com/Nomos-N4s/nomos/commit/a0b7b2b507bb464c044386919be6682f2d2ed472))
+* add CHANGELOG entry for [#75](https://github.com/Nomos-N4s/nomos/issues/75) auto-refresh ([316dc75](https://github.com/Nomos-N4s/nomos/commit/316dc75cb4738d6498524fe0919c5fe6ce3a77e1))
+* add release badge to README ([784bb8a](https://github.com/Nomos-N4s/nomos/commit/784bb8add5b7be7cd85c8d1a3679cd84a8c44cd0))
+* add social preview image for repo card and link shares ([85170bd](https://github.com/Nomos-N4s/nomos/commit/85170bd0622d531e215e5779dfa8390d18e22f17))
+* record uv and atomic-commit conventions in AGENTS.md ([b8bdf5d](https://github.com/Nomos-N4s/nomos/commit/b8bdf5d1a64b1a635e90b157c1cd5f7427d5b061))
+* roadmap decision record - release/delivery, Azure-first deployment, native gates ([d273a3b](https://github.com/Nomos-N4s/nomos/commit/d273a3b752c80f4177d300fe550de1fb974d6271))
+
 ## [0.8.0] — 2026-08-11
 
 ### Added
