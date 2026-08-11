@@ -146,7 +146,9 @@ def _generate_rl_summary(summary: pd.DataFrame | None) -> str:
         return "Unable to generate RL training summary."
 
 
-def _log_rl_to_backend(backend: OntologyBackend | None, label: str, row: dict, should_log: bool = True):
+def _log_rl_to_backend(
+    backend: OntologyBackend | None, label: str, row: dict, should_log: bool = True
+):
     if backend is None or not should_log:
         return
     with contextlib.suppress(Exception):
