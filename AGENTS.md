@@ -11,6 +11,10 @@
 - **CLA.md** added — standard Individual Contributor License Agreement. External contributors must accept terms (PR = acceptance). CONTRIBUTING.md updated to reference it.
 - Architecture: Capability → Governance → Identity. Deep learning, JEPA world models, and computer vision are Capability Layer technologies; the Governance Layer constrains them.
 
+## Conventions
+- **Package management**: uv is the project's package manager. `uv.lock` is the source of truth — never edit by hand; regenerate with `uv lock` and install with `uv sync --frozen`. Docker builds are uv-native (`--frozen`). Note: `uv` may not be on PATH in non-interactive shells — use `python -m uv`.
+- **Atomic commits**: commit in small, focused units with conventional prefixes (`feat:`, `fix:`, `docs:`, `chore:`, `build:`, `test:`). Frequent atomic commits keep entire.io checkpoint refs flowing — the history is the telemetry.
+
 ## Work State
 ### Completed
 - **Chapters 1-4** — All written. Ch1 (motivation), Ch2 (Neural Parliament, 560 lines), Ch3 (Ulysses Contracts, 359 lines), Ch4 (Identity Layer, 573 lines). Ch4 includes: formal tuple $\mathcal{I} = \langle \mathcal{O}, \mathcal{C}_{\text{core}}, \mathcal{K}, \mathcal{P} \rangle$, four-tier mutability, genesis bootstrapping with 3-of-5 multisig, ontology extension with sandboxed isolation buffer (empirical property measurement via independent monitors), runtime integrity hashes for action bindings, liveness exception for hardware deadlock breaker, constitutional contracts.
