@@ -1,0 +1,113 @@
+I need you to work on the stack of sub-issues out of #69 and group them in stacked prs as per github's latest stacked pr feature.
+
+---
+
+ok, so where are ew?
+
+---
+
+yes, proceed with the writing the proofs and creating the stacked PRs, remember we use atomic commits, as many as logically possible.
+
+---
+
+what happeed? why did you stop?
+
+---
+
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+
+---
+
+why have you stopped?
+
+---
+
+Where are the stacked prs? l
+
+---
+
+remember that all prs MUST close an existing issue or sub-issue, all checks MUST pass as well.
+
+---
+
+so.. where are we?
+
+---
+
+proceed, fix whatever needs to be fixed.ç
+
+---
+
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+
+---
+
+I can't rebase and merge as admin because all of the stacked prs say: "Not Ready" I self-review/approve my work. but can't find the option to rebase/merge it is my first time working with the stacked pr web view and functionality of GitHub
+
+---
+
+so?
+
+---
+
+yes, run them. is there a gh stack command for it?
+
+---
+
+so? carry on! finish it
+
+---
+
+Does it mean that Epic #69 is complete? do we have the docs to reflect that?
+
+---
+
+close 69, on github, update agents.md, roadmap.md and what aout the github page we have for documentation, is it up-to-date? and can you check why entire.io is not working in our agentic coding sessions? despite getting possitive messages when I "entire enable" this codebase? like no checkpoints at all, hy?
+
+---
+
+so, what happened? and if you ar eediting the codebase, make sure to open a pr perhaps linked to #69 so we can automatically close it.
+
+---
+
+Mintlify is a paid service that I can't afford, so we need to clean eveythin up from them and "go back" to Github Pages (mkdocs?) or something better but still free
+
+---
+
+I just suspended mintlify, all good. I feel like the project is super robust, far from production (correct me if I' wrong) but in a good shape/status to lets say a Linkedin post? maybe a few medium articles? I want to put this out there, it has some low traction from some contributors but I want to go loud! help me story tell this monster.
+
+---
+
+I can copy/paste from a file as long as you remove them from the repo when I say so... But no that I'm thinking about it I believe that we MUST do the renaming/branding from governance-layer to "Nomos" of the whole repo and code before we go loud, I know I don't have a website for it, so for it'll be quite technical in a github page, I think I'm happy with it.
+
+---
+
+prioritize the rebranding, and just like we did with #69 you might want to slice it in as many gh sub-issues as you think of and have a stack of prs for all of the work (we will eventually need to quickly update the repo rules so I can self-approve and rebase/merge my own stack without someone else's review or approval and then bring the repo rules and plicies back)
+
+---
+
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+
+---
+
+you are mering branches that failed every check!
+
+---
+
+rename the repo both locally and remotely, don't touch anything else. Oh wait the main Readme still references governance-layer and the gh page is still full of references to governance-layer and not Nomos! fit that in one single PR! I'll merge it.
+
+---
+
+#209 is failing
+
+---
+
+merged it... can we address the entire.io issue, please?
+
+---
+
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+
+---
+
+hat I man by the entire.io issue is that I'm trying to use the tool (search the web) but for some reason no dispatch no checkpoints are being recorded, I remember you mentioned somehing about sh and windows and presented me 2 alternatives.
