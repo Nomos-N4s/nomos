@@ -1,8 +1,14 @@
 name: publish-image
 
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Image version to publish (e.g. 0.10.0)
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -26,7 +32,10 @@ jobs:
         id: meta
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${{ inputs.version }}"
+          if [[ -z "$VERSION" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
           if [[ -z "$VERSION" || "$VERSION" == *-* ]]; then
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
           else
