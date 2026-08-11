@@ -1,13 +1,17 @@
 # Changelog
 
-All notable changes to the Governance Layer project are documented here.
+All notable changes to the Nomos project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-08-11
+
 ### Added
+- License moved to Apache-2.0 (was CC BY 4.0); LICENSE, README, CLA, and docs references aligned
+- Docker build fixed: tests/ and examples/ now copied into the image, base stage is the default build target, .dockerignore added
 - MkDocs Material documentation build system (`mkdocs.yml`, `docs/`)
 - GitHub Actions workflow to build and deploy docs to GitHub Pages
 - GitHub Project #3 for issue tracking with 4 epics (A–D)
