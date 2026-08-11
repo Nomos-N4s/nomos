@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,7 +38,7 @@ jobs:
         run: uv pip install -e ".[agent]"
 
       - name: Run tests with coverage
-        run: uv run pytest -v --tb=short --cov=src.nomos --cov-report=term-missing
+        run: uv run pytest -v --tb=short --cov=src.nomos --cov-branch --cov-report=term-missing
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -45,6 +46,34 @@ jobs:
         with:
           name: coverage-${{ matrix.python-version }}
           path: .coverage*
+
+      - name: Check coverage enforcement window
+        id: window
+        if: matrix.python-version == '3.11'
+        run: |
+          ENFORCE_AFTER="2026-09-11"
+          TODAY="$(date +%Y-%m-%d)"
+          if [[ "$TODAY" > "$ENFORCE_AFTER" || "$TODAY" == "$ENFORCE_AFTER" ]]; then
+            echo "enforced=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enforced=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Coverage gate (report-only until 2026-09-11, enforced at 90% after)
+        if: matrix.python-version == '3.11'
+        run: uv run coverage report --fail-under=${{ steps.window.outputs.enforced == 'true' && '90' || '0' }} -m
+
+      - name: Generate coverage XML
+        if: matrix.python-version == '3.11'
+        run: uv run coverage xml
+
+      - name: Post coverage comment
+        if: matrix.python-version == '3.11' && github.event_name == 'pull_request'
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          coverage-path: coverage.xml
+          minimal-coverage: 0
 
   lint:
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-.PHONY: test build docs docker-build docker-build-rl docker-test lint clean reproduce
+.PHONY: test build docs docker-build docker-build-rl docker-test lint coverage clean reproduce
 
 test:
 	python -m pytest tests/ -v --tb=short --cov=src.nomos --cov-report=term-missing
@@ -23,6 +23,11 @@ docker-test:
 lint:
 	ruff check src/
 	ruff format --check src/
+	@echo "Coverage gate: make coverage (coverage run -m pytest tests/ -q && coverage report --fail-under=90 -m)"
+
+coverage:
+	coverage run -m pytest tests/ -q
+	coverage report --fail-under=90 -m
 
 reproduce: docker-build
 	mkdir -p results
