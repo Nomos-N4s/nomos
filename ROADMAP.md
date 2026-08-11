@@ -52,7 +52,7 @@ checkbox-by-checkbox audit + residue sweep (`8ef6e7f`).
 
 8. **#161** structured JSON logging (F1) — **DONE** (merged 2026-08-11), also
    consumed by Track J (Log Analytics) and Track F.
-9. *(Track J deployment happens here — gate #161+#182 is now OPEN.)*
+9. *(Track J deployment happens after #164 — the #161+#182 gate is now OPEN.)*
 10. **#164** tamper-evident hash-chained audit log (F4) — **NEXT** (P1, moved
     earlier: core value, no deployment needed).
 11. **#165** SLOs + alerting (F5) — after first deployment; consumes the
@@ -100,8 +100,11 @@ isolation model (#70).
 
 ## Track I — Release & delivery (#213) — DONE (2026-08-11)
 
-Every merge yields a versioned, runnable artifact; Track J consumes GHCR
-images instead of building in-cluster.
+Pushes to `main` trigger release-please, which opens a release PR for
+releasable changes (multiple merges may batch into one PR); the version is
+minted when that release PR merges. The multi-arch image publishes only on
+release (`release: [published]`) or manual dispatch — never on tag push (see
+#217). Track J consumes GHCR images instead of building in-cluster.
 
 26. **#217** CI: publish multi-arch Docker image to GHCR on tag push (F1) —
     MERGED; trigger reworked to `release: [published]` + `workflow_dispatch`
