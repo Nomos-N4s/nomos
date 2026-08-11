@@ -8,6 +8,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.10.0](https://github.com/Nomos-N4s/nomos/compare/v0.9.0...v0.10.0) (2026-08-11)
+
+
+### Features
+
+* /healthz, /readyz, /metrics endpoints for runner serve ([#163](https://github.com/Nomos-N4s/nomos/issues/163)) ([23ad445](https://github.com/Nomos-N4s/nomos/commit/23ad445fc4e748964787254501b1de3bf39747a6))
+* add .parliament example configs for the LLM scenarios ([e0fcbfc](https://github.com/Nomos-N4s/nomos/commit/e0fcbfc489a42835bec754bb025d044c71123752))
+* add agent benchmark report generation ([aa92807](https://github.com/Nomos-N4s/nomos/commit/aa928073206be2a9c4a417987c943185f1741b27))
+* add agent trace tab to the dashboard ([89eb1e8](https://github.com/Nomos-N4s/nomos/commit/89eb1e81a3832ef5df366a04564458e3c4906967))
+* add agent validation metrics ([214ed55](https://github.com/Nomos-N4s/nomos/commit/214ed556d62574c11fd5f23533e23a16302bf205))
+* add four LLM-native scenarios with prompt renderers ([7fe49ce](https://github.com/Nomos-N4s/nomos/commit/7fe49cea5ce58f1686d663b47eb9e30427bcf681))
+* add governance trace writer and self-contained HTML viewer ([5ae5393](https://github.com/Nomos-N4s/nomos/commit/5ae539311c5b807ce664ceccd6ccd7883cd6b59b))
+* add governed vs ungoverned comparison harness ([d7642a7](https://github.com/Nomos-N4s/nomos/commit/d7642a7b3d1512025049432c1472c588814291fb))
+* add prediction_harness core module and tests ([74018b4](https://github.com/Nomos-N4s/nomos/commit/74018b487ddae45713a0ca2b6ec6dacf8a3c9552))
+* add property-based tests for contracts, identity, and TEE ([#119](https://github.com/Nomos-N4s/nomos/issues/119)) ([0b7f62c](https://github.com/Nomos-N4s/nomos/commit/0b7f62cfa931701544dad2ba1c13443a463e4ad4))
+* add python-dotenv and refactor .env handling for agent runs ([bd0c288](https://github.com/Nomos-N4s/nomos/commit/bd0c2885bd3971fa19a25c1c021f1373d021140f))
+* agent run reproducibility (response cache, schema contract, pipeline, runner subcommand) ([e87d10e](https://github.com/Nomos-N4s/nomos/commit/e87d10ee622487dd09ff45f31df00572caae8cdf))
+* auto-refresh toggle for live Colab-to-dashboard updates ([#75](https://github.com/Nomos-N4s/nomos/issues/75)) ([05f6791](https://github.com/Nomos-N4s/nomos/commit/05f6791881a61339b65233a4607cac872bbf9919))
+* export agent metrics and report API from the agents package ([5cc8124](https://github.com/Nomos-N4s/nomos/commit/5cc81246b162638cf11a78832601a915c5d611c7))
+* expose Speaker per-member scoring publicly ([904574a](https://github.com/Nomos-N4s/nomos/commit/904574ab98b99e682ef334f2f4829b4d356c471e))
+* integrate prove-agent CLI subcommand ([62025a3](https://github.com/Nomos-N4s/nomos/commit/62025a36346671968f136f3f5cdc0394ced75331))
+* **lean:** prove genesis 3-of-5 multisig bootstrapping (Ch4 §4) ([84809be](https://github.com/Nomos-N4s/nomos/commit/84809be9dbdb279e9d4f7d43cf442ceed7c315eb))
+* **lean:** prove identity coherence threshold guard (Ch4 §6.1) ([2982ba0](https://github.com/Nomos-N4s/nomos/commit/2982ba031387053bd7de72d70d2386f842f601cb))
+* **lean:** prove identity tier mutability rules (Ch4 §3) ([c087a2a](https://github.com/Nomos-N4s/nomos/commit/c087a2a4f5b717271b15708267917459b980f1de))
+* **lean:** prove runtime integrity hash chain invariants (Ch4 §2.1/§6.1) ([86ff22a](https://github.com/Nomos-N4s/nomos/commit/86ff22a48faa13efaa9a4b82a4871e3444dbce7f))
+* **lean:** prove sandboxed isolation buffer protocol (Ch4 §5.2) ([767c47b](https://github.com/Nomos-N4s/nomos/commit/767c47b322292f23853d9146ea185ee6b90c51b7))
+* **lean:** register IdentityBuffer in GovBudgetProof manifest ([c1b4219](https://github.com/Nomos-N4s/nomos/commit/c1b42191bb749e5d9b5c121b9476a79e3947f1b8))
+* **lean:** register IdentityCoherence in GovBudgetProof manifest ([f56efa4](https://github.com/Nomos-N4s/nomos/commit/f56efa44903a0ca327992e54d7cc28dd864f37bc))
+* **lean:** register IdentityGenesis in GovBudgetProof manifest ([08a0acf](https://github.com/Nomos-N4s/nomos/commit/08a0acffb230266f7dd7dc7d52fbde8bedbb293c))
+* **lean:** register IdentityHashes in GovBudgetProof manifest ([0947528](https://github.com/Nomos-N4s/nomos/commit/0947528984a9eb1f69b8601de07920402457b14c))
+* **lean:** register IdentityTiers in GovBudgetProof manifest ([7e8792a](https://github.com/Nomos-N4s/nomos/commit/7e8792ab2fd7165aa28b9df03a9d886e0e711998))
+* publish multi-arch OCI images to GHCR on version tags ([#217](https://github.com/Nomos-N4s/nomos/issues/217)) ([a04ef0d](https://github.com/Nomos-N4s/nomos/commit/a04ef0db50e4ce3d9af006657071a0f8528cb2f2))
+* record committee scores, vetoers, and contracts in the harness ([0f774e0](https://github.com/Nomos-N4s/nomos/commit/0f774e069aac2676a364b30fee2f5016a8b8e869))
+* record per-step agent latency in the comparison harness ([77ac41f](https://github.com/Nomos-N4s/nomos/commit/77ac41f609a4e2f29e4bf279bef46e93a2ebcd14))
+* structured JSON logging foundation ([#161](https://github.com/Nomos-N4s/nomos/issues/161)) ([1c56550](https://github.com/Nomos-N4s/nomos/commit/1c56550ada7e795a19d688abe41d5ea796be5e3f))
+* support state-dependent action metadata; log applied decisions ([f3bdef2](https://github.com/Nomos-N4s/nomos/commit/f3bdef2bbaa00095943f4f07098559bf4a3e6815))
+* switch LLM runs to OpenRouter free models only ([699e2ae](https://github.com/Nomos-N4s/nomos/commit/699e2ae732865b05f43ee7a174d11b7eff3bb8ac))
+
+
+### Bug Fixes
+
+* apply ruff format to prediction_harness ([a046da8](https://github.com/Nomos-N4s/nomos/commit/a046da82213428fc9f4dd90fc31363731fa33de9))
+* correct OPENROUTER_API_KEY key name in .env.example ([d044e1d](https://github.com/Nomos-N4s/nomos/commit/d044e1d970e11c942a7402306974f4a475409d23))
+* coverage comment action needs uppercase inputs and relative file paths ([cba13df](https://github.com/Nomos-N4s/nomos/commit/cba13dfca1572866dfd13b48c3aa413578fd4630))
+* dual-inherit from gymnasium.Env + gym.Env for SB3 Colab compat ([a619c7c](https://github.com/Nomos-N4s/nomos/commit/a619c7c5589d79ed08f5cf90a4d33d7fb3b891f8))
+* exclude root project files from Mintlify processing ([#148](https://github.com/Nomos-N4s/nomos/issues/148)) ([2540762](https://github.com/Nomos-N4s/nomos/commit/2540762f76fc0dd01d32ff20cd7bb6cc175e28c7))
+* GovernanceGridWorld inherits from gym.Env, fixes PPO training on Colab ([6dcbc00](https://github.com/Nomos-N4s/nomos/commit/6dcbc0030688814800c61c4ef1541071f94d65d1))
+* **lean:** repair IdentityHashes module content ([8c43e01](https://github.com/Nomos-N4s/nomos/commit/8c43e01be7f5de3641d61e8e88e776ba5d7a3e18))
+* parliament sentinel string resolved to SpeakerStateMachine in __init__ ([50c702d](https://github.com/Nomos-N4s/nomos/commit/50c702d62a81c38d05d36ec60898b7a5f4599614))
+* rebrand paths in server docs, ruff-format readyz test (review [#182](https://github.com/Nomos-N4s/nomos/issues/182)) ([a4126a2](https://github.com/Nomos-N4s/nomos/commit/a4126a27da2029dcd5ffc46d0eb4f524a02f6121))
+* remove docs/ symlinks and MkDocs CI (prep for 3-repo split) ([0123a95](https://github.com/Nomos-N4s/nomos/commit/0123a958d42d220f94c8bd4e5871fd818bcadf59))
+* remove duplicate changelog heading (review [#181](https://github.com/Nomos-N4s/nomos/issues/181)) ([8f2aec1](https://github.com/Nomos-N4s/nomos/commit/8f2aec1c67572955886a5b17a5e5ac6fbabcc977))
+* resolve ruff lint issues (unused imports, lambda, json import) ([b5ff2e9](https://github.com/Nomos-N4s/nomos/commit/b5ff2e9152d00ec15c98b93a1179c35a263c8f90))
+* resolve ruff lint issues across test files ([348a7c3](https://github.com/Nomos-N4s/nomos/commit/348a7c3c60047734bfce218385cf668c8530f070))
+* ruff format line length in prediction_harness ([e9f5129](https://github.com/Nomos-N4s/nomos/commit/e9f51295dbb981fbc636fb2f87302cd4df7cff86))
+* sweep leftover src/governance refs missed by brand slice 2 ([a36b99b](https://github.com/Nomos-N4s/nomos/commit/a36b99bb7f6521c585cef5790cf49adb60db10ae))
+* sweep leftover src/governance refs missed by brand slice 2 [[#86](https://github.com/Nomos-N4s/nomos/issues/86)] ([89eab9f](https://github.com/Nomos-N4s/nomos/commit/89eab9f8638dce4ae8f0818b9f98c9b85049235e))
+* tidy trace display data (rounded scores, no dead column) ([3a3ee1d](https://github.com/Nomos-N4s/nomos/commit/3a3ee1d6e1cfe54ad9a1632b0239923df1563796))
+* use default coverage path for comment action (directory scan) ([c2d6810](https://github.com/Nomos-N4s/nomos/commit/c2d6810474c9304486569af892e3ec274072944b))
+
+
+### Documentation
+
+* add CHANGELOG entry for [#163](https://github.com/Nomos-N4s/nomos/issues/163) health endpoints ([a0b7b2b](https://github.com/Nomos-N4s/nomos/commit/a0b7b2b507bb464c044386919be6682f2d2ed472))
+* add CHANGELOG entry for [#75](https://github.com/Nomos-N4s/nomos/issues/75) auto-refresh ([316dc75](https://github.com/Nomos-N4s/nomos/commit/316dc75cb4738d6498524fe0919c5fe6ce3a77e1))
+* add feature-144 documentation with mermaid diagrams ([c1f07e3](https://github.com/Nomos-N4s/nomos/commit/c1f07e37485018e94946c2f7bf971577403b361e))
+* add ordered execution roadmap (board-backed) ([c4b2f09](https://github.com/Nomos-N4s/nomos/commit/c4b2f0914b79809ea8462f4f3f8c336b51d2d0d3))
+* add release badge to README ([784bb8a](https://github.com/Nomos-N4s/nomos/commit/784bb8add5b7be7cd85c8d1a3679cd84a8c44cd0))
+* add SEO title and description frontmatter to nav pages ([#95](https://github.com/Nomos-N4s/nomos/issues/95)) ([aff3dfc](https://github.com/Nomos-N4s/nomos/commit/aff3dfcf4fe5a18e62f7132578472f72eb57854b))
+* add social preview image for repo card and link shares ([85170bd](https://github.com/Nomos-N4s/nomos/commit/85170bd0622d531e215e5779dfa8390d18e22f17))
+* agent benchmark protocol in reproducibility doc ([f96921b](https://github.com/Nomos-N4s/nomos/commit/f96921bfd2fad8a471c68a01ca18794a4efea1d6))
+* align license references (README, CLA, docs index) with Apache-2.0 ([c8e4189](https://github.com/Nomos-N4s/nomos/commit/c8e4189f14c92f57501cfed9f326befec7b325ac))
+* brand pass governance layer -&gt; Nomos (brand slice 2) ([9479f23](https://github.com/Nomos-N4s/nomos/commit/9479f234ec5007bc36972ce9da9c9185506d180d))
+* cut changelog entry for v0.8.0 launch release ([e319581](https://github.com/Nomos-N4s/nomos/commit/e31958196f573474995dca2d159a53ed427eef6a))
+* document strengthened statistical methods in benchmarks and Appendix D ([#112](https://github.com/Nomos-N4s/nomos/issues/112)) ([b12cff4](https://github.com/Nomos-N4s/nomos/commit/b12cff4663bc153e50e1800feaedc5e5cf373892))
+* fix capitalization typo in chapter-03 ([#113](https://github.com/Nomos-N4s/nomos/issues/113)) ([a04e1d3](https://github.com/Nomos-N4s/nomos/commit/a04e1d35edbab89f6cdb088e99a3df8df525d498))
+* fix stray whitespace and duplicate horizontal rule ([#121](https://github.com/Nomos-N4s/nomos/issues/121)) ([4f3752d](https://github.com/Nomos-N4s/nomos/commit/4f3752dab96215e2c54f827a0600f3940156edb3))
+* fix typo "vetos" → "vetoes" in TEE isolation appendix ([#98](https://github.com/Nomos-N4s/nomos/issues/98)) ([d95ca73](https://github.com/Nomos-N4s/nomos/commit/d95ca7372b55d1b438e59f55d71dd6d0c96d79db))
+* fix typos, grammar, and broken markdown formatting ([#96](https://github.com/Nomos-N4s/nomos/issues/96)) ([78bbef2](https://github.com/Nomos-N4s/nomos/commit/78bbef2d76d9a6ce3bc39ba5a3a47b3fb66faf7d))
+* move osf-registration.md to nomos-website repo ([86237ed](https://github.com/Nomos-N4s/nomos/commit/86237ed0eada391740019831ed3a37d91ecbfa43))
+* record uv and atomic-commit conventions in AGENTS.md ([b8bdf5d](https://github.com/Nomos-N4s/nomos/commit/b8bdf5d1a64b1a635e90b157c1cd5f7427d5b061))
+* rename remaining Governance Layer references (requirements headers) ([6c6b767](https://github.com/Nomos-N4s/nomos/commit/6c6b767600d078492d0ff07f964698d206c010f4))
+* rename repo surface to Nomos (single rebrand PR) ([57310ca](https://github.com/Nomos-N4s/nomos/commit/57310ca44c933c3c629ea7813e84d47761e89bfb))
+* restore GitHub Pages mkdocs pipeline, add Lean verification page ([a3ccc4b](https://github.com/Nomos-N4s/nomos/commit/a3ccc4b560b3843c9d1c713377d941d9e624d5c0))
+* roadmap decision record - release/delivery, Azure-first deployment, native gates ([d273a3b](https://github.com/Nomos-N4s/nomos/commit/d273a3b752c80f4177d300fe550de1fb974d6271))
+* stage book/changelog/references/src into docs tree for mkdocs build ([51662b6](https://github.com/Nomos-N4s/nomos/commit/51662b632e58466ffad550ce2cf63c903bb21abe))
+* sync AGENTS.md active state and roadmap to board ([a701596](https://github.com/Nomos-N4s/nomos/commit/a7015963fce72a09496dd0e1712ddd5d879e4869))
+* update AGENTS.md with AI Agent Validation epic ([#145](https://github.com/Nomos-N4s/nomos/issues/145)) ([#146](https://github.com/Nomos-N4s/nomos/issues/146)) ([4e5d230](https://github.com/Nomos-N4s/nomos/commit/4e5d2300ed455f1196074483e87599f5792bb5ab))
+* update AGENTS.md with Phase C epic and 3-repo roadmap ([db1bc54](https://github.com/Nomos-N4s/nomos/commit/db1bc545f0b6817f7534a0fd0e9a9f27eff89c8b))
+* update CHANGELOG for feature [#144](https://github.com/Nomos-N4s/nomos/issues/144) ([e6274e3](https://github.com/Nomos-N4s/nomos/commit/e6274e399e44c9f3efb9d3daaa542b15ea58645b))
+
 ## [0.9.0](https://github.com/Nomos-N4s/nomos/compare/v0.8.0...v0.9.0) (2026-08-11)
 
 
