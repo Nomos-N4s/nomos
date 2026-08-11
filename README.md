@@ -81,6 +81,17 @@ python -m src.nomos.runner prove --all
 python -m src.nomos.runner all --baselines --steps 1000 --seeds 5
 ```
 
+## Testing
+
+```bash
+python -m pytest tests/ -v
+make coverage   # coverage run -m pytest tests/ -q && coverage report --fail-under=60 -m
+```
+
+CI runs the same suite with line + branch coverage, posts coverage comments
+on PRs, and enforces the 90% line threshold from 2026-09-11 (baseline at
+adoption: 93%).
+
 ## Containerized
 
 Versioned multi-arch images (`linux/amd64` and `linux/arm64`) are published to
