@@ -1,0 +1,72 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Weekly deep scan: Sundays 22:25 UTC
+    - cron: "25 22 * * 0"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+concurrency:
+  # Cancel superseded runs: only the newest analysis per branch/event matters.
+  group: "${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  # NOTE: this job MUST be named exactly "CodeQL" -- the main ruleset requires a
+  # status check with that literal context (produced by default setup before it
+  # was disabled). No matrix here: GitHub appends the matrix cell to the check
+  # name (e.g. "CodeQL (python)"), which would re-block every PR.
+  CodeQL:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          # Python is interpreted: no build step required, and forcing one can
+          # only poison the database (autobuild is a no-op at best).
+          build-mode: none
+          queries: +security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"
+
+  security-and-quality:
+    name: security-and-quality
+    # Deep sweep: the full default + extended + quality suite, weekly and on
+    # manual dispatch. Not required by the ruleset; it complements the
+    # per-PR security-extended pass above.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          build-mode: none
+          queries: +security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python/deep"
