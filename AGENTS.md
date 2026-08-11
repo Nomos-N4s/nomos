@@ -3,7 +3,7 @@
 - Register the framework on OSF for timestamp provenance and DOI.
 
 ## Important Details
-- Author: **Carlos Pinto (xcoder-es)** — solo software builder, not an academic. Repo is `xcoder-es/governance-layer`. All inquiries to capintobe@gmail.com.
+- Author: **Carlos Pinto (xcoder-es)** — solo software builder, not an academic. Repo is `xcoder-es/nomos`. All inquiries to capintobe@gmail.com.
 - All Mermaid diagrams and LaTeX must avoid HTML tags (`<br/>`), custom `classDef` styling, and nested `\text{}` for GitHub compatibility. Use `\mathrm{}` instead.
 - **First review panel** (5 rounds) completed theoretical vetting across all three layers. All accepted fixes executed. Panel signed off. Three residual risks acknowledged (social engineering, hardware supply chain, adaptive proxy gap) as unavoidable physical-world limits.
 - **Second harder review panel** (2026-07-26) evaluated the implementation with grade C-. One genuine bug found (baseline decoupling in benchmarks) and fixed. Full response at `book/responses/response-to-expert-panel-harder-review.md`.

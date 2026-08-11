@@ -1,4 +1,4 @@
-"""pytest configuration for governance-layer tests."""
+"""pytest configuration for nomos tests."""
 import os
 import sys
 

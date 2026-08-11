@@ -12,7 +12,7 @@ for the full TEE threat model.
 
 ## Security Model
 
-The Governance Layer relies on Trusted Execution Environments (TEEs) for
+Nomos relies on Trusted Execution Environments (TEEs) for
 runtime isolation of Parliament members. The architecture is described in
 Appendix A and covers:
 

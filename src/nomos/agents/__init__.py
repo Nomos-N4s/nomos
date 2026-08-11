@@ -3,7 +3,7 @@ Agent backends for the LLM <-> Parliament integration benchmark.
 
 An agent backend is the Capability Layer's decision engine: given the
 current world state, it produces a single :class:`AgentAction`. The
-Governance Layer then constrains that action through the Speaker.
+The governance layer then constrains that action through the Speaker.
 
 Real-world analogy:
     The pilot (the agent) flies the plane; air traffic control (the

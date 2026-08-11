@@ -16,7 +16,7 @@ model calls.
 
 The LLM response is schema-validated by PydanticAI against
 :class:`_AgentOutput` at the boundary — the Capability Layer can only
-produce well-typed output for the Governance Layer to constrain.
+produce well-typed output for the governance layer to constrain.
 
 Real-world analogy:
     The adapter is the pilot's radio. The tower does not care which
