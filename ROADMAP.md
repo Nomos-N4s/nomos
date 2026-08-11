@@ -100,10 +100,11 @@ isolation model (#70).
 
 ## Track I — Release & delivery (#213) — DONE (2026-08-11)
 
-Every merge is versioned by release-please (changelog + release PR), but the
-multi-arch image is published only on release (`release: [published]`) or
-manual dispatch — never on tag push (see #217). Track J consumes GHCR images
-instead of building in-cluster.
+Pushes to `main` trigger release-please, which opens a release PR for
+releasable changes (multiple merges may batch into one PR); the version is
+minted when that release PR merges. The multi-arch image publishes only on
+release (`release: [published]`) or manual dispatch — never on tag push (see
+#217). Track J consumes GHCR images instead of building in-cluster.
 
 26. **#217** CI: publish multi-arch Docker image to GHCR on tag push (F1) —
     MERGED; trigger reworked to `release: [published]` + `workflow_dispatch`
