@@ -1,0 +1,72 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KZRS7525CQJG7TPRRY97AQKM",
+  "session_id": "ses_014b0b466ffebdk7LnpCZQJse3",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-11T16:07:22.6268313Z",
+  "branch": "chore/codeql-workflow",
+  "checkpoints_count": 3,
+  "save_step_count": 2,
+  "files_touched": [
+    "src/nomos/observability.py",
+    "src/nomos/runner.py",
+    "src/nomos/speaker.py"
+  ],
+  "agent": "OpenCode",
+  "model": "deepseek-v4-flash-free",
+  "turn_id": "cb8fb1185dbd",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 4257071,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 79752704,
+    "output_tokens": 688645,
+    "api_call_count": 831
+  },
+  "session_metrics": {
+    "turn_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-11T16:07:20.2951506Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 730,
+    "human_modified": 1534,
+    "human_removed": 0,
+    "total_committed": 1226,
+    "total_lines_changed": 2264,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 760,
+      "user_lines_removed": 459,
+      "agent_lines_added": 349,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "src/nomos/observability.py": 297,
+        "src/nomos/speaker.py": 463
+      },
+      "user_removed_per_file": {
+        "src/nomos/speaker.py": 459
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 292,
+      "user_lines_removed": 2,
+      "agent_lines_added": 1718,
+      "agent_lines_removed": 1068,
+      "user_added_per_file": {
+        "src/nomos/runner.py": 35,
+        "src/nomos/speaker.py": 78,
+        "tests/test_observability.py": 179
+      },
+      "user_removed_per_file": {
+        "src/nomos/speaker.py": 2
+      }
+    }
+  ]
+}
