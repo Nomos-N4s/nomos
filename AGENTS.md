@@ -60,24 +60,28 @@
 
 ## Roadmap
 
-Ordered execution plan lives in **`ROADMAP.md`** (board-backed, https://github.com/users/xcoder-es/projects/3). Tracks:
+Ordered execution plan lives in **`ROADMAP.md`** (board-backed, https://github.com/users/xcoder-es/projects/3). Execution-plan decisions 2026-08-11: Azure-first deployment (one cloud green before multi-cloud), release-please automation, deploy-first Track E reorder (#161 → first deployment → #164 → #165 → #162/#167 → #166/#168), native components evidence-gated. Tracks:
 
-1. **Track A (now)** — merge #181 (auto-refresh → #75) and #182 (health endpoints → #163).
-2. **Track B** — close Phase C (#58): #73 → #74 → Streamlit Cloud deploy.
+1. **Track A (now)** — merge #181 (auto-refresh → #75) and #182 (health endpoints → #163 + Track J probe prerequisite).
+2. **Track B** — close Phase C (#58): #73 → #74 → Streamlit Cloud deploy (lite path, parallel with Track J).
 3. **Track C** — Phase D dashboard narrative (#59): #77 → #76 → #78.
-4. **Track D** — rebrand #86 (`governance-layer` → `nomos`) before SDK/observability land.
-5. **Track E** — observability (#158): #161 → #162 → #167 → #166 → #164 → #165 → #168.
-6. **Track F** — SDK (#159): #169 → #170 → #171 → #172 → #174 → #173 (PyPI as `nomos-n4s`).
+4. **Track D — DONE** — rebrand #86 closed 2026-08-11 (with slices #202/#203/#204 + residue sweep `8ef6e7f`).
+5. **Track E** — observability (#158), deploy-first order: #161 (P0, now) → #164 → #165 → #162/#167 → #166 → #168.
+6. **Track F** — SDK (#159): #169 → #170 → #171 → #172 → #174 → #173 (PyPI as `nomos-n4s`); #172 gates Track L.
 7. **Track G (parallel)** — Lean proofs: Identity Layer done (epic #69 closed 2026-08-10, stack #200 merged); TEE isolation model (#70) next.
 8. **Track H (gated)** — commercialization (#160): #175 legal gate → #176/#177; #180 anytime; #179 deferred.
+9. **Track I (P0)** — release & delivery (#213): #217 GHCR publish → #218 release-please → #219 coverage gate.
+10. **Track J (P1, gate #161+#182)** — one-cloud Azure (#214): #220 ADR → #221 Pulumi ACA IaC → #222 verification run.
+11. **Track K (P2, gate J green)** — multi-cloud (#215): #223 AWS → #224 GCP → #225 parity matrix.
+12. **Track L (P2, gates #172 + #226 evidence)** — native & performance (#216): #226 perf budget → #227 Rust feasibility → #228 Go feasibility → #229 atomicity ADR.
 
 Phase D (validation) status: DSL ✅ (#131), AI Agent Validation ✅ (epic #145, all of #138–#144 closed 2026-08-01), website build in nomos-website repo, language-agnostic protocol = #172 (Track F).
 
 Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration = #176, expanded Lean proofs = Track G.
 
 ## Next Move
-1. Track A: merge #181/#182 once authors address the inline change requests.
-2. In parallel: pick up #73 (cloud-compat), #77 (annotations), #161 (JSON logging) — all P0.
+1. Track A: merge #181/#182 once authors address the inline change requests (#182 unlocks Track J probes).
+2. In parallel, P0 batch: #161 (JSON logging), #217 (GHCR publish), #218 (release-please), #219 (coverage gate), plus #73/#77.
 
 ## Relevant Files
 - `book/chapter-01/01-why-ai-needs-a-governance-layer.md`: Chapter 1 — problem statement
