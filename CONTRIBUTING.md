@@ -1,4 +1,4 @@
-# Contributing to Governance Layer
+# Contributing to Nomos
 
 Thanks for your interest! This is a solo project but community contributions are welcome.
 

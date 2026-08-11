@@ -1,5 +1,5 @@
 """
-Streamlit dashboard for the Governance Layer.
+Streamlit dashboard for Nomos.
 
 Provides a visual interface for exploring the formal model, replaying
 Parliament decisions, viewing benchmark comparisons, and inspecting RL
@@ -31,7 +31,7 @@ import streamlit as st
 from nomos.ontology.memory_backend import MemoryBackend
 
 st.set_page_config(
-    page_title="Governance Layer — Formal Framework",
+    page_title="Nomos — Formal Framework",
     page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -70,7 +70,7 @@ def get_ontology_backend():
 def main():
     backend = get_ontology_backend()
 
-    st.sidebar.title("🏛️ Governance Layer")
+    st.sidebar.title("🏛️ Nomos")
     st.sidebar.caption("Formal Framework for Self-Governing AI")
 
     use_neo4j = "Neo4jBackend" in str(type(backend))

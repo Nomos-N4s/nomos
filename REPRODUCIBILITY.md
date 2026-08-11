@@ -1,6 +1,6 @@
 # Reproducibility Protocol
 
-All benchmark results in the Governance Layer reference implementation
+All benchmark results in the Nomos reference implementation
 are fully reproducible. This document specifies the exact procedure.
 
 ## Quick Start (Containerized)

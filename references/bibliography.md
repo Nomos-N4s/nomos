@@ -1,6 +1,6 @@
 # Bibliography
 
-> Living bibliography for the Governance Layer research project.
+> Living bibliography for the Nomos research project.
 > Sorted conceptual → chronological → alphabetical.
 
 ---

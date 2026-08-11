@@ -45,7 +45,7 @@ class AttestationReport:
 
 
 class SimulatedEnclave:
-    """Simulated TEE enclave for testing governance-layer security properties.
+    """Simulated TEE enclave for testing Nomos governance layer security properties.
 
     In simulation mode, all operations are in-memory Python. The interface
     mirrors what a real SGX/SEV enclave would provide.

@@ -75,7 +75,7 @@ def cmd_benchmark(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="RL Adversary against the Governance Layer")
+    parser = argparse.ArgumentParser(description="RL Adversary against Nomos")
     sub = parser.add_subparsers(dest="command")
 
     p_train = sub.add_parser("train", help="Train PPO agent")

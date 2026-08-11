@@ -1,6 +1,6 @@
 # References
 
-This directory contains the living bibliography for the Governance Layer research project.
+This directory contains the living bibliography for the Nomos research project.
 
 ## Purpose
 
