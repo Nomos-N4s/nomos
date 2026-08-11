@@ -81,6 +81,27 @@ python -m src.nomos.runner prove --all
 python -m src.nomos.runner all --baselines --steps 1000 --seeds 5
 ```
 
+## Containerized
+
+Versioned multi-arch images (`linux/amd64` and `linux/arm64`) are published to
+GHCR on every `v*` tag:
+
+```bash
+docker pull ghcr.io/nomos-n4s/nomos:v0.8.0          # core, default entrypoint
+docker pull ghcr.io/nomos-n4s/nomos:with-rl         # includes PyTorch RL stack
+docker pull ghcr.io/nomos-n4s/nomos:latest          # latest stable core (skipped for pre-releases)
+```
+
+Run the reference implementation inside the image:
+
+```bash
+docker run --rm ghcr.io/nomos-n4s/nomos:v0.8.0 all --steps 10 --seeds 1
+```
+
+Local development builds use the same image name with `dev` tags
+(`make docker-build`, `make docker-build-rl`, `make reproduce`); published
+images are immutable per version tag.
+
 ## Dashboard
 
 ```bash
