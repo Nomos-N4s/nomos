@@ -18,7 +18,7 @@ A formal framework for bounded autonomous decision-making.
 - [Theory](book/00-preface.md)
 - [API](api/index.md)
 - [Benchmarks](benchmarks/index.md)
-- [GitHub](https://github.com/xcoder-es/nomos)
+- [GitHub](https://github.com/Nomos-N4s/nomos)
 
 ---
 
@@ -60,7 +60,7 @@ python -m src.nomos.runner speaker
 - [Theory](book/00-preface.md)
 - [API](api/index.md)
 - [Benchmarks](benchmarks/index.md)
-- [GitHub](https://github.com/xcoder-es/nomos)
+- [GitHub](https://github.com/Nomos-N4s/nomos)
 
 ## License
 

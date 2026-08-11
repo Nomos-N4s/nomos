@@ -26,7 +26,7 @@ a container, eliminating environment differences.
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/xcoder-es/nomos.git
+git clone https://github.com/Nomos-N4s/nomos.git
 cd nomos
 pip install -e .
 
@@ -209,7 +209,7 @@ with the release version (e.g., `v0.1.0`).
   author    = {Carlos Pinto (xcoder-es)},
   title     = {The Governance Layer: A Formal Framework for Self-Governing AI},
   year      = {2026},
-  url       = {https://github.com/xcoder-es/nomos},
+  url       = {https://github.com/Nomos-N4s/nomos},
   doi       = {<OSF DOI pending>},
 }
 ```

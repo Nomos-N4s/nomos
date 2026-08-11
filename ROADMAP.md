@@ -49,7 +49,7 @@ Gate: nothing else starts until these merge — they touch `runner.py`,
 
 ## Track D — Rebrand to Nomos (#86) — DONE
 
-Rebrand complete 2026-08-11: repo `xcoder-es/nomos`, package `src/nomos`,
+Rebrand complete 2026-08-11: repo `Nomos-N4s/nomos` (org, transferred from `xcoder-es/nomos`), package `src/nomos`,
 Pages URL live, all three slices (#202/#203/#204) and epic #86 closed after a
 checkbox-by-checkbox audit + residue sweep (`8ef6e7f`).
 

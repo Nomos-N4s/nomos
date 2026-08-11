@@ -5,7 +5,7 @@ description: "Weekly release notes for Nomos, covering new features, updates, an
 
 # Changelog
 
-Weekly updates to the Nomos product. For the full version history, see the repository [CHANGELOG](https://github.com/xcoder-es/nomos/blob/main/CHANGELOG.md).
+Weekly updates to the Nomos product. For the full version history, see the repository [CHANGELOG](https://github.com/Nomos-N4s/nomos/blob/main/CHANGELOG.md).
 
 ## Posts
 

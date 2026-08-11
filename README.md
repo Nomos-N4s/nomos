@@ -6,10 +6,10 @@ The Neural Parliament, Ulysses Contracts, and Identity Layer —
 a complete architecture for constraining autonomous agents through deliberation,
 pre-commitment, and identity coherence.
 
-[![Tests](https://github.com/xcoder-es/nomos/actions/workflows/tests.yml/badge.svg)](https://github.com/xcoder-es/nomos/actions/workflows/tests.yml)
-[![Docs](https://github.com/xcoder-es/nomos/actions/workflows/docs.yml/badge.svg)](https://xcoder-es.github.io/nomos/)
+[![Tests](https://github.com/Nomos-N4s/nomos/actions/workflows/tests.yml/badge.svg)](https://github.com/Nomos-N4s/nomos/actions/workflows/tests.yml)
+[![Docs](https://github.com/Nomos-N4s/nomos/actions/workflows/docs.yml/badge.svg)](https://nomos-n4s.github.io/nomos/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/xcoder-es/nomos)](https://github.com/xcoder-es/nomos/releases/latest)
+[![Release](https://img.shields.io/github/v/release/Nomos-N4s/nomos)](https://github.com/Nomos-N4s/nomos/releases/latest)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 [![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 [![Lean 4](https://img.shields.io/badge/Lean%204-verified-2ea44f)](gov-budget-proof/)
@@ -162,7 +162,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). By submitting a PR you accept the
   author    = {Carlos Pinto (xcoder-es)},
   title     = {Nomos: A Formal Framework for Self-Governing AI},
   year      = {2026},
-  url       = {https://github.com/xcoder-es/nomos},
+  url       = {https://github.com/Nomos-N4s/nomos},
 }
 ```
 
