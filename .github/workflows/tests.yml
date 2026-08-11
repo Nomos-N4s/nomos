@@ -72,7 +72,6 @@ jobs:
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERAGE_PATH: coverage.xml
 
   lint:
     runs-on: ubuntu-latest
