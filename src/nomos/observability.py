@@ -194,7 +194,7 @@ class JsonFormatter(logging.Formatter):
 
     def __init__(self, pretty: bool = False):
         """Args:
-            pretty: indent the JSON with two spaces instead of one line.
+        pretty: indent the JSON with two spaces instead of one line.
         """
         super().__init__()
         self.pretty = pretty
@@ -211,9 +211,7 @@ class JsonFormatter(logging.Formatter):
     @staticmethod
     def _exception_text(record: logging.LogRecord) -> str:
         if record.exc_info:
-            return _redact_string(
-                "".join(traceback.format_exception(*record.exc_info)).rstrip()
-            )
+            return _redact_string("".join(traceback.format_exception(*record.exc_info)).rstrip())
         if record.exc_text:
             return _redact_string(record.exc_text)
         return ""
