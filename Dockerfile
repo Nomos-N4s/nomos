@@ -1,4 +1,6 @@
-FROM python:3.11-slim AS base
+FROM python:3.12-slim AS base
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -6,18 +8,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-COPY pyproject.toml .
 COPY src/ src/
-RUN pip install --no-cache-dir -e .
+COPY tests/ tests/
+COPY examples/ examples/
+RUN uv sync --frozen --no-dev && .venv/bin/python -m pytest tests/ -x -q
 
-RUN python -m pytest tests/ -x -q
+ENV PATH="/app/.venv/bin:$PATH"
 
 ENTRYPOINT ["python", "-m", "src.nomos.runner"]
 
 FROM base AS with-rl
-COPY requirements-rl.txt .
-RUN pip install --no-cache-dir -r requirements-rl.txt
-RUN python -m pytest tests/ -x -q
+
+RUN uv sync --frozen --no-dev --extra rl && .venv/bin/python -m pytest tests/ -x -q
