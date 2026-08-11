@@ -1,0 +1,48 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KZRPEKEJ6JV6BDVQX7A4622F",
+  "session_id": "ses_014b0b466ffebdk7LnpCZQJse3",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-11T15:18:42.1858835Z",
+  "branch": "182-collab",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [],
+  "agent": "OpenCode",
+  "model": "deepseek-v4-flash-free",
+  "turn_id": "1cb1e18b2669",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 4045664,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 69506304,
+    "output_tokens": 606222,
+    "api_call_count": 722
+  },
+  "session_metrics": {
+    "turn_count": 15
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 784,
+      "user_lines_removed": 64,
+      "agent_lines_added": 1366,
+      "agent_lines_removed": 1017,
+      "user_added_per_file": {
+        "docs/api/index.md": 1,
+        "docs/server.md": 111,
+        "mkdocs.yml": 1,
+        "pyproject.toml": 3,
+        "src/nomos/ontology/backend.py": 75,
+        "src/nomos/ontology/neo4j_backend.py": 8,
+        "src/nomos/runner.py": 113,
+        "src/nomos/server.py": 258,
+        "tests/test_server.py": 214
+      },
+      "user_removed_per_file": {
+        "src/nomos/ontology/backend.py": 64
+      }
+    }
+  ]
+}
