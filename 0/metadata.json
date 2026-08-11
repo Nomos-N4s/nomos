@@ -1,0 +1,48 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KZS1RVCXQ1ABVBCVG1RG1BNF",
+  "session_id": "ses_014b0b466ffebdk7LnpCZQJse3",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-11T18:36:56.3788076Z",
+  "branch": "build/coverage-gate",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    ".github/workflows/tests.yml"
+  ],
+  "agent": "OpenCode",
+  "model": "deepseek-v4-flash-free",
+  "turn_id": "7b40fdecf488",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 5007729,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 108066304,
+    "output_tokens": 880038,
+    "api_call_count": 1098
+  },
+  "session_metrics": {
+    "turn_count": 36
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-11T18:36:53.2210764Z",
+    "agent_lines": 0,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 139,
+    "human_removed": 1,
+    "total_committed": 139,
+    "total_lines_changed": 141,
+    "agent_percentage": 0.7092198581560284,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
