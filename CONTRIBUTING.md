@@ -21,6 +21,19 @@ Thanks for your interest! This is a solo project but community contributions are
 - Reference the issue: `Issue #42: fix budget overflow edge case`
 - One commit per logical change
 
+## Releases
+
+- Releases are automated with [release-please](https://github.com/googleapis/release-please)
+  (python release type). It consumes the conventional-commit prefixes above, so
+  **semver-relevant changes must use `feat:` / `fix:` / `refactor:` / `perf:` /
+  `revert:`** — this is now a mechanical requirement, not a style suggestion.
+- After a releasable merge to `main`, a `chore(main): release nomos X.Y.Z` pull
+  request opens automatically. Merge it as-is: on merge, release-please tags
+  `vX.Y.Z`, publishes the GitHub release with generated notes, and the GHCR
+  `publish-image` workflow builds and pushes the multi-arch images.
+- **Do not hand-edit `CHANGELOG.md`** — release-please owns it.
+- **Do not create tags or GitHub releases manually** — let the release PR do it.
+
 ## Labels Guide
 
 | Label | Meaning |

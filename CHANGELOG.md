@@ -5,11 +5,8 @@ All notable changes to the Nomos project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
-
-### Added
-- Structured JSON logging foundation (#161): `nomos.observability` with `configure_logging()` (plain / compact JSON / pretty JSON), deterministic schema (timestamp, level, logger, message, sorted extras), recursive secret redaction (name-based + value-shape, incl. OpenAI `sk-` keys, Bearer tokens, AWS `AKIA`, PEM blocks), and non-JSON-native value coercion. CLI flags `--log-format` / `--log-level` on every runner subcommand; Speaker emits `governance_cycle_start`, `proposal_scored`, `proposal_vetoed`, `governance_decision` events; `all` benchmark command emits one `benchmark_run` JSON line per strategy-scenario; `run_governance_cycle(extra_context=...)` attaches call-site context (e.g. strategy/run_id) to every record without ever influencing the decision.
-- Multi-arch OCI images published to GHCR on `v*` tags (#217): `docker-bake.hcl` targets `base` and `with-rl` for `linux/amd64`+`linux/arm64`, tagged `vX.Y.Z` (+`latest` for stable releases) / `with-rl`, with a full `org.opencontainers.image.*` label set; container entrypoint aligned to the installed package (`python -m nomos.runner`); Makefile docker targets rebased onto `ghcr.io/nomos-n4s/nomos`.
+> CHANGELOG.md is now maintained by release-please. Do not hand-edit this
+> file — entries are generated from conventional-commit history on release.
 
 ## [0.8.0] — 2026-08-11
 

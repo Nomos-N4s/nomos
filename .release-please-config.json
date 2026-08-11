@@ -1,0 +1,23 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "nomos",
+      "changelog-path": "CHANGELOG.md",
+      "bump-patch-for-minor-pre-major": false
+    }
+  },
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance improvements" },
+    { "type": "refactor", "section": "Refactor" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "test", "section": "Tests" },
+    { "type": "build", "section": "Build and CI" },
+    { "type": "ci", "section": "Build and CI" },
+    { "type": "style", "section": "Style" },
+    { "type": "chore", "section": "Miscellaneous chores" },
+    { "type": "revert", "section": "Reverts" }
+  ]
+}
