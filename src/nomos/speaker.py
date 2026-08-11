@@ -66,11 +66,15 @@ Real-world analogy:
     and when to call a vote. They also enforce procedural rules.
 """
 
+import logging
 from collections import defaultdict
 from typing import Any
 
 from .committee.base import ParliamentMember
 from .models import GovernanceDecision, PriorityTag, Proposal
+from .observability import RESERVED_EXTRA_KEYS
+
+_LOGGER = logging.getLogger("nomos.speaker")
 
 
 class SpeakerStateMachine:
@@ -328,6 +332,7 @@ class SpeakerStateMachine:
         state: Any,
         raw_proposals: list[Proposal],
         decision_class: str = "routine",
+        extra_context: dict[str, Any] | None = None,
     ) -> GovernanceDecision:
         """Run one complete governance cycle from proposals to decision.
 
@@ -348,13 +353,32 @@ class SpeakerStateMachine:
             raw_proposals: All proposals submitted by members.
             decision_class: Determines voting threshold (see
                 :meth:`_resolve_vote`).
+            extra_context: Optional structured logging context (e.g.
+                ``{"strategy": "monolithic_rl"}``) merged into every log
+                record emitted for this cycle. Never influences the
+                decision — observability only.
 
         Returns:
             A :class:`GovernanceDecision` containing the winning action,
             scores, vetoes, and metadata (including falsification counts).
         """
+        clean_context = {
+            k: v for k, v in (extra_context or {}).items() if k not in RESERVED_EXTRA_KEYS
+        }
         self._falsification_counts = {}
         agenda = self.set_agenda(raw_proposals)
+
+        _LOGGER.info(
+            "governance_cycle_start",
+            extra={
+                **clean_context,
+                "event": "governance_cycle_start",
+                "phase": "agenda",
+                "decision_class": decision_class,
+                "agenda_size": len(agenda),
+                "max_rounds": self.max_rounds,
+            },
+        )
 
         for _round in range(self.max_rounds):
             if _round == 0:
@@ -366,11 +390,37 @@ class SpeakerStateMachine:
 
             for proposal in agenda:
                 scores = self._score_proposal(state, proposal)
+                _LOGGER.debug(
+                    "proposal_scored",
+                    extra={
+                        **clean_context,
+                        "event": "proposal_scored",
+                        "phase": "scoring",
+                        "round": _round + 1,
+                        "member_id": proposal.member_id,
+                        "action": str(proposal.action),
+                        "tag": str(proposal.tag),
+                        "scores": scores,
+                    },
+                )
                 vetoers = self._check_vetoes(scores)
                 if vetoers:
+                    _LOGGER.debug(
+                        "proposal_vetoed",
+                        extra={
+                            **clean_context,
+                            "event": "proposal_vetoed",
+                            "phase": "veto",
+                            "round": _round + 1,
+                            "member_id": proposal.member_id,
+                            "action": str(proposal.action),
+                            "tag": str(proposal.tag),
+                            "vetoers": vetoers,
+                        },
+                    )
                     continue
                 if self._resolve_vote(scores, decision_class):
-                    return GovernanceDecision(
+                    decision = GovernanceDecision(
                         action=proposal.action,
                         scores=scores,
                         governance_meta={
@@ -380,8 +430,27 @@ class SpeakerStateMachine:
                             "falsification_counts": dict(self._falsification_counts),
                         },
                     )
+                    _LOGGER.info(
+                        "governance_decision",
+                        extra={
+                            **clean_context,
+                            "event": "governance_decision",
+                            "phase": "decision",
+                            "round": _round + 1,
+                            "decision_class": decision_class,
+                            "action": str(decision.action),
+                            "is_default": False,
+                            "falsification_counts": decision.governance_meta[
+                                "falsification_counts"
+                            ],
+                            "winning_proposal": decision.governance_meta[
+                                "winning_proposal"
+                            ],
+                        },
+                    )
+                    return decision
 
-        return GovernanceDecision(
+        decision = GovernanceDecision(
             action=self.default_action,
             scores={},
             governance_meta={
@@ -391,6 +460,22 @@ class SpeakerStateMachine:
                 "falsification_counts": dict(self._falsification_counts),
             },
         )
+        _LOGGER.info(
+            "governance_decision",
+            extra={
+                **clean_context,
+                "event": "governance_decision",
+                "phase": "decision",
+                "decision_class": decision_class,
+                "action": str(decision.action),
+                "is_default": True,
+                "reason": decision.governance_meta["reason"],
+                "falsification_counts": decision.governance_meta[
+                    "falsification_counts"
+                ],
+            },
+        )
+        return decision
 
 
 # ──────────────────────────────────────────────

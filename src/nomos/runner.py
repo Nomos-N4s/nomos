@@ -20,6 +20,7 @@ import argparse
 import csv
 import importlib
 import json
+import logging
 import os
 import sys
 import threading
@@ -38,7 +39,10 @@ from .committee.base import ParliamentMember
 from .contracts.contract import UlyssesContract
 from .dsl import ParliamentConfig, parse_file, validate
 from .experiments.metrics import ExperimentReport
+from .observability import configure_logging
 from .speaker import SpeakerStateMachine
+
+_LOGGER = logging.getLogger("nomos.runner")
 
 ALL_STRATEGIES = ["governance", "monolithic_rl", "random", "static_masking", "veto_only"]
 
@@ -329,6 +333,19 @@ def cmd_all(args):
         for r in reps:
             strat = r.metadata.get("strategy", "governance")
             seed = r.metadata.get("seed", 0)
+            _LOGGER.info(
+                "benchmark_run",
+                extra={
+                    "event": "benchmark_run",
+                    "scenario": scenario,
+                    "strategy": strat,
+                    "seed": seed,
+                    "steps": r.total_steps,
+                    "reward": r.total_reward,
+                    "deadlocks": r.deadlock_count,
+                    "violations": r.constraint_violations,
+                },
+            )
             print(
                 f"    [{strat} seed={seed}] {r.name}: steps={r.total_steps} "
                 f"reward={r.total_reward:.1f} "
@@ -497,6 +514,22 @@ def cmd_agent(args):
     )
 
 
+def _add_global_args(parser):
+    parser.add_argument(
+        "--log-format",
+        choices=["plain", "json", "json-pretty"],
+        default="plain",
+        help="Log output format: plain (local dev), json (production/SIEM), "
+        "json-pretty (indented JSON for debugging) (default: plain)",
+    )
+    parser.add_argument(
+        "--log-level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
+        help="Logging level for nomos.* loggers (default: info)",
+    )
+
+
 def _add_shared_args(parser):
     parser.add_argument(
         "--steps", type=int, default=1000, help="Number of steps per run (default: 1000)"
@@ -538,6 +571,7 @@ def _add_shared_args(parser):
 
 def main():
     parser = argparse.ArgumentParser(description="Nomos Reference Implementation")
+    _add_global_args(parser)
     sub = parser.add_subparsers(dest="command")
 
     p_speaker = sub.add_parser("speaker", help="Run quick speaker sanity test")
@@ -715,6 +749,7 @@ def main():
         parser.error("--steps must be > 0")
     if hasattr(args, "seeds") and args.seeds is not None and args.seeds < 1:
         parser.error("--seeds must be > 0")
+    configure_logging(fmt=args.log_format, level=args.log_level)
     args.func(args)
 
 

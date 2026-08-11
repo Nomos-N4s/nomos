@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Structured JSON logging foundation (#161): `nomos.observability` with `configure_logging()` (plain / compact JSON / pretty JSON), deterministic schema (timestamp, level, logger, message, sorted extras), recursive secret redaction (name-based + value-shape, incl. OpenAI `sk-` keys, Bearer tokens, AWS `AKIA`, PEM blocks), and non-JSON-native value coercion. CLI flags `--log-format` / `--log-level` on every runner subcommand; Speaker emits `governance_cycle_start`, `proposal_scored`, `proposal_vetoed`, `governance_decision` events; `all` benchmark command emits one `benchmark_run` JSON line per strategy-scenario; `run_governance_cycle(extra_context=...)` attaches call-site context (e.g. strategy/run_id) to every record without ever influencing the decision.
+
 ## [0.8.0] — 2026-08-11
 
 ### Added
