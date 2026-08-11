@@ -15,7 +15,7 @@ strictly observability: the endpoints below never call
 module.
 
 ```
-python -m src.governance.runner serve --host 127.0.0.1 --port 8000
+python -m src.nomos.runner serve --host 127.0.0.1 --port 8000
 ```
 
 | Flag | Default | Meaning |
@@ -90,7 +90,7 @@ format, for scraping:
 This requires the optional `observability` extra:
 
 ```
-pip install governance-layer[observability]
+pip install nomos[observability]
 ```
 
 Without it, `/metrics` returns `503` with a plain-text message pointing
