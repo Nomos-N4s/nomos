@@ -11,9 +11,13 @@ from src.nomos.observability import configure_logging
 from src.nomos.speaker import SpeakerStateMachine
 
 
-def _make_proposal(member_id: str, tag: int = PriorityTag.ROUTINE,
-                   risk: float = 0.0, reward: float = 0.5,
-                   coherence: float = 1.0) -> Proposal:
+def _make_proposal(
+    member_id: str,
+    tag: int = PriorityTag.ROUTINE,
+    risk: float = 0.0,
+    reward: float = 0.5,
+    coherence: float = 1.0,
+) -> Proposal:
     return Proposal(
         member_id=member_id,
         action=f"action_{member_id}",
@@ -134,9 +138,7 @@ class TestSpeakerTelemetry:
         _, buf = _capture(fmt="json", level="info")
         speaker = self._speaker()
         proposal = _make_proposal("reward")
-        decision = speaker.run_governance_cycle(
-            state="normal", raw_proposals=[proposal]
-        )
+        decision = speaker.run_governance_cycle(state="normal", raw_proposals=[proposal])
         records = _parse_json_docs(buf.getvalue())
         decision_rec = [r for r in records if r["event"] == "governance_decision"][0]
         assert decision_rec["action"] == decision.action
@@ -163,9 +165,7 @@ class TestSpeakerTelemetry:
         _, buf = _capture(fmt="json", level="info")
         speaker = self._speaker()
         proposal = _make_proposal("reward")
-        d1 = speaker.run_governance_cycle(
-            state="normal", raw_proposals=[proposal]
-        )
+        d1 = speaker.run_governance_cycle(state="normal", raw_proposals=[proposal])
         d2 = speaker.run_governance_cycle(
             state="normal",
             raw_proposals=[proposal],

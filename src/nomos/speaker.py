@@ -443,9 +443,7 @@ class SpeakerStateMachine:
                             "falsification_counts": decision.governance_meta[
                                 "falsification_counts"
                             ],
-                            "winning_proposal": decision.governance_meta[
-                                "winning_proposal"
-                            ],
+                            "winning_proposal": decision.governance_meta["winning_proposal"],
                         },
                     )
                     return decision
@@ -470,9 +468,7 @@ class SpeakerStateMachine:
                 "action": str(decision.action),
                 "is_default": True,
                 "reason": decision.governance_meta["reason"],
-                "falsification_counts": decision.governance_meta[
-                    "falsification_counts"
-                ],
+                "falsification_counts": decision.governance_meta["falsification_counts"],
             },
         )
         return decision
