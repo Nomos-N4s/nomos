@@ -1,9 +1,9 @@
 site_name: Nomos
 site_description: A Formal Framework for Self-Governing AI
 site_author: Carlos Pinto (xcoder-es)
-site_url: https://xcoder-es.github.io/nomos/
-repo_url: https://github.com/xcoder-es/nomos
-repo_name: xcoder-es/nomos
+site_url: https://nomos-n4s.github.io/nomos/
+repo_url: https://github.com/Nomos-N4s/nomos
+repo_name: Nomos-N4s/nomos
 copyright: Created by Carlos Pinto (xcoder-es)
 
 theme:

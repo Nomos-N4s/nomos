@@ -7,7 +7,7 @@ description: "Cross-validates the 12 formal predictions from the Governance Laye
 
 > **Status:** Implemented  
 > **Branch:** `feat/144-prediction-cross-validation`  
-> **Issue:** [#144](https://github.com/xcoder-es/nomos/issues/144)  
+> **Issue:** [#144](https://github.com/Nomos-N4s/nomos/issues/144)  
 > **Epic:** Phase D — AI Agent Validation (#145)
 
 ## Overview
