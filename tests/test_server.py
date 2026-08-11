@@ -96,9 +96,7 @@ class TestReadyzPayload:
         status, body = readyz_payload(state)
         assert status == 503
         assert body["checks"]["deadlock_breaker"]["ok"] is False
-        assert body["checks"]["deadlock_breaker"]["detail"] == (
-            "deadlock breaker not configured"
-        )
+        assert body["checks"]["deadlock_breaker"]["detail"] == ("deadlock breaker not configured")
 
     def test_ready_again_after_deadlock_breaker_reset(self):
         breaker = DeadlockBreaker(threshold_cycles=2)
