@@ -23,7 +23,7 @@ You represent that you have the legal right to grant the license above:
 - If your Contribution was created entirely by you, you represent that you own
   the copyright in it.
 - If your Contribution incorporates third-party material, you represent that you
-  have the right to include it under the Project's license (CC BY 4.0).
+  have the right to include it under the Project's license (Apache-2.0).
 
 ## 3. Moral Rights
 

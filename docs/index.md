@@ -64,4 +64,4 @@ python -m src.nomos.runner speaker
 
 ## License
 
-Licensed under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license.
+Licensed under the [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) license.

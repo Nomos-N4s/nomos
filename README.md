@@ -8,7 +8,7 @@ pre-commitment, and identity coherence.
 
 [![Tests](https://github.com/xcoder-es/nomos/actions/workflows/tests.yml/badge.svg)](https://github.com/xcoder-es/nomos/actions/workflows/tests.yml)
 [![Docs](https://github.com/xcoder-es/nomos/actions/workflows/docs.yml/badge.svg)](https://xcoder-es.github.io/nomos/)
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 [![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 [![Lean 4](https://img.shields.io/badge/Lean%204-verified-2ea44f)](gov-budget-proof/)
@@ -161,4 +161,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). By submitting a PR you accept the
 
 ## License
 
-[CC BY 4.0](LICENSE) — attribution required, commercial use permitted.
+[Apache 2.0](LICENSE) — permissive open-source license, commercial use permitted.
