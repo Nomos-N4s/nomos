@@ -1,0 +1,322 @@
+"""Tests for the tamper-evident audit log (#164)."""
+
+import json
+import re
+
+import pytest
+
+from src.nomos.audit import ENTITY_TYPES, ZERO_HASH, AuditLog, AuditRecord, AuditVerification
+from src.nomos.tee.batch import merkle_root
+
+
+def _fixed_now(value: str = "2026-08-11T15:00:00.000Z"):
+    """A fixed clock so identical runs produce identical logs."""
+    return lambda: value
+
+
+def _make_log(tmp_path, count: int = 5, payload=None):
+    log = AuditLog(tmp_path / "events.jsonl", now_fn=_fixed_now())
+    for i in range(count):
+        log.append(
+            "decision",
+            "adopted",
+            f"proposal:{i}",
+            payload if payload is not None else {"action": f"act_{i}", "risk": 0.2 * i},
+        )
+    return log
+
+
+def _lines(path) -> list[str]:
+    return path.read_text(encoding="utf-8").splitlines()
+
+
+class TestAuditChain:
+    def test_append_chains_records(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        records = log.records()
+        assert len(records) == 3
+        assert [r.seq for r in records] == [0, 1, 2]
+        assert records[0].prev_hash == ZERO_HASH
+        assert records[1].prev_hash == records[0].hash
+        assert records[2].prev_hash == records[1].hash
+        assert log.verify().valid
+        assert "chain intact" in log.verify().message
+
+    def test_entity_types_are_validated(self, tmp_path):
+        log = AuditLog(tmp_path / "e.jsonl")
+        with pytest.raises(ValueError):
+            log.append("not_an_entity", "x", "id")
+        with pytest.raises(TypeError):
+            log.append("decision", "x", "id", payload="not a dict")
+
+    def test_payload_is_canonicalised(self, tmp_path):
+        log = AuditLog(tmp_path / "e.jsonl", now_fn=_fixed_now())
+        log.append(
+            "decision", "adopted", "p:1", {"b": 1, "a": [3, {"d": 4, "c": 5}], "nan": float("nan")}
+        )
+        stored = log.records()[0].payload
+        assert list(stored) == ["a", "b", "nan"]
+        assert stored["a"] == [3, {"c": 5, "d": 4}]
+        assert stored["nan"] == "nan"
+
+    def test_payload_canonicalises_datetimes_sets_and_objects(self, tmp_path):
+        import datetime as dt
+
+        class Thing:
+            def __repr__(self):
+                return "<thing>"
+
+        log = AuditLog(tmp_path / "e.jsonl", now_fn=_fixed_now())
+        log.append(
+            "identity",
+            "commitment_changed",
+            "id:1",
+            {
+                "when": dt.datetime(2026, 8, 11, 15, 0, tzinfo=dt.timezone.utc),
+                "tags": {"c", "a", "b"},
+                "thing": Thing(),
+            },
+        )
+        stored = log.records()[0].payload
+        assert stored["when"] == "2026-08-11T15:00:00+00:00"
+        assert stored["tags"] == ["a", "b", "c"]
+        assert stored["thing"] == "<thing>"
+
+    def test_empty_log_verifies(self, tmp_path):
+        log = AuditLog(tmp_path / "e.jsonl")
+        assert log.verify().valid
+        assert len(log) == 0
+
+    def test_missing_file_is_a_failure(self, tmp_path):
+        log = AuditLog(tmp_path / "e.jsonl")
+        log.append("decision", "adopted", "proposal:0")
+        (tmp_path / "e.jsonl").unlink()
+        result = log.verify()
+        assert not result.valid
+        assert "missing" in result.message
+
+    def test_batch_root_matches_tee_merkle(self, tmp_path):
+        log = _make_log(tmp_path, count=4)
+        expected = merkle_root([r.hash.encode("utf-8") for r in log.records()])
+        assert log.batch_root() == expected
+        assert isinstance(log.batch_root(), str) and len(log.batch_root()) == 64
+
+    def test_reproducible_across_identical_runs(self, tmp_path):
+        first = _make_log(tmp_path, count=3)
+        second_path = tmp_path / "second"
+        second = AuditLog(second_path, now_fn=_fixed_now())
+        for r in first.records():
+            second.append(r.entity_type, r.event, r.entity_id, r.payload)
+        assert _lines(first.path) == _lines(second_path)
+        assert first.batch_root() == second.batch_root()
+
+
+class TestTamperDetection:
+    def test_payload_mutation_reported_at_exact_index(self, tmp_path):
+        log = _make_log(tmp_path, count=5)
+        lines = _lines(log.path)
+        mutated = json.loads(lines[2])
+        mutated["payload"]["action"] = "malicious_action"
+        lines[2] = json.dumps(mutated, sort_keys=True, separators=(",", ":"))
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = log.verify()
+        assert not result.valid
+        assert result.broken_index == 2
+        assert "tampered" in result.message
+
+    def test_hash_field_mutation_reported(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        lines = _lines(log.path)
+        mutated = json.loads(lines[1])
+        mutated["hash"] = "f" + mutated["hash"][1:]
+        lines[1] = json.dumps(mutated, sort_keys=True, separators=(",", ":"))
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = log.verify()
+        assert result.broken_index == 1
+        assert "tampered" in result.message
+
+    def test_removed_record_breaks_chain_at_next_index(self, tmp_path):
+        log = _make_log(tmp_path, count=5)
+        lines = _lines(log.path)
+        del lines[2]
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = log.verify()
+        assert not result.valid
+        # record at position 2 now carries seq 3: positional tamper at index 2
+        assert result.broken_index == 2
+        assert "positional" in result.message
+
+    def test_inserted_record_breaks_chain(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        lines = _lines(log.path)
+        forged = {
+            "seq": 1,
+            "entity_type": "decision",
+            "event": "forged",
+            "entity_id": "x",
+            "timestamp": "2026-08-11T15:00:00.000Z",
+            "payload": {},
+            "prev_hash": ZERO_HASH,
+            "hash": "0" * 64,
+        }
+        lines.insert(1, json.dumps(forged, sort_keys=True, separators=(",", ":")))
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = log.verify()
+        assert not result.valid
+        # a well-formed forgery has an invalid content hash: caught at its own index
+        assert result.broken_index == 1
+        assert "tampered" in result.message
+
+    def test_malformed_line_reported(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        lines = _lines(log.path)
+        lines[1] = "this is not json"
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = log.verify()
+        assert not result.valid
+        assert result.broken_index == 1
+        assert "malformed" in result.message
+
+    def test_json_but_missing_keys_reported_malformed(self, tmp_path):
+        log = _make_log(tmp_path, count=2)
+        lines = _lines(log.path)
+        lines[1] = json.dumps({"seq": 1, "event": "partial"})
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        result = log.verify()
+        assert result.broken_index == 1
+        assert "malformed" in result.message
+
+    def test_bad_types_reported_malformed(self, tmp_path):
+        log = _make_log(tmp_path, count=2)
+        lines = _lines(log.path)
+        mutated = json.loads(lines[1])
+        mutated["seq"] = "one"  # non-int seq
+        lines[1] = json.dumps(mutated)
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        result = log.verify()
+        assert result.broken_index == 1
+        assert "malformed" in result.message
+
+    def test_rehashed_attack_breaks_chain_at_next_index(self, tmp_path):
+        """An attacker who rewrites a record AND recomputes its hash correctly
+        survives that record but must re-issue the next link: chain break."""
+        log = _make_log(tmp_path, count=4)
+        lines = _lines(log.path)
+        mutated = json.loads(lines[2])
+        mutated["payload"]["action"] = "evil"
+        # Recompute the hash so record 2 itself verifies...
+        import hashlib
+
+        fields = {k: mutated[k] for k in mutated if k != "hash"}
+        mutated["hash"] = hashlib.sha256(
+            json.dumps(fields, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        lines[2] = json.dumps(mutated, sort_keys=True, separators=(",", ":"))
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = log.verify()
+        assert not result.valid
+        assert result.broken_index == 3  # record 3's prev_hash no longer matches
+        assert "chain break" in result.message
+
+    def test_append_after_tamper_still_caught(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        lines = _lines(log.path)
+        mutated = json.loads(lines[1])
+        mutated["event"] = "rewritten"
+        lines[1] = json.dumps(mutated, sort_keys=True, separators=(",", ":"))
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        log.append("decision", "adopted", "proposal:99")
+        result = log.verify()
+        assert not result.valid
+        assert result.broken_index == 1  # never silently revalidated
+
+    def test_out_of_band_deletion_detected(self, tmp_path):
+        log = _make_log(tmp_path, count=2)
+        log.path.unlink()
+        result = log.verify()
+        assert not result.valid
+        assert "missing" in result.message
+
+
+class TestAppendOnly:
+    def test_no_mutation_api(self, tmp_path):
+        log = _make_log(tmp_path, count=2)
+        for forbidden in ("update", "delete", "rewrite", "truncate", "clear"):
+            assert not hasattr(log, forbidden)
+        with pytest.raises(AttributeError):  # frozen dataclass field
+            log.records()[0].seq = 99
+
+    def test_rewrite_attempt_is_detected(self, tmp_path):
+        log = _make_log(tmp_path, count=4)
+        lines = _lines(log.path)
+        rewritten = json.loads(lines[2])
+        rewritten["seq"] = 2
+        rewritten["event"] = "forged_rewrite"
+        lines[2] = json.dumps(rewritten, sort_keys=True, separators=(",", ":"))
+        log.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        result = log.verify()
+        assert not result.valid
+        assert result.broken_index == 2
+
+    def test_verify_after_legitimate_appends_stays_valid(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        for i in range(3, 6):
+            log.append("veto", "applied", f"proposal:{i}", {"reason": "safety"})
+        assert log.verify().valid
+        assert len(log) == 6
+
+
+class TestSiemExport:
+    def test_export_line_format(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        out = tmp_path / "events.syslog"
+        count = log.export_siem(out)
+        assert count == 3
+        lines = out.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == 3
+        for i, line in enumerate(lines):
+            assert line.startswith("<13>1 2026-08-11T15:00:00.000Z - nomos ")
+            assert f" {i} adopted " in line
+            assert f'[nomos-audit entity_type="decision" entity_id="proposal:{i}" hash="' in line
+        # payload JSON survives at the end of the line
+        assert json.loads(lines[0].rsplit(" ", 1)[1]) == {"action": "act_0", "risk": 0.0}
+
+    def test_export_is_deterministic(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        out_a, out_b = tmp_path / "a.syslog", tmp_path / "b.syslog"
+        log.export_siem(out_a)
+        log.export_siem(out_b)
+        assert out_a.read_text(encoding="utf-8") == out_b.read_text(encoding="utf-8")
+
+    def test_sd_escaping(self, tmp_path):
+        log = AuditLog(tmp_path / "e.jsonl", now_fn=_fixed_now())
+        log.append("identity", "commitment_changed", 'id"weird]\\x', {"k": "v"})
+        out = tmp_path / "e.syslog"
+        log.export_siem(out, hostname="node-1")
+        line = out.read_text(encoding="utf-8").strip()
+        assert line.startswith("<13>1 2026-08-11T15:00:00.000Z node-1 nomos 0 commitment_changed ")
+        # RFC 5424 SD escaping: no raw quotes/brackets inside the SD element
+        sd = line.split("] ", 1)[0].split("[", 1)[1]
+        assert re.fullmatch(
+            r'nomos-audit entity_type="identity" entity_id="id\\"weird\\\]\\\\x" hash="[0-9a-f]{64}"',
+            sd,
+        )
+
+
+class TestPermissionsContract:
+    def test_entity_types_are_the_documented_set(self):
+        assert ENTITY_TYPES == ("proposal", "decision", "contract", "veto", "identity")
+
+    def test_append_returns_verifiable_records(self, tmp_path):
+        log = AuditLog(tmp_path / "e.jsonl", now_fn=_fixed_now())
+        record = log.append("contract", "enacted", "contract:1", {"mask": {"bank_loans"}})
+        assert isinstance(record, AuditRecord)
+        assert isinstance(log.verify(), AuditVerification)
+        assert log.verify().valid
