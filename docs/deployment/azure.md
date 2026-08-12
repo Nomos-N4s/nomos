@@ -121,10 +121,24 @@ pulumi up
 
 ---
 
-## Deployment Verification Checklist
+## Deployment Verification Checklist (#222)
 
-After deploying via `pulumi up`, perform the following steps to verify operational health:
+After deploying via `pulumi up`, you can run the automated verification script to validate operational health and generate a verification report:
 
+```bash
+cd infra/azure
+python verify.py
+```
+
+This script automatically:
+1. Fetches stack outputs from Pulumi.
+2. Tests the Core Liveness endpoint (`/healthz`).
+3. Tests the Core Readiness endpoint (`/readyz`).
+4. Tests Dashboard accessibility.
+5. Queries Azure CLI for Container Apps runtime status.
+6. Generates `infra/azure/verification_report.md`.
+
+Alternatively, you can perform manual verification:
 1. **Verify Core Liveness Endpoint (`/healthz`):**
    ```bash
    curl -i https://<core-url>/healthz
