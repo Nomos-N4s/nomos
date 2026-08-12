@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.11.1](https://github.com/Nomos-N4s/nomos/compare/v0.11.0...v0.11.1) (2026-08-12)
+
+
+### Documentation
+
+* ADR 0001 modular monolith and atomic governance gate ([#220](https://github.com/Nomos-N4s/nomos/issues/220)) ([f28fc40](https://github.com/Nomos-N4s/nomos/commit/f28fc40ef3e22c69aa6c10287b3273f51552ba03))
+* ADR 0001 restricts MemoryBackend to local mode; label dashboard writes as projections ([16bd21a](https://github.com/Nomos-N4s/nomos/commit/16bd21a877acf2f0a7f2868b2b24946e27d7d84b))
+
 ## [0.11.0](https://github.com/Nomos-N4s/nomos/compare/v0.10.1...v0.11.0) (2026-08-12)
 
 
