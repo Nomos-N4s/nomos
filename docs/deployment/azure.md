@@ -44,13 +44,13 @@ flowchart TB
 ## Component Breakdown
 
 1. **Core Container App:**
-   - **Image:** `ghcr.io/nomos-n4s/nomos:0.11.1`
+   - **Image:** `ghcr.io/nomos-n4s/nomos:0.13.0` <!-- x-release-please-version -->
    - **Entrypoint:** `python -m nomos.runner serve --host 0.0.0.0 --port 8000`
    - **Probes:**
      - Liveness: `HTTP GET /healthz` (Port 8000)
      - Readiness: `HTTP GET /readyz` (Port 8000)
 2. **Dashboard Container App:**
-   - **Image:** `ghcr.io/nomos-n4s/nomos:0.11.1`
+   - **Image:** `ghcr.io/nomos-n4s/nomos:0.13.0` <!-- x-release-please-version -->
    - **Entrypoint:** `streamlit run src/nomos/dashboard/app.py --server.port=8501 --server.address=0.0.0.0`
    - **Liveness Probe:** `HTTP GET /_stcore/health` (Port 8501)
 3. **Key Vault & Managed Identity:**
@@ -109,7 +109,7 @@ pulumi up
 | `azure-native:location` | string | `eastus` | Azure target region |
 | `nomos-azure:environment_name` | string | `dev` | Deployment environment tag |
 | `nomos-azure:image_repository` | string | `ghcr.io/nomos-n4s/nomos` | GHCR container repository |
-| `nomos-azure:image_tag` | string | `0.11.1` | Image tag to deploy |
+| `nomos-azure:image_tag` | string | current release | Image tag to deploy; defaults to the `.release-please-manifest.json` version. Override to pin an older image. |
 | `nomos-azure:core_cpu` | float | `0.5` | vCPU allocation for Core container |
 | `nomos-azure:core_memory` | string | `1.0Gi` | RAM allocation for Core container |
 | `nomos-azure:dashboard_cpu` | float | `0.5` | vCPU allocation for Dashboard container |
