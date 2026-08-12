@@ -97,6 +97,29 @@ def test_image_tag_tracks_release_manifest() -> None:
         sys.path = sys_path_orig
 
 
+def test_default_image_tag_raises_actionable_error_when_manifest_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A missing/unreadable manifest must raise a clear RuntimeError, not a bare
+    FileNotFoundError, and must not silently fall back to a hardcoded tag."""
+    sys_path_orig = list(sys.path)
+    try:
+        sys.path.insert(0, str(INFRA_AZURE_DIR))
+        config_path = INFRA_AZURE_DIR / "config.py"
+        spec = importlib.util.spec_from_file_location("nomos_infra_config", config_path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        monkeypatch.setattr(
+            module, "_MANIFEST_PATH", INFRA_AZURE_DIR / "does-not-exist.json"
+        )
+        with pytest.raises(RuntimeError, match="image_tag"):
+            module._default_image_tag()
+    finally:
+        sys.path = sys_path_orig
+
+
 def test_main_module_importable() -> None:
     """Verify infra/azure/__main__.py exists and defines main()."""
     main_path = INFRA_AZURE_DIR / "__main__.py"

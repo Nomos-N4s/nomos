@@ -22,8 +22,23 @@ def _default_image_tag() -> str:
     GHCR image and removes the drift a hardcoded literal invites. An explicit
     ``pulumi config set nomos-azure:image_tag <tag>`` still overrides this to
     pin an older image.
+
+    Raises a clear, actionable ``RuntimeError`` if the manifest cannot be read
+    or parsed, rather than surfacing a bare ``FileNotFoundError`` /
+    ``JSONDecodeError`` / ``KeyError`` from deep in a ``pulumi up``. It
+    deliberately does not fall back to a hardcoded tag: a silent default is
+    exactly the drift this function exists to prevent, so the safe failure is
+    to stop with instructions to set an explicit override.
     """
-    return json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))["."]
+    try:
+        manifest = json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))
+        return manifest["."]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise RuntimeError(
+            f"Could not derive the container image tag from {_MANIFEST_PATH}: {exc}. "
+            "Run Pulumi from within the repository checkout, or set an explicit tag with "
+            "`pulumi config set nomos-azure:image_tag <tag>`."
+        ) from exc
 
 
 class NomosAzureConfig:
