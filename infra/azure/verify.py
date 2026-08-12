@@ -49,10 +49,10 @@ def main() -> None:
         print(f"Failed to parse Pulumi outputs as JSON: {e}")
         sys.exit(1)
 
-    core_url = outputs.get("core_url", {}).get("value", "")
-    dashboard_url = outputs.get("dashboard_url", {}).get("value", "")
-    rg_name = outputs.get("resource_group_name", {}).get("value", "")
-    kv_name = outputs.get("key_vault_name", {}).get("value", "")
+    core_url = outputs.get("core_url", "")
+    dashboard_url = outputs.get("dashboard_url", "")
+    rg_name = outputs.get("resource_group_name", "")
+    kv_name = outputs.get("key_vault_name", "")
 
     print(f"  - Resource Group: {rg_name}")
     print(f"  - Key Vault: {kv_name}")
@@ -162,6 +162,10 @@ def main() -> None:
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))
     print(f"\nReport written to {report_path}")
+
+    # Exit with failure code if verification failed
+    if not verification_passed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
