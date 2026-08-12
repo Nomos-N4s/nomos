@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.13.0](https://github.com/Nomos-N4s/nomos/compare/v0.12.0...v0.13.0) (2026-08-12)
+
+
+### Features
+
+* **azure:** add automated verification script and operational report for [#222](https://github.com/Nomos-N4s/nomos/issues/222) ([feee829](https://github.com/Nomos-N4s/nomos/commit/feee8296654d7c4fcf14366bf2d4606549930dc1))
+* **azure:** add automated verification script and report generation for [#222](https://github.com/Nomos-N4s/nomos/issues/222) ([2e7aaeb](https://github.com/Nomos-N4s/nomos/commit/2e7aaeb7cc1b4629f0c231f65af16fa753c787a7))
+
+
+### Bug Fixes
+
+* **azure:** correct Pulumi output parsing and failure exit code in verify.py ([4ae7c4d](https://github.com/Nomos-N4s/nomos/commit/4ae7c4d8d4f665ab09e4074c339ab5905ebe1a90))
+
+
+### Documentation
+
+* add provision verify and destroy hard rule to AGENTS.md ([c6eb3ce](https://github.com/Nomos-N4s/nomos/commit/c6eb3ceb8f948df847b71eab068bd6dc76f07c85))
+
 ## [0.12.0](https://github.com/Nomos-N4s/nomos/compare/v0.11.1...v0.12.0) (2026-08-12)
 
 
