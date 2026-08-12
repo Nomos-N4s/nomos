@@ -248,6 +248,11 @@ class AuditLog:
         now_fn: Callable returning the ISO-8601 UTC timestamp for new
             records; inject a fixed clock for reproducible runs (defaults to
             the real current time).
+
+    Reopening an existing store restores the full chain from disk — ``seq``,
+    ``prev_hash``, ``records()``, ``batch_root()``, and ``export_siem()``
+    always reflect the complete log, never just this instance's appends.
+    A malformed existing file raises :class:`ValueError` at construction.
     """
 
     def __init__(self, path: str | Path, now_fn: Callable[[], str] | None = None) -> None:
@@ -258,6 +263,20 @@ class AuditLog:
         # records yet" while a missing file means out-of-band deletion.
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.touch(exist_ok=True)
+        self._load()
+
+    def _load(self) -> None:
+        """Restore the in-memory chain from the existing store.
+
+        Raises:
+            ValueError: The store contains a line that is not a parseable
+                audit record (missing fields, wrong types, or bad JSON).
+        """
+        for index, line in enumerate(self.path.read_text(encoding="utf-8").splitlines()):
+            record = _parse_line(index, line)
+            if record is None:
+                raise ValueError(f"audit log {self.path} is malformed at record {index}")
+            self._entries.append(record)
 
     def append(
         self,
@@ -309,7 +328,7 @@ class AuditLog:
         return record
 
     def records(self) -> tuple[AuditRecord, ...]:
-        """The records appended through this instance (append-only view)."""
+        """The full chain: records loaded from disk plus this instance's appends."""
         return tuple(self._entries)
 
     def __len__(self) -> int:
@@ -329,6 +348,9 @@ class AuditLog:
            reported as *tampered* at its index.
         4. A record whose ``prev_hash`` does not match the previous record's
            hash is reported as a *chain break* at its index.
+        5. A file that is shorter than the chain this instance knows is
+           reported as *truncated* (trailing records removed) — a shortened
+           log would otherwise verify as an intact prefix.
 
         Returns:
             :class:`AuditVerification` with the exact broken index.
@@ -338,6 +360,8 @@ class AuditLog:
         except FileNotFoundError:
             return AuditVerification(False, 0, "audit log file missing (deleted out of band)")
         if not lines:
+            if self._entries:
+                return AuditVerification(False, 0, "audit log truncated (all records removed)")
             return AuditVerification(True, None, "audit log is empty (no records)")
 
         previous_hash = ZERO_HASH
@@ -371,6 +395,12 @@ class AuditLog:
                     f"record {index} prev_hash does not match previous record (chain break)",
                 )
             previous_hash = record.hash
+        if len(lines) < len(self._entries):
+            return AuditVerification(
+                False,
+                len(lines),
+                f"audit log truncated: {len(lines)} records on disk, {len(self._entries)} expected",
+            )
         return AuditVerification(True, None, f"chain intact: {len(lines)} records verified")
 
     def batch_root(self) -> str:
