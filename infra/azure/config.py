@@ -2,10 +2,43 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 try:
     import pulumi
 except ImportError:
     pulumi = None  # type: ignore[assignment]
+
+_MANIFEST_PATH = Path(__file__).resolve().parents[2] / ".release-please-manifest.json"
+
+
+def _default_image_tag() -> str:
+    """Return the current release version from the release-please manifest.
+
+    The manifest is release-please's single source of truth for the package
+    version, bumped automatically on every release. Deriving the deployed
+    image tag from it keeps the Azure stack in lockstep with the published
+    GHCR image and removes the drift a hardcoded literal invites. An explicit
+    ``pulumi config set nomos-azure:image_tag <tag>`` still overrides this to
+    pin an older image.
+
+    Raises a clear, actionable ``RuntimeError`` if the manifest cannot be read
+    or parsed, rather than surfacing a bare ``FileNotFoundError`` /
+    ``JSONDecodeError`` / ``KeyError`` from deep in a ``pulumi up``. It
+    deliberately does not fall back to a hardcoded tag: a silent default is
+    exactly the drift this function exists to prevent, so the safe failure is
+    to stop with instructions to set an explicit override.
+    """
+    try:
+        manifest = json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))
+        return manifest["."]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise RuntimeError(
+            f"Could not derive the container image tag from {_MANIFEST_PATH}: {exc}. "
+            "Run Pulumi from within the repository checkout, or set an explicit tag with "
+            "`pulumi config set nomos-azure:image_tag <tag>`."
+        ) from exc
 
 
 class NomosAzureConfig:
@@ -25,7 +58,7 @@ class NomosAzureConfig:
             self.image_repository: str = (
                 cfg.get("image_repository") or "ghcr.io/nomos-n4s/nomos"
             )
-            self.image_tag: str = cfg.get("image_tag") or "0.11.1"
+            self.image_tag: str = cfg.get("image_tag") or _default_image_tag()
 
             # Container compute allocations
             self.core_cpu: float = float(cfg.get("core_cpu") or "0.5")
@@ -52,7 +85,7 @@ class NomosAzureConfig:
             self.environment_name = "dev"
             self.resource_group_name = "nomos-rg-dev"
             self.image_repository = "ghcr.io/nomos-n4s/nomos"
-            self.image_tag = "0.11.1"
+            self.image_tag = _default_image_tag()
             self.core_cpu = 0.5
             self.core_memory = "1.0Gi"
             self.dashboard_cpu = 0.5

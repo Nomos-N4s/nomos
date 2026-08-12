@@ -4,7 +4,10 @@
       "release-type": "python",
       "package-name": "nomos",
       "changelog-path": "CHANGELOG.md",
-      "bump-patch-for-minor-pre-major": false
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        "docs/deployment/azure.md"
+      ]
     }
   },
   "changelog-sections": [
