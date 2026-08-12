@@ -60,6 +60,11 @@ flowchart TB
 | **Identity Layer** | Formal ontology + core commitments + 4-tier mutability (Constitutional → Dynamic → Operational → Immutable) + genesis 3-of-5 multisig bootstrapping + bounded parameter envelope. |
 | **TEE Enclave** | Simulated trusted execution environment: sealed storage, attestation, Merkle-tree batch verification, hardware watchdog with deadlock breaker, constant-time data-oblivious operations. |
 
+Deployment topology is a recorded decision: the system ships as a **modular
+monolith** (core + dashboard, one atomic governance gate) with explicit,
+evidence-based split signals. See
+[ADR 0001](docs/adr/0001-modular-monolith-and-atomic-governance-gate.md).
+
 ---
 
 ## By the Numbers
