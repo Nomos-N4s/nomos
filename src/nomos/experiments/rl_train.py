@@ -18,6 +18,11 @@ from typing import Any
 import numpy as np
 
 from .gym_env import GovernanceGridWorld
+from .rl_metrics import (
+    compute_episode_metrics,
+    step_record_from_info,
+    summarize_episodes,
+)
 
 
 def make_env(
@@ -71,53 +76,45 @@ def evaluate(
 
     Returns:
         Dict with ``metrics_per_episode``, ``avg_reward``, ``std_reward``,
-        ``avg_violations``, ``avg_apples``, ``total_steps``, and
-        ``decision_history``.
+        ``avg_violations``, ``avg_apples``, ``avg_vetoes``, ``veto_precision``,
+        ``veto_recall``, ``avg_falsifications``, ``total_steps``, and
+        ``decision_history``. All counts follow the canonical definitions in
+        :mod:`nomos.experiments.rl_metrics`.
     """
+    episode_metrics = []
     metrics_list = []
     all_histories = []
 
     for ep in range(episodes):
         obs, _ = env.reset(seed=42 + ep)
-        ep_reward = 0.0
-        ep_violations = 0
-        ep_steps = 0
-        ep_apples = 0
+        records = []
 
         while True:
             action, _ = model.predict(obs, deterministic=deterministic)
             obs, reward, terminated, truncated, info = env.step(int(action))
-            ep_reward += reward
-            ep_violations += info["violations"]
-            ep_apples += 1 if info.get("reward", 0) > 0.5 else 0
-            ep_steps += 1
+            records.append(step_record_from_info(info))
 
             if terminated or truncated:
                 break
 
-        metrics_list.append(
-            {
-                "episode": ep,
-                "reward": ep_reward,
-                "steps": ep_steps,
-                "violations": ep_violations,
-                "apples": ep_apples,
-            }
-        )
+        em = compute_episode_metrics(records)
+        episode_metrics.append(em)
+        metrics_list.append({"episode": ep, **em.as_dict()})
         all_histories.extend(env.decision_history)
 
-    avg_reward = np.mean([m["reward"] for m in metrics_list])
-    std_reward = np.std([m["reward"] for m in metrics_list])
-    avg_violations = np.mean([m["violations"] for m in metrics_list])
-    avg_apples = np.mean([m["apples"] for m in metrics_list])
+    summary = summarize_episodes(episode_metrics)
 
     return {
         "metrics_per_episode": metrics_list,
-        "avg_reward": float(avg_reward),
-        "std_reward": float(std_reward),
-        "avg_violations": float(avg_violations),
-        "avg_apples": float(avg_apples),
-        "total_steps": sum(m["steps"] for m in metrics_list),
+        "avg_reward": summary["avg_reward"],
+        "std_reward": summary["std_reward"],
+        "avg_violations": summary["avg_violations"],
+        "avg_apples": summary["avg_apples"],
+        "avg_vetoes": summary["avg_vetoes"],
+        "veto_precision": summary["veto_precision"],
+        "veto_recall": summary["veto_recall"],
+        "avg_falsifications": summary["avg_falsifications"],
+        "total_steps": summary["total_steps"],
         "decision_history": all_histories[:500],
     }
 

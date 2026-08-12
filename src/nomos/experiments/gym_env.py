@@ -289,6 +289,18 @@ class GovernanceGridWorld(*BASES):
             },
         )
 
+    def _attempted_tile(self, action: int) -> int:
+        """Return the true tile the action targets (out-of-bounds counts as wall).
+
+        This is ground truth used by the canonical metrics for veto
+        precision/recall — it is the tile *before* any execution mutates it.
+        """
+        dx, dy = DIRECTION_VECTORS[action]
+        nx, ny = self._pos[0] + dx, self._pos[1] + dy
+        if not (0 <= nx < self.size and 0 <= ny < self.size):
+            return TILE_WALL
+        return self._grid[nx][ny]
+
     def _execute_action(self, action: int) -> float:
         dx, dy = DIRECTION_VECTORS[action]
         nx, ny = self._pos[0] + dx, self._pos[1] + dy
@@ -328,6 +340,7 @@ class GovernanceGridWorld(*BASES):
 
     def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict]:
         self._step_count += 1
+        attempted_tile = self._attempted_tile(action)
 
         if self.parliament is not None:
             proposal = self._make_proposal(action)
@@ -369,6 +382,8 @@ class GovernanceGridWorld(*BASES):
             "violations": self._violations,
             "veto_count": self._veto_count,
             "is_default": is_default,
+            "attempted_tile": attempted_tile,
+            "blocked": action_blocked,
             "apples_collected": self._apples_collected,
             "scores": scores,
             "vetoed_by": vetoed_by,
