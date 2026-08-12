@@ -48,10 +48,23 @@ Three forces pin the topology down:
 - **One deployable artifact pair** — the core container and the dashboard
   container, published from the same release (GHCR images, Track I).
 - **One data lifetime** — a single ontology backend shared by core and
-  dashboard (in-process Memory backend, or one Neo4j instance when
-  `NEO4J_URI` is configured). No per-service databases.
+  dashboard; no per-service databases. The in-process ``MemoryBackend`` is
+  valid **only in single-process/local mode** (core and dashboard in one
+  process — e.g., local development with the embedded dashboard). In the
+  two-process production topology each process would construct its own
+  in-memory store, so the shared backend **must** be the Neo4j-backed store
+  (``NEO4J_URI``; the IaC in #221 provisions it) or an API-mediated shared
+  persistence path once the core API lands (#172). A dashboard that cannot
+  reach the shared backend must **fail closed** in production, not silently
+  fall back to memory.
 - **One atomic gate** — all governance state transitions happen inside the
   core process; the dashboard only *queries* and *replays* decisions.
+  Dashboard writes (e.g., the replay log in
+  ``src/nomos/dashboard/parliament_tab.py``) are **non-authoritative
+  projections** — observational copies of decisions for display, never
+  authoritative governance transitions. Authoritative state is written only
+  by the core process (or by the audit log's ``append``, which only the core
+  and identity-authorized components touch).
 
 ## Topology
 
@@ -75,7 +88,7 @@ flowchart TB
         D["Streamlit app"]
     end
     subgraph Store["Ontology backend — one data lifetime"]
-        O["Memory or Neo4j"]
+        O["Neo4j (two-process prod); Memory only local"]
     end
     A -- "proposals" --> R
     R -- "GovernanceDecision" --> A

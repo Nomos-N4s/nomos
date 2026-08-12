@@ -54,6 +54,13 @@ def _neo4j_available() -> bool:
 
 @st.cache_resource
 def get_ontology_backend():
+    """Pick the ontology backend: Neo4j when configured, else in-memory.
+
+    ADR 0001: the memory fallback is valid only for single-process/local
+    mode. In the two-process production topology the shared backend must be
+    Neo4j (provisioned by the Track J IaC), and a failed connection must
+    fail closed rather than silently split the data lifetime.
+    """
     if _neo4j_available():
         try:
             from nomos.ontology.neo4j_backend import Neo4jBackend

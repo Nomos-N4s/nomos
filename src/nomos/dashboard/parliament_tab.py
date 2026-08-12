@@ -14,6 +14,12 @@ Real-world analogy:
     A flight data recorder (black box) replay. Every decision, score,
     and veto is recorded and can be replayed step by step to understand
     what the Parliament was thinking at each moment.
+
+Note (see ADR 0001 — one atomic gate): every entity this tab writes via
+``_log_step_to_backend`` is a **non-authoritative projection** — an
+observational replay copy for display. Authoritative governance state is
+written only by the core process; the dashboard never performs governance
+transitions.
 """
 
 import json
@@ -126,6 +132,13 @@ def _render_scores(step_data: dict):
 
 
 def _log_step_to_backend(backend: OntologyBackend | None, step: dict):
+    """Write one replayed step as an observational projection (non-authoritative).
+
+    ADR 0001: the dashboard never performs governance transitions; these
+    entities are display-side copies of already-made decisions. Failure to
+    write is non-fatal (``except Exception: pass``) precisely because the
+    projection is not authoritative state.
+    """
     if backend is None:
         return
     try:
