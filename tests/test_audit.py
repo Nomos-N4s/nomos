@@ -101,6 +101,31 @@ class TestAuditChain:
         assert log.batch_root() == expected
         assert isinstance(log.batch_root(), str) and len(log.batch_root()) == 64
 
+    def test_anchor_persisted_outside_the_jsonl(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        anchor = tmp_path / "events.jsonl.root"
+        assert anchor.exists()
+        assert json.loads(anchor.read_text(encoding="utf-8"))["root"] == log.batch_root()
+        # the anchor is a separate file from the chain
+        assert anchor.read_text(encoding="utf-8") != log.path.read_text(encoding="utf-8")
+
+    def test_anchor_updated_on_every_append(self, tmp_path):
+        log = _make_log(tmp_path, count=2)
+        first_root = json.loads((tmp_path / "events.jsonl.root").read_text(encoding="utf-8"))[
+            "root"
+        ]
+        log.append("veto", "applied", "proposal:2")
+        second_root = json.loads((tmp_path / "events.jsonl.root").read_text(encoding="utf-8"))[
+            "root"
+        ]
+        assert first_root != second_root
+        assert second_root == log.batch_root()
+
+    def test_empty_log_has_no_anchor_and_verifies(self, tmp_path):
+        log = AuditLog(tmp_path / "e.jsonl")
+        assert not (tmp_path / "e.jsonl.root").exists()
+        assert log.verify().valid
+
     def test_reproducible_across_identical_runs(self, tmp_path):
         first = _make_log(tmp_path, count=3)
         second_path = tmp_path / "second"
@@ -295,6 +320,71 @@ class TestTamperDetection:
         result = log.verify()
         assert not result.valid
         assert "truncated" in result.message
+
+    def test_full_rewrite_and_rehash_detected_by_anchor(self, tmp_path):
+        """CWE-345: a writer that rewrites EVERY record and rehashes the whole
+        chain passes all self-consistency rules but fails the anchor."""
+        log = _make_log(tmp_path, count=4)
+        forged_chain = []
+        previous = ZERO_HASH
+        for index in range(4):
+            fields = {
+                "seq": index,
+                "entity_type": "decision",
+                "event": "forged",
+                "entity_id": f"proposal:{index}",
+                "timestamp": "2026-08-11T15:00:00.000Z",
+                "payload": {"action": "evil"},
+                "prev_hash": previous,
+            }
+            import hashlib
+
+            fields["hash"] = hashlib.sha256(
+                json.dumps(fields, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
+            forged_chain.append(fields)
+            previous = fields["hash"]
+        log.path.write_text(
+            "\n".join(json.dumps(r, sort_keys=True, separators=(",", ":")) for r in forged_chain)
+            + "\n",
+            encoding="utf-8",
+        )
+
+        result = log.verify()
+        assert not result.valid
+        assert "root mismatch" in result.message
+
+    def test_anchor_deleted_detected(self, tmp_path):
+        log = _make_log(tmp_path, count=2)
+        (tmp_path / "events.jsonl.root").unlink()
+        result = log.verify()
+        assert not result.valid
+        assert "anchor" in result.message
+
+    def test_record_without_anchor_update_detected(self, tmp_path):
+        """Models the crash window (or a writer bypassing append()): a record
+        lands in the JSONL but the anchor is not advanced — fail-loud."""
+        log = _make_log(tmp_path, count=2)
+        import hashlib
+
+        fields = {
+            "seq": 2,
+            "entity_type": "decision",
+            "event": "orphan",
+            "entity_id": "proposal:2",
+            "timestamp": "2026-08-11T15:00:00.000Z",
+            "payload": {"action": "x"},
+            "prev_hash": log.records()[-1].hash,
+        }
+        fields["hash"] = hashlib.sha256(
+            json.dumps(fields, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        extra = json.dumps(fields, sort_keys=True, separators=(",", ":"))
+        with log.path.open("a", encoding="utf-8") as fh:
+            fh.write(extra + "\n")
+        result = log.verify()
+        assert not result.valid
+        assert "root mismatch" in result.message
 
 
 class TestAppendOnly:

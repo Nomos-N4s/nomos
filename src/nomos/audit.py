@@ -18,10 +18,18 @@ Design goals (matching ``#164``):
   JSON of every other field. The first record links to
   :data:`ZERO_HASH`. Mutation of any historical record breaks either its own
   hash or the next record's ``prev_hash`` link.
-- **Merkle anchoring:** :meth:`AuditLog.batch_root` folds every record hash
-  into a single Merkle root via the TEE module's ``merkle_root``
-  (Appendix A §8) — the whole log can be anchored externally (timestamped,
-  replicated) with one value.
+- **Merkle anchoring (CWE-345):** :meth:`AuditLog.batch_root` folds every
+  record hash into a single Merkle root via the TEE module's ``merkle_root``
+  (Appendix A §8). That root is additionally persisted in a **sidecar anchor
+  file** (``<path>.root``) *outside* the JSONL store, updated atomically on
+  every append. ``verify()`` compares the on-disk chain's root against the
+  anchor — a writer who rewrites every record and rehashes the whole chain
+  passes the self-consistency checks but cannot match the anchor unless they
+  also control the sidecar. For real deployments the anchor must be
+  replicated/attested off-host (Appendix A); the sidecar is the reference
+  implementation of that seam. If the process crashes between the JSONL
+  write and the anchor update, ``verify()`` reports a root mismatch —
+  fail-loud by design, no silent self-healing.
 - **Deterministic:** canonical JSON (sorted keys, fixed separators, no
   random salts) plus an injectable clock (:meth:`AuditLog.__init__`'s
   ``now_fn``) make identical runs byte-identical — auditable reproducibility.
@@ -66,6 +74,7 @@ from __future__ import annotations
 import datetime as _dt
 import hashlib
 import json
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -325,7 +334,34 @@ class AuditLog:
         with self.path.open("a", encoding="utf-8", newline="\n") as fh:
             fh.write(_canonical_json(record.to_dict()) + "\n")
         self._entries.append(record)
+        self._write_anchor()
         return record
+
+    @property
+    def _anchor_path(self) -> Path:
+        """Sidecar holding the trusted Merkle root, outside the JSONL file."""
+        return self.path.with_name(self.path.name + ".root")
+
+    def _write_anchor(self) -> None:
+        """Persist the trusted Merkle root of the whole chain to the sidecar.
+
+        Atomic (temp file + rename), so a reader never sees a partial anchor.
+        """
+        payload = _canonical_json(
+            {"root": merkle_root([r.hash.encode("utf-8") for r in self._entries])}
+        )
+        tmp = self._anchor_path.with_name(self._anchor_path.name + ".tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, self._anchor_path)
+
+    def _read_anchor(self) -> str | None:
+        """The trusted root from the sidecar, or ``None`` if missing/malformed."""
+        try:
+            raw = json.loads(self._anchor_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+        root = raw.get("root") if isinstance(raw, dict) else None
+        return root if isinstance(root, str) and len(root) == 64 else None
 
     def records(self) -> tuple[AuditRecord, ...]:
         """The full chain: records loaded from disk plus this instance's appends."""
@@ -351,6 +387,10 @@ class AuditLog:
         5. A file that is shorter than the chain this instance knows is
            reported as *truncated* (trailing records removed) — a shortened
            log would otherwise verify as an intact prefix.
+        6. The Merkle root of the on-disk chain must equal the trusted root
+           in the sidecar anchor (``<path>.root``), which lives *outside* the
+           JSONL file. A writer that rewrites every record and rehashes the
+           whole chain passes rules 1–5, but fails here — CWE-345.
 
         Returns:
             :class:`AuditVerification` with the exact broken index.
@@ -365,6 +405,7 @@ class AuditLog:
             return AuditVerification(True, None, "audit log is empty (no records)")
 
         previous_hash = ZERO_HASH
+        disk_hashes: list[str] = []
         for index, line in enumerate(lines):
             record = _parse_line(index, line)
             if record is None:
@@ -395,11 +436,24 @@ class AuditLog:
                     f"record {index} prev_hash does not match previous record (chain break)",
                 )
             previous_hash = record.hash
+            disk_hashes.append(record.hash)
         if len(lines) < len(self._entries):
             return AuditVerification(
                 False,
                 len(lines),
                 f"audit log truncated: {len(lines)} records on disk, {len(self._entries)} expected",
+            )
+        trusted_root = self._read_anchor()
+        if trusted_root is None:
+            return AuditVerification(
+                False, 0, "anchor file missing or malformed (deleted out of band)"
+            )
+        disk_root = merkle_root([h.encode("utf-8") for h in disk_hashes])
+        if disk_root != trusted_root:
+            return AuditVerification(
+                False,
+                None,
+                f"Merkle root mismatch with anchor (chain rewritten and rehashed): {disk_root[:16]}... != {trusted_root[:16]}...",
             )
         return AuditVerification(True, None, f"chain intact: {len(lines)} records verified")
 
