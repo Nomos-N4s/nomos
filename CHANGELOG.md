@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.13.1](https://github.com/Nomos-N4s/nomos/compare/v0.13.0...v0.13.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **azure:** derive image_tag from release manifest ([edf7ab6](https://github.com/Nomos-N4s/nomos/commit/edf7ab61dfdc24e22b558df7faf3eeba08355135)), closes [#252](https://github.com/Nomos-N4s/nomos/issues/252)
+* **azure:** raise actionable error when release manifest is unreadable ([f56da22](https://github.com/Nomos-N4s/nomos/commit/f56da229eba7c2b75dcadb46af8a2fc5818ba940))
+* **ci:** publish images on release and slash build time ([2293292](https://github.com/Nomos-N4s/nomos/commit/22932923c9fe2221c4ab9893a42d7f93140bb691)), closes [#265](https://github.com/Nomos-N4s/nomos/issues/265)
+
 ## [0.13.0](https://github.com/Nomos-N4s/nomos/compare/v0.12.0...v0.13.0) (2026-08-12)
 
 
