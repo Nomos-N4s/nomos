@@ -1,12 +1,16 @@
 name: publish-image
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      version:
+        description: Image version to publish (e.g. 0.13.0)
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       version:
-        description: Image version to publish (e.g. 0.10.0)
+        description: Image version to publish (e.g. 0.13.0)
         required: false
         type: string
 
@@ -19,7 +23,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -34,14 +37,16 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           if [[ -z "$VERSION" ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
+            VERSION="$GITHUB_REF_NAME"
           fi
+          VERSION="${VERSION#v}"
           if [[ -z "$VERSION" || "$VERSION" == *-* ]]; then
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
           else
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "created=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: docker/bake-action@v6
         env:
@@ -49,6 +54,7 @@ jobs:
           VERSION: ${{ steps.meta.outputs.version }}
           PRERELEASE: ${{ steps.meta.outputs.prerelease }}
           REVISION: ${{ github.sha }}
+          CREATED: ${{ steps.meta.outputs.created }}
         with:
           files: docker-bake.hcl
           push: true
