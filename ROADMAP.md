@@ -125,9 +125,10 @@ Gate: **#161 + #182 merged** (probes + structured logs) — both landed
 Runs parallel with Track B (Streamlit Cloud = lite path). Reference IaC for
 Track K forks. Starts after #164.
 
-29. **#220** ADR: modular-monolith topology + atomic governance gate (F1).
-30. **#221** Pulumi IaC: Azure Container Apps (F2) — consumes GHCR artifacts,
-    Key Vault secrets, ACA probes, Log Analytics.
+29. **#220** ADR: modular-monolith topology + atomic governance gate (F1) —
+    **DONE (2026-08-12)** — `docs/adr/0001-modular-monolith-and-atomic-governance-gate.md`.
+30. **#221** Pulumi IaC: Azure Container Apps (F2) — **NEXT**; consumes GHCR
+    artifacts, Key Vault secrets, ACA probes, Log Analytics.
 31. **#222** deployment verification run (F3) — 5-item checklist + metrics
     handoff to #165.
     → Epic #214 Done when verification receipts are posted.
@@ -156,7 +157,7 @@ this epic's sign-off (decision #4).
 
 ## Next move
 
-1. **#164** tamper-evident audit log (the only pre-deployment Track E item).
-2. Track J: **#220** ADR → #221 Pulumi ACA → #222 verification (gate open).
-3. Track B in parallel (lite path): #73 → #74 Streamlit Cloud deploy.
+1. Track J-F2: **#221** Pulumi ACA IaC (ADR #220 done — topology is the modular monolith).
+2. Track B in parallel (lite path): #73 → #74 Streamlit Cloud deploy.
+3. Track J-F3: **#222** verification run after deploy.
 4. Rest of Track E after the first deployment: #165 → #162/#167 → #166 → #168.

@@ -57,6 +57,17 @@ Thanks for your interest! This is a solo project but community contributions are
 - **Tests**: every new feature needs at least one test
 - **No neural networks** in governance code — the layer must be fully algorithmic
 
+## Where Things Live
+
+| Path | Contents |
+|------|----------|
+| `src/nomos/` | Reference implementation — speaker, contracts, identity, TEE sim, audit log, runner |
+| `book/` | Theory — chapters 1–4, appendices, review responses |
+| `docs/` | MkDocs site — ADRs, API reference, server endpoints |
+| `docs/adr/` | Architectural decision records — **read [ADR 0001](docs/adr/0001-modular-monolith-and-atomic-governance-gate.md) before proposing topology changes** |
+| `gov-budget-proof/` | Lean 4 formal proofs |
+| `examples/` | `.parliament` DSL configs |
+
 ## Questions?
 
 Open a discussion or check the [README](README.md) and [book/](book/) for the theory.
