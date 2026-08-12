@@ -9,12 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-RUN python -m uv sync --frozen --no-dev --no-install-project --extra dashboard
+RUN /bin/uv sync --frozen --no-dev --no-install-project --extra dashboard
 
 COPY src/ src/
 COPY tests/ tests/
 COPY examples/ examples/
-RUN python -m uv sync --frozen --no-dev --extra dashboard && .venv/bin/python -m pytest tests/ -x -q
+RUN /bin/uv sync --frozen --no-dev --extra dashboard && .venv/bin/python -m pytest tests/ -x -q
 
 ENV PATH="/app/.venv/bin:$PATH"
 
@@ -22,4 +22,4 @@ ENTRYPOINT ["python", "-m", "nomos.runner"]
 
 FROM base AS with-rl
 
-RUN python -m uv sync --frozen --no-dev --extra rl --extra dashboard && .venv/bin/python -m pytest tests/ -x -q
+RUN /bin/uv sync --frozen --no-dev --extra rl --extra dashboard && .venv/bin/python -m pytest tests/ -x -q
