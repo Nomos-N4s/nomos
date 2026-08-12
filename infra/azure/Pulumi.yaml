@@ -1,0 +1,6 @@
+name: nomos-azure
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Infrastructure as Code for Nomos Azure Container Apps deployment (#221)

@@ -1,0 +1,9 @@
+config:
+  azure-native:location: eastus
+  nomos-azure:environment_name: dev
+  nomos-azure:image_repository: ghcr.io/nomos-n4s/nomos
+  nomos-azure:image_tag: "0.11.1"
+  nomos-azure:core_cpu: "0.5"
+  nomos-azure:core_memory: "1.0Gi"
+  nomos-azure:dashboard_cpu: "0.5"
+  nomos-azure:dashboard_memory: "1.0Gi"
