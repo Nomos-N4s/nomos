@@ -79,7 +79,7 @@ def main():
     sub = parser.add_subparsers(dest="command")
 
     p_train = sub.add_parser("train", help="Train PPO agent")
-    p_train.add_argument("--mode", choices=["governance", "no_governance"], default="governance")
+    p_train.add_argument("--mode", choices=["governance", "no_governance", "static_mask"], default="governance")
     p_train.add_argument("--timesteps", type=int, default=100_000)
     p_train.add_argument("--size", type=int, default=10)
     p_train.add_argument("--seed", type=int, default=42)
@@ -89,13 +89,15 @@ def main():
 
     p_eval = sub.add_parser("eval", help="Evaluate trained model")
     p_eval.add_argument("--model", required=True)
-    p_eval.add_argument("--mode", choices=["governance", "no_governance"], default="governance")
+    p_eval.add_argument("--mode", choices=["governance", "no_governance", "static_mask"], default="governance")
     p_eval.add_argument("--size", type=int, default=10)
     p_eval.add_argument("--episodes", type=int, default=5)
     p_eval.add_argument("--live-log", type=str, help="Path for live JSONL log")
     p_eval.set_defaults(func=cmd_eval)
 
-    p_bench = sub.add_parser("benchmark", help="Benchmark governance vs no_governance")
+    p_bench = sub.add_parser(
+        "benchmark", help="Benchmark governance vs no_governance vs static_mask"
+    )
     p_bench.add_argument("--timesteps", type=int, default=100_000)
     p_bench.add_argument("--size", type=int, default=10)
     p_bench.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44])

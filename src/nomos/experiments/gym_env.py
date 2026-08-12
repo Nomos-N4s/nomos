@@ -95,6 +95,11 @@ class GovernanceGridWorld(*BASES):
         apple_count: Number of apples to place (default 8).
         max_steps: Episode length limit (default 200).
         live_log_path: Optional path for JSONL step log.
+        static_mask: When ``True`` and ``parliament`` is ``None``, poison moves
+            are statically blocked by a fixed filter (no Parliament). This is
+            the env-level analogue of
+            :class:`~nomos.benchmarks.baselines.StaticMasking`. Ignored when a
+            Parliament is present.
     """
 
     metadata = {"render_modes": []} if GYM_AVAILABLE else {}
@@ -108,6 +113,7 @@ class GovernanceGridWorld(*BASES):
         apple_count: int = 8,
         max_steps: int = 200,
         live_log_path: str | None = None,
+        static_mask: bool = False,
     ):
         super().__init__()
         self.size = size
@@ -116,6 +122,7 @@ class GovernanceGridWorld(*BASES):
         self.apple_count = apple_count
         self.max_steps = max_steps
         self.live_log_path = live_log_path
+        self.static_mask = static_mask
 
         if parliament is None:
             self.parliament = None
@@ -354,6 +361,12 @@ class GovernanceGridWorld(*BASES):
             scores = decision.scores
             vetoed_by = decision.vetoed_by
             falsification_counts = decision.governance_meta.get("falsification_counts", {})
+        elif self.static_mask:
+            action_blocked = attempted_tile == TILE_POISON
+            scores = {}
+            vetoed_by = ["static_mask"] if action_blocked else []
+            falsification_counts = {}
+            is_default = False
         else:
             action_blocked = False
             scores = {}

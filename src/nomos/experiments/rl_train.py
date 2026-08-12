@@ -24,6 +24,9 @@ from .rl_metrics import (
     summarize_episodes,
 )
 
+#: The governance modes that actually exist as distinct code paths.
+MODES = ("governance", "no_governance", "static_mask")
+
 
 def make_env(
     mode: str = "governance",
@@ -37,7 +40,9 @@ def make_env(
     """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
 
     Args:
-        mode: ``"governance"`` (default), ``"no_governance"``, or ``"static_mask"``.
+        mode: One of :data:`MODES` — ``"governance"`` (full Parliament),
+            ``"no_governance"`` (actions execute directly), or ``"static_mask"``
+            (a fixed filter blocks poison moves, no Parliament).
         size: Grid dimension.
         seed: Random seed.
         poison_ratio: Fraction of tiles that are poison.
@@ -47,8 +52,13 @@ def make_env(
 
     Returns:
         A configured :class:`~.gym_env.GovernanceGridWorld`.
+
+    Raises:
+        ValueError: If ``mode`` is not one of :data:`MODES`.
     """
-    parliament = None if mode == "no_governance" else "default"  # sentinel: __init__ resolves it
+    if mode not in MODES:
+        raise ValueError(f"Unknown mode {mode!r}; expected one of {MODES}")
+    parliament = "default" if mode == "governance" else None  # sentinel: __init__ resolves it
     return GovernanceGridWorld(
         parliament=parliament,
         size=size,
@@ -57,6 +67,7 @@ def make_env(
         apple_count=apple_count,
         max_steps=max_steps,
         live_log_path=live_log_path,
+        static_mask=(mode == "static_mask"),
     )
 
 
@@ -226,11 +237,31 @@ def benchmark(
     seeds: list[int] = None,
     log_dir: str = "results",
     eval_episodes: int = 10,
+    modes: list[str] | None = None,
 ) -> dict[str, Any]:
+    """Train and evaluate across governance modes and seeds.
+
+    Args:
+        total_timesteps: Training steps per (mode, seed) run.
+        size: Grid dimension.
+        seeds: Seeds to average over (defaults to ``[42]``).
+        log_dir: Output directory.
+        eval_episodes: Evaluation episodes per run.
+        modes: Modes to benchmark. Defaults to :data:`MODES` — exactly the
+            modes that exist as distinct code paths.
+
+    Returns:
+        Per-mode aggregate statistics, also written to
+        ``benchmark_results.json``.
+    """
     seeds = seeds or [42]
+    modes = modes or list(MODES)
+    for mode in modes:
+        if mode not in MODES:
+            raise ValueError(f"Unknown mode {mode!r}; expected one of {MODES}")
     all_results = {}
 
-    for mode in ["governance", "no_governance"]:
+    for mode in modes:
         mode_results = []
         for seed in seeds:
             print(f"  Training {mode} with seed={seed}...")
@@ -244,13 +275,14 @@ def benchmark(
                 eval_episodes=eval_episodes,
             )
             mode_results.append(result["eval"])
-        avg = np.mean([r["avg_reward"] for r in mode_results])
-        std = np.std([r["avg_reward"] for r in mode_results])
-        avg_v = np.mean([r["avg_violations"] for r in mode_results])
         all_results[mode] = {
-            "avg_reward": float(avg),
-            "std_reward": float(std),
-            "avg_violations": float(avg_v),
+            "avg_reward": float(np.mean([r["avg_reward"] for r in mode_results])),
+            "std_reward": float(np.std([r["avg_reward"] for r in mode_results])),
+            "avg_violations": float(np.mean([r["avg_violations"] for r in mode_results])),
+            "avg_apples": float(np.mean([r["avg_apples"] for r in mode_results])),
+            "avg_vetoes": float(np.mean([r["avg_vetoes"] for r in mode_results])),
+            "veto_precision": float(np.mean([r["veto_precision"] for r in mode_results])),
+            "veto_recall": float(np.mean([r["veto_recall"] for r in mode_results])),
             "n_seeds": len(seeds),
             "eval_results": mode_results,
         }
