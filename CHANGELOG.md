@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.12.0](https://github.com/Nomos-N4s/nomos/compare/v0.11.1...v0.12.0) (2026-08-12)
+
+
+### Features
+
+* add Pulumi IaC program for Azure Container Apps deployment ([#221](https://github.com/Nomos-N4s/nomos/issues/221)) ([995b8dc](https://github.com/Nomos-N4s/nomos/commit/995b8dcfc95657d891d164d44c5c297d35cd0f5c))
+
+
+### Bug Fixes
+
+* **docker:** use explicit /bin/uv path instead of python -m uv ([#221](https://github.com/Nomos-N4s/nomos/issues/221)) ([7b95509](https://github.com/Nomos-N4s/nomos/commit/7b95509ec751c476e63e5bfd18e322fba85d4696))
+* **docker:** use python -m uv and scope extras per stage ([#221](https://github.com/Nomos-N4s/nomos/issues/221)) ([614d0e8](https://github.com/Nomos-N4s/nomos/commit/614d0e87b0d72275690f0682dc587caf5ae72158))
+* install dashboard extra in Dockerfile so streamlit-autorefresh is present in deployed images ([#221](https://github.com/Nomos-N4s/nomos/issues/221)) ([cf7cd5c](https://github.com/Nomos-N4s/nomos/commit/cf7cd5c7c7758c37bfcfa20f4e9e4c622fc4f11e))
+
+
+### Documentation
+
+* clarify uv invocation rule for Dockerfiles in AGENTS.md ([#221](https://github.com/Nomos-N4s/nomos/issues/221)) ([bbd4580](https://github.com/Nomos-N4s/nomos/commit/bbd45807a6fec2d3ee5eb143344e3c28324336ba))
+* document Azure Container Apps deployment and update mkdocs nav ([#221](https://github.com/Nomos-N4s/nomos/issues/221)) ([7c9b9cc](https://github.com/Nomos-N4s/nomos/commit/7c9b9cc0b05defedc7bcccdaf563756c4696dedd))
+* enforce PR template compliance in AGENTS.md HARD RULE ([#221](https://github.com/Nomos-N4s/nomos/issues/221)) ([0ad194a](https://github.com/Nomos-N4s/nomos/commit/0ad194a19782f79cfc7e4c63d65bb395247f3b44))
+
 ## [0.11.1](https://github.com/Nomos-N4s/nomos/compare/v0.11.0...v0.11.1) (2026-08-12)
 
 
