@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.11.0](https://github.com/Nomos-N4s/nomos/compare/v0.10.1...v0.11.0) (2026-08-12)
+
+
+### Features
+
+* tamper-evident hash-chained audit log ([#164](https://github.com/Nomos-N4s/nomos/issues/164)) ([15cc7a9](https://github.com/Nomos-N4s/nomos/commit/15cc7a96eca0fd37f07e72daa11e98687ab9ea56))
+
+
+### Bug Fixes
+
+* anchor audit chain in sidecar Merkle root outside JSONL (CWE-345) ([62af683](https://github.com/Nomos-N4s/nomos/commit/62af683a00514b8eaedd40cfc950459835b31d0d))
+* restore chain from disk on reopen and detect truncation (CodeRabbit) ([42265e2](https://github.com/Nomos-N4s/nomos/commit/42265e2fc7fb380951cbcb9e6aaa3b69331c68c5))
+
 ## [0.10.1](https://github.com/Nomos-N4s/nomos/compare/v0.10.0...v0.10.1) (2026-08-11)
 
 
