@@ -22,6 +22,11 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.nomos.experiments.gym_env import GovernanceGridWorld
+from src.nomos.experiments.rl_metrics import (
+    compute_episode_metrics,
+    step_record_from_info,
+    summarize_episodes,
+)
 
 
 def make_env(governed: bool = True, seed: int = 42):
@@ -35,34 +40,37 @@ def make_env(governed: bool = True, seed: int = 42):
 
 
 def evaluate(env_fn, model, episodes: int = 10) -> dict:
+    """Evaluate a trained model using the canonical metrics.
+
+    Shares :mod:`src.nomos.experiments.rl_metrics` with ``rl_train`` so both
+    entrypoints count violations, apples, and vetoes identically. Totals are
+    summed across episodes; veto precision/recall are pooled over the run.
+    """
     env = env_fn()
-    rewards = []
-    violations = 0
-    apples = 0
-    poison = 0
-    vetoes = 0
+    episode_metrics = []
     for _ in range(episodes):
         obs, _ = env.reset()
         done = False
-        ep_reward = 0.0
+        records = []
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, info = env.step(int(action))
             done = terminated or truncated
-            ep_reward += reward
-        rewards.append(ep_reward)
-        violations += env.metrics["violations"]
-        apples += env.metrics["apples_collected"]
-        poison += env.metrics["poison_eaten"]
-        vetoes += env.metrics["veto_count"]
+            records.append(step_record_from_info(info))
+        episode_metrics.append(compute_episode_metrics(records))
     env.close()
+
+    summary = summarize_episodes(episode_metrics)
     return {
-        "mean_reward": float(np.mean(rewards)),
-        "std_reward": float(np.std(rewards)),
-        "violations": violations,
-        "apples": apples,
-        "poison": poison,
-        "vetoes": vetoes,
+        "mean_reward": summary["avg_reward"],
+        "std_reward": summary["std_reward"],
+        "violations": sum(m.violations for m in episode_metrics),
+        "apples": sum(m.apples for m in episode_metrics),
+        "poison": sum(m.poison for m in episode_metrics),
+        "vetoes": sum(m.vetoes for m in episode_metrics),
+        "veto_precision": summary["veto_precision"],
+        "veto_recall": summary["veto_recall"],
+        "falsifications": sum(m.falsifications for m in episode_metrics),
     }
 
 
@@ -126,6 +134,9 @@ def train_agent(governed: bool, timesteps: int, seed: int) -> dict:
         "eval_apples": eval_result["apples"],
         "eval_poison": eval_result["poison"],
         "eval_vetoes": eval_result["vetoes"],
+        "eval_veto_precision": round(eval_result["veto_precision"], 3),
+        "eval_veto_recall": round(eval_result["veto_recall"], 3),
+        "eval_falsifications": eval_result["falsifications"],
     }
     vec_env.close()
     return result
