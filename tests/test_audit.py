@@ -110,6 +110,40 @@ class TestAuditChain:
         assert _lines(first.path) == _lines(second_path)
         assert first.batch_root() == second.batch_root()
 
+    def test_reopened_log_continues_the_chain(self, tmp_path):
+        path = tmp_path / "events.jsonl"
+        first = AuditLog(path, now_fn=_fixed_now())
+        first.append("decision", "adopted", "proposal:0")
+        first.append("decision", "adopted", "proposal:1")
+
+        second = AuditLog(path, now_fn=_fixed_now())
+        assert len(second) == 2  # chain restored from disk
+        second.append("veto", "applied", "proposal:1")
+        assert len(second) == 3
+        assert [r.seq for r in second.records()] == [0, 1, 2]
+        assert second.records()[2].prev_hash == second.records()[1].hash
+        assert second.verify().valid
+        # the file on disk is the ground truth: 3 records
+        assert len(_lines(path)) == 3
+
+    def test_reopen_batch_root_covers_loaded_chain(self, tmp_path):
+        path = tmp_path / "events.jsonl"
+        first = AuditLog(path, now_fn=_fixed_now())
+        first.append("decision", "adopted", "proposal:0")
+        second = AuditLog(path, now_fn=_fixed_now())
+        assert second.batch_root() == first.batch_root()
+        assert len(second.records()) == 1
+
+    def test_reopen_rejects_malformed_store(self, tmp_path):
+        path = tmp_path / "events.jsonl"
+        first = AuditLog(path, now_fn=_fixed_now())
+        first.append("decision", "adopted", "proposal:0")
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write("not json\n")
+
+        with pytest.raises(ValueError, match="malformed at record 1"):
+            AuditLog(path)
+
 
 class TestTamperDetection:
     def test_payload_mutation_reported_at_exact_index(self, tmp_path):
@@ -243,6 +277,24 @@ class TestTamperDetection:
         result = log.verify()
         assert not result.valid
         assert "missing" in result.message
+
+    def test_truncated_log_detected(self, tmp_path):
+        log = _make_log(tmp_path, count=5)
+        lines = _lines(log.path)
+        log.path.write_text("\n".join(lines[:3]) + "\n", encoding="utf-8")
+
+        result = log.verify()
+        assert not result.valid
+        assert result.broken_index == 3
+        assert "truncated" in result.message
+
+    def test_emptied_log_detected(self, tmp_path):
+        log = _make_log(tmp_path, count=3)
+        log.path.write_text("", encoding="utf-8")
+
+        result = log.verify()
+        assert not result.valid
+        assert "truncated" in result.message
 
 
 class TestAppendOnly:
