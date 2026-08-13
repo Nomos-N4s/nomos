@@ -231,6 +231,18 @@ because that is exactly what an adversary that *cannot play* produces — the
 defect §E.5.1(2) identified in the first campaign. A PASS only means "the
 adversary lost" if it could have won.
 
+> **Reporting addendum (no threshold changed).** An engineering timing run — one
+> seed, one ε, no result published — showed that the overall bypass rate is
+> diluted by attempt composition: a blocked tile is never consumed, so a policy
+> can re-attack unwinnable plain poison indefinitely while rarely trying an
+> ambiguous tile. §E.4.2 already records that attempt counts are not a measure
+> of effort. The bypass rate **restricted to ambiguous tiles** is therefore
+> reported beside H6 and plotted as its own panel, so a failure can be read
+> correctly. The H6 metric and its 0.05 threshold are unchanged, and the verdict
+> is still computed from the overall rate. Recorded here rather than applied
+> silently, following the precedent set for the H1–H3 applicability scoping rule
+> in Part I.
+
 ### H7 — Shaping changes the search, not the scoreboard
 
 - **Metrics:** (a) `falsified_integrity_mean` pooled across the grid, shaped arm
