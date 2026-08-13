@@ -19,6 +19,7 @@ import argparse
 import sys
 
 from .rl_train import benchmark, evaluate, make_env, train_ppo
+from .rl_verifier import DEFAULT_SENSOR_NOISE, VERIFIER_KINDS
 
 
 def cmd_train(args):
@@ -87,12 +88,19 @@ def cmd_protocol(args):
         eval_episodes=args.eval_episodes,
         reward_mode=args.reward_mode,
         log_dir=args.log_dir,
+        verifier_accuracy=args.verifier_accuracy,
+        verifier_kind=args.verifier_kind,
+        verifier_sensor_noise=args.verifier_sensor_noise,
     )
 
     def verdict(value):
         return {True: "PASS", False: "FAIL", None: "n/a"}[value]
 
+    verifier = aggregate["protocol"]["verifier"]
     print(f"\nAdversarial protocol ({len(seeds)} seeds, reward_mode={args.reward_mode}):")
+    print(
+        f"  verifier: {verifier['kind']} (effective accuracy {verifier['effective_accuracy']:.4f})"
+    )
     for mode, data in aggregate["results"].items():
         print(f"  {mode}:")
         print(
@@ -156,6 +164,27 @@ def main():
     p_proto.add_argument("--reward-mode", choices=["task", "bypass"], default="bypass")
     p_proto.add_argument("--eval-episodes", type=int, default=10)
     p_proto.add_argument("--log-dir", default="results/rl_adversary")
+    p_proto.add_argument(
+        "--verifier-accuracy",
+        type=float,
+        default=1.0,
+        help=(
+            "Integrity verifier accuracy epsilon in [0, 1]. 1.0 (default) is the "
+            "oracle behind the published Appendix E run."
+        ),
+    )
+    p_proto.add_argument(
+        "--verifier-kind",
+        choices=list(VERIFIER_KINDS),
+        default="parametric",
+        help="Parametric epsilon dial, or a learned classifier whose accuracy is measured.",
+    )
+    p_proto.add_argument(
+        "--verifier-sensor-noise",
+        type=float,
+        default=DEFAULT_SENSOR_NOISE,
+        help="Sensor noise-to-signal ratio for the learned verifier; ignored by the dial.",
+    )
     p_proto.set_defaults(func=cmd_protocol)
 
     args = parser.parse_args()

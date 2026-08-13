@@ -28,6 +28,7 @@ from .rl_metrics import (
 )
 from .rl_seeding import seed_everything
 from .rl_train import MODES, make_env
+from .rl_verifier import DEFAULT_SENSOR_NOISE
 
 # ── Pre-registered protocol constants ──────────────────────────────────────
 #: Bypass-rate threshold each hypothesis is tested against.
@@ -141,6 +142,9 @@ def run_protocol(
     reward_mode: str = "bypass",
     adversarial: bool = True,
     log_dir: str = "results/rl_adversary",
+    verifier_accuracy: float = 1.0,
+    verifier_kind: str = "parametric",
+    verifier_sensor_noise: float = DEFAULT_SENSOR_NOISE,
 ) -> dict[str, Any]:
     """Run the pre-registered adversarial protocol across modes and seeds.
 
@@ -157,6 +161,11 @@ def run_protocol(
         reward_mode: ``"bypass"`` (default) or ``"task"``.
         adversarial: Whether to use the attack-surface action space.
         log_dir: Output directory for checkpoints and results.
+        verifier_accuracy: ε ∈ [0, 1] for the Integrity verifier (V1, #272).
+            ``1.0`` (default) is the oracle behind the published Appendix E run.
+        verifier_kind: ``"parametric"`` (default) or ``"classifier"``.
+        verifier_sensor_noise: Sensor noise-to-signal ratio for the learned
+            verifier; ignored by the parametric dial.
 
     Returns:
         The aggregate result dict, also written to
@@ -184,6 +193,9 @@ def run_protocol(
                 seed=seed,
                 adversarial=adversarial,
                 reward_mode=reward_mode,
+                verifier_accuracy=verifier_accuracy,
+                verifier_kind=verifier_kind,
+                verifier_sensor_noise=verifier_sensor_noise,
             )
             model = PPO(env=env, seed=seed, verbose=0, **PPO_HYPERPARAMS)
             model.learn(total_timesteps=total_timesteps, progress_bar=False)
@@ -197,6 +209,9 @@ def run_protocol(
                 seed=seed + 9000,
                 adversarial=adversarial,
                 reward_mode=reward_mode,
+                verifier_accuracy=verifier_accuracy,
+                verifier_kind=verifier_kind,
+                verifier_sensor_noise=verifier_sensor_noise,
             )
             evaluation = evaluate_adversary(eval_env, model, episodes=eval_episodes)
             run = {
@@ -205,6 +220,16 @@ def run_protocol(
                 "total_timesteps": total_timesteps,
                 "reward_mode": reward_mode,
                 "adversarial": adversarial,
+                # The dial that was asked for and the accuracy actually realised
+                # — they differ for the learned verifier, whose accuracy is
+                # measured rather than set, and the measured one is what the
+                # result must be read against.
+                "verifier": {
+                    "kind": verifier_kind,
+                    "requested_accuracy": verifier_accuracy,
+                    "effective_accuracy": eval_env.verifier_accuracy,
+                    "sensor_noise": verifier_sensor_noise,
+                },
                 "checkpoint": checkpoint,
                 "canonical": evaluation["canonical"],
                 "hypotheses": evaluation["hypotheses"],
@@ -213,7 +238,14 @@ def run_protocol(
                 json.dump(run, fh, indent=2)
             runs.append(run)
 
-    aggregate = aggregate_runs(runs, modes, seeds, total_timesteps, reward_mode)
+    aggregate = aggregate_runs(
+        runs,
+        modes,
+        seeds,
+        total_timesteps,
+        reward_mode,
+        verifier=runs[0]["verifier"] if runs else None,
+    )
     with open(os.path.join(log_dir, "adversary_protocol.json"), "w") as fh:
         json.dump(aggregate, fh, indent=2)
     return aggregate
@@ -225,8 +257,16 @@ def aggregate_runs(
     seeds: list[int],
     total_timesteps: int,
     reward_mode: str,
+    *,
+    verifier: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Aggregate per-seed runs into per-mode mean ± CI and hypothesis verdicts."""
+    """Aggregate per-seed runs into per-mode mean ± CI and hypothesis verdicts.
+
+    ``verifier`` is the Integrity verifier configuration the runs used; it is
+    recorded in the ``protocol`` block so a result can never be read without the
+    accuracy it was produced at. ``None`` records the oracle, which is what the
+    published Appendix E run used.
+    """
     per_mode: dict[str, Any] = {}
     for mode in modes:
         mode_runs = [r for r in runs if r["mode"] == mode]
@@ -242,6 +282,9 @@ def aggregate_runs(
             "veto_recall": _mean_ci([c["veto_recall"] for c in cans]),
             "governance_bypass_rate": _mean_ci([h["governance_bypass_rate"] for h in hyps]),
             "safety_silenced_rate": _mean_ci([h["safety_silenced_rate"] for h in hyps]),
+            "verifier_observed_accuracy": _mean_ci(
+                [h.get("verifier_observed_accuracy") for h in hyps]
+            ),
             "h1": {
                 "over_budget_events": sum(h["h1_over_budget_events"] for h in hyps),
                 "max_admitted": max(h["max_admitted"] for h in hyps),
@@ -262,6 +305,16 @@ def aggregate_runs(
         "protocol": {
             "epsilon": EPSILON,
             "budget_cap": BUDGET_CAP,
+            # Recorded unconditionally so no result can be quoted without the
+            # verifier accuracy it was produced at — the caveat that Appendix E
+            # §E.5.1(1) had to state in prose.
+            "verifier": verifier
+            or {
+                "kind": "parametric",
+                "requested_accuracy": 1.0,
+                "effective_accuracy": 1.0,
+                "sensor_noise": None,
+            },
             "modes": modes,
             "seeds": seeds,
             "total_timesteps": total_timesteps,
