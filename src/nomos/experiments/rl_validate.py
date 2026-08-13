@@ -102,8 +102,75 @@ def validate_protocol(aggregate: Mapping[str, Any]) -> list[str]:
     return problems
 
 
+def validate_sweep(frontier: Mapping[str, Any]) -> list[str]:
+    """Return a list of problems with an ε-sweep frontier (empty = valid).
+
+    Checks the shape of the result and the sanity of its numbers, never their
+    values: a cliff and a plateau are both legitimate outcomes, and a validator
+    that rejected one of them would be enforcing a conclusion.
+
+    What it does insist on is that the claim to being pre-registered is backed
+    by something. A frontier with no pre-registration hash is not a weaker
+    result, it is an unfalsifiable one, so its absence is an error rather than
+    a warning.
+    """
+    problems: list[str] = []
+
+    provenance = frontier.get("preregistration")
+    if not isinstance(provenance, Mapping):
+        problems.append("missing 'preregistration' provenance block")
+    elif not provenance.get("sha256"):
+        problems.append("preregistration.sha256 is missing — the pre-registration is unverifiable")
+
+    sweep = frontier.get("sweep")
+    if not isinstance(sweep, Mapping):
+        problems.append("missing 'sweep' block")
+    else:
+        for key in ("epsilons", "arms", "seeds", "total_timesteps", "environment_config"):
+            if key not in sweep:
+                problems.append(f"sweep missing '{key}'")
+
+    points = frontier.get("points")
+    if not isinstance(points, list) or not points:
+        problems.append("missing or empty 'points'")
+        return problems
+
+    for point in points:
+        if not isinstance(point, Mapping):
+            problems.append("point is not an object")
+            continue
+        label = f"point(arm={point.get('arm')}, eps={point.get('epsilon')})"
+        epsilon = point.get("epsilon")
+        if not _finite(epsilon) or not 0.0 <= float(epsilon) <= 1.0:
+            problems.append(f"{label}: epsilon outside [0, 1]")
+        if point.get("n_seeds", 0) < 1:
+            problems.append(f"{label}: n_seeds < 1")
+        for key in ("bypass_rate", "veto_precision", "veto_recall"):
+            if key not in point:
+                problems.append(f"{label}: missing {key}")
+            else:
+                _check_mean_ci(f"{label}.{key}", point[key], problems, 0.0, 1.0)
+
+    verdicts = frontier.get("verdicts")
+    if not isinstance(verdicts, Mapping):
+        problems.append("missing 'verdicts' block")
+        return problems
+    for hypothesis in ("h4", "h5", "h6", "h7"):
+        block = verdicts.get(hypothesis)
+        if not isinstance(block, Mapping) or "pass" not in block:
+            problems.append(f"verdicts.{hypothesis}: missing pass verdict")
+        elif not isinstance(block["pass"], bool) and block["pass"] is not None:
+            problems.append(f"verdicts.{hypothesis}.pass is not a bool or None")
+    if "curve_shape" not in verdicts:
+        problems.append("verdicts: missing curve_shape")
+    return problems
+
+
 def _resolve_path(path: str) -> str:
     if os.path.isdir(path):
+        frontier = os.path.join(path, "verifier_frontier.json")
+        if os.path.isfile(frontier):
+            return frontier
         return os.path.join(path, "adversary_protocol.json")
     return path
 
@@ -118,15 +185,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: result file not found: {path}")
         return 1
     with open(path) as fh:
-        aggregate = json.load(fh)
+        document = json.load(fh)
 
-    problems = validate_protocol(aggregate)
+    # Dispatch on the document's own shape rather than on the filename, so a
+    # renamed or copied artifact is still validated as what it actually is.
+    is_frontier = "points" in document and "sweep" in document
+    problems = validate_sweep(document) if is_frontier else validate_protocol(document)
     if problems:
         print(f"INVALID: {len(problems)} problem(s) in {path}")
         for p in problems:
             print(f"  - {p}")
         return 1
-    print(f"OK: {path} is well-formed and sane ({len(aggregate['results'])} modes)")
+    if is_frontier:
+        print(f"OK: {path} is well-formed and sane ({len(document['points'])} sweep points)")
+    else:
+        print(f"OK: {path} is well-formed and sane ({len(document['results'])} modes)")
     return 0
 
 
