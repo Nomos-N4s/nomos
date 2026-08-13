@@ -399,7 +399,34 @@ These bound what the curve can be claimed to show.
    between members, gradient attacks on a learned committee — remain untested, as
    in Appendix E.
 
-### F.5.1 How this folds into the paper spine
+### F.5.1 A note on the measurement layer
+
+Appendix E §E.5.2 recorded four metrics that computed `0/0` and published it as
+`0.0`. This campaign produced one more of the same family, one level up, and it
+is recorded here for the same reason.
+
+`score_curve()` scored each hypothesis over whichever `(arm, ε)` points happened
+to be present, with no notion of which points were *expected*. Because the sweep
+runs as sixteen independently-scheduled jobs and the curve is reassembled from
+whatever artifacts are on disk, a crashed or never-launched job would have left a
+hole that scoring could not see — and if the absent point were the one that would
+have failed, the hypothesis would have been reported as **PASS on data that never
+existed**. The function's own docstring already promised `None` in that case; the
+implementation did not deliver it.
+
+Found by an automated review of the pull request that published this appendix,
+and fixed before these numbers were released: verdicts now check coverage against
+the expected grid, name any absent points, and degrade to `n/a`; `rl_validate`
+rejects an incomplete frontier outright. The published curve reports 16 of 16
+points measured, and re-scoring it under the fix left every verdict and the
+curve-shape analysis byte-identical.
+
+The failure mode is the one this project keeps rediscovering: **a verdict that
+looks like a measurement but is an absence of one.** It is recorded rather than
+quietly patched because the harness's credibility rests on the record, not on the
+absence of mistakes.
+
+### F.5.2 How this folds into the paper spine
 
 For [#256](https://github.com/Nomos-N4s/nomos/issues/256), this campaign
 contributes: the asserted-metadata negative result now replicated across sixteen

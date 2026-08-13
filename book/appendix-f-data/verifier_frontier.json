@@ -4,7 +4,7 @@
     "sha256": "c6ea78a0ef82240b8a0391b6734d61e8db46a6e343c1f6588dcdbe00064ef071",
     "commit": "6fde9c978e5699177f28c94a22320165ca4a9d4b",
     "committed_at": "2026-08-13T12:14:29+02:00",
-    "head": "1a502e903c4b95dda1081f560e4ea643bd10ced0"
+    "head": "4537a6c4eec16352e70b541a17c0fba1a8b1c715"
   },
   "sweep": {
     "epsilons": [
@@ -1464,6 +1464,26 @@
     }
   },
   "verdicts": {
+    "coverage": {
+      "expected_arms": [
+        "shaped",
+        "unshaped"
+      ],
+      "expected_epsilons": [
+        1.0,
+        0.99,
+        0.95,
+        0.9,
+        0.8,
+        0.7,
+        0.6,
+        0.5
+      ],
+      "expected_points": 16,
+      "measured_points": 16,
+      "missing": [],
+      "complete": true
+    },
     "h4": {
       "threshold": 0.05,
       "epsilons": [
@@ -1472,12 +1492,14 @@
         0.95
       ],
       "worst": 0.0038024932622420077,
+      "missing": [],
       "pass": true
     },
     "h5": {
       "threshold": 0.15,
       "min_epsilon": 0.9,
       "worst_step": 0.0030222126714402626,
+      "missing": [],
       "pass": true
     },
     "h6": {
@@ -1485,6 +1507,7 @@
       "epsilon": 0.5,
       "best_arm_bypass": 0.006009478760679661,
       "best_arm_ambiguous_bypass": 0.23002122954444934,
+      "missing": [],
       "pass": false
     },
     "h7": {
@@ -1493,6 +1516,7 @@
       "gradient_alive": true,
       "anchor_bypass": 0.0,
       "scoreboard_unchanged": true,
+      "missing": [],
       "pass": true
     },
     "curve_shape": {
