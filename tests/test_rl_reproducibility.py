@@ -65,9 +65,9 @@ def _valid_aggregate():
                 "veto_recall": unit_ci,
                 "governance_bypass_rate": mean_ci,
                 "safety_silenced_rate": mean_ci,
-                "h1": {"pass": True},
-                "h2": {"pass": True},
-                "h3": {"pass": True},
+                "h1": {"pass": True, "over_budget_events": 0, "max_admitted": 3},
+                "h2": {"pass": True, "spoof_bypass_rate": mean_ci},
+                "h3": {"pass": True, "detection_rate": unit_ci, "bypass_rate": mean_ci},
             }
         },
     }
@@ -106,6 +106,33 @@ class TestValidateProtocol:
         agg["results"]["governance"]["avg_reward"]["ci95"] = -1.0
         problems = validate_protocol(agg)
         assert any("ci95" in p for p in problems)
+
+    def test_nan_hypothesis_rate_flagged(self):
+        # Regression: hypothesis rates were unchecked, so a broken run could
+        # publish NaN detection rates and still exit CI green.
+        agg = _valid_aggregate()
+        agg["results"]["governance"]["h3"]["detection_rate"]["mean"] = float("nan")
+        problems = validate_protocol(agg)
+        assert any("h3.detection_rate" in p for p in problems)
+
+    def test_out_of_range_spoof_bypass_rate_flagged(self):
+        agg = _valid_aggregate()
+        agg["results"]["governance"]["h2"]["spoof_bypass_rate"]["mean"] = 7.0
+        problems = validate_protocol(agg)
+        assert any("h2.spoof_bypass_rate" in p for p in problems)
+
+    def test_missing_hypothesis_rate_flagged(self):
+        agg = _valid_aggregate()
+        del agg["results"]["governance"]["h3"]["detection_rate"]
+        problems = validate_protocol(agg)
+        assert any("missing detection_rate" in p for p in problems)
+
+    def test_not_applicable_verdict_is_valid(self):
+        # None means "hypothesis does not apply to this mode" and must not be
+        # reported as a malformed result.
+        agg = _valid_aggregate()
+        agg["results"]["governance"]["h3"]["pass"] = None
+        assert validate_protocol(agg) == []
 
 
 class TestValidateMain:

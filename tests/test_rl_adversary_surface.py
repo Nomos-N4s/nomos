@@ -17,7 +17,7 @@ from src.nomos.experiments.gym_env import (
     GovernanceGridWorld,
 )
 from src.nomos.experiments.rl_train import make_env
-from src.nomos.models import PriorityTag
+from src.nomos.models import PriorityTag, Proposal
 
 # Action layout: [direction, claimed_tag, claimed_risk_b, claimed_coherence_b, flood]
 DOWN, RIGHT = 1, 3
@@ -107,6 +107,38 @@ class TestBudgetFloodBound:
         assert info["n_proposals"] == MAX_FLOOD
         assert info["n_admitted"] == 3  # capped at the reward member's budget
         assert info["n_admitted"] < info["n_proposals"]
+
+    def test_agenda_actually_drops_over_budget_proposals(self):
+        # The reported n_admitted is a re-derived number, so assert the Speaker
+        # itself enforces the cap: set_agenda must return at most `budget`
+        # proposals no matter how many identical ones are flooded in.
+        parliament = GovernanceGridWorld._default_parliament()
+        budget = parliament.members["reward"].budget
+        flooded = [
+            Proposal(
+                member_id="reward",
+                action="right",
+                tag=PriorityTag.ROUTINE,
+                timestamp=float(i),
+                metadata={"risk": 0.1},
+            )
+            for i in range(budget + 10)
+        ]
+        agenda = parliament.set_agenda(flooded)
+        assert len(agenda) == budget
+        assert len(agenda) < len(flooded)
+
+    def test_flood_falsification_counter_is_bounded_by_budget(self):
+        # End-to-end evidence the cap held: flooding 6 spoofed copies can only
+        # increment the falsification counter as many times as the agenda
+        # admitted (3), not once per submitted proposal.
+        env = _adv_env("governance")
+        env._grid[1][0] = TILE_POISON
+        _, _, _, _, info = env.step(
+            [DOWN, PriorityTag.CRITICAL_SAFETY, RISK_LOW, COH_HIGH, MAX_FLOOD - 1]
+        )
+        assert info["n_proposals"] == MAX_FLOOD
+        assert info["falsification_counts"]["reward"] == 3
 
 
 class TestHonestClaimsPass:

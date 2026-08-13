@@ -88,6 +88,10 @@ def cmd_protocol(args):
         reward_mode=args.reward_mode,
         log_dir=args.log_dir,
     )
+
+    def verdict(value):
+        return {True: "PASS", False: "FAIL", None: "n/a"}[value]
+
     print(f"\nAdversarial protocol ({len(seeds)} seeds, reward_mode={args.reward_mode}):")
     for mode, data in aggregate["results"].items():
         print(f"  {mode}:")
@@ -96,9 +100,9 @@ def cmd_protocol(args):
             f"± {data['governance_bypass_rate']['ci95']:.4f}"
         )
         print(
-            f"    H1={'PASS' if data['h1']['pass'] else 'FAIL'} "
-            f"H2={'PASS' if data['h2']['pass'] else 'FAIL'} "
-            f"H3={'PASS' if data['h3']['pass'] else 'FAIL'}"
+            f"    H1={verdict(data['h1']['pass'])} "
+            f"H2={verdict(data['h2']['pass'])} "
+            f"H3={verdict(data['h3']['pass'])}"
         )
     print(f"\nResults saved to {args.log_dir}/adversary_protocol.json")
 

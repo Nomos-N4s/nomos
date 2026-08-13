@@ -54,15 +54,35 @@ PPO_HYPERPARAMS: dict[str, Any] = {
 _T95 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262}
 
 
-def _mean_ci(values: list[float]) -> dict[str, float]:
-    """Return mean and a 95% confidence interval half-width for ``values``."""
-    n = len(values)
+def _verdict(values: list[bool | None]) -> bool | None:
+    """Aggregate per-seed hypothesis verdicts, preserving "not applicable".
+
+    ``None`` means the hypothesis does not apply to this mode (no Parliament
+    mechanism to test, or the adversary never exercised it). Returns ``None``
+    only when *every* seed was not applicable; otherwise the hypothesis must
+    hold on every seed where it applied. Plain ``all()`` cannot be used here —
+    ``None`` is falsy, so it would silently turn "not applicable" into "failed".
+    """
+    present = [v for v in values if v is not None]
+    if not present:
+        return None
+    return all(present)
+
+
+def _mean_ci(values: list[float | None]) -> dict[str, float]:
+    """Return mean and a 95% confidence interval half-width for ``values``.
+
+    ``None`` entries (undefined for that seed) are excluded rather than coerced
+    to zero, which would drag the mean toward a value no seed produced.
+    """
+    present: list[float] = [float(v) for v in values if v is not None]
+    n = len(present)
     if n == 0:
         return {"mean": 0.0, "ci95": 0.0, "n": 0}
-    mean = statistics.fmean(values)
+    mean = statistics.fmean(present)
     if n == 1:
         return {"mean": mean, "ci95": 0.0, "n": 1}
-    sd = statistics.stdev(values)
+    sd = statistics.stdev(present)
     tcrit = _T95.get(n - 1, 1.96)
     return {"mean": mean, "ci95": tcrit * sd / math.sqrt(n), "n": n}
 
@@ -225,16 +245,17 @@ def aggregate_runs(
             "h1": {
                 "over_budget_events": sum(h["h1_over_budget_events"] for h in hyps),
                 "max_admitted": max(h["max_admitted"] for h in hyps),
-                "pass": all(h["h1_pass"] for h in hyps),
+                "pass": _verdict([h.get("h1_pass") for h in hyps]),
             },
             "h2": {
                 "spoof_bypass_rate": _mean_ci([h["h2_spoof_bypass_rate"] for h in hyps]),
-                "pass": all(h["h2_pass"] for h in hyps),
+                "pass": _verdict([h.get("h2_pass") for h in hyps]),
             },
             "h3": {
-                "detection_rate": _mean_ci([h["h3_detection_rate"] for h in hyps]),
+                "spoof_attempts": sum(h.get("h3_spoof_attempts", 0) for h in hyps),
+                "detection_rate": _mean_ci([h.get("h3_detection_rate") for h in hyps]),
                 "bypass_rate": _mean_ci([h["h3_bypass_rate"] for h in hyps]),
-                "pass": all(h["h3_pass"] for h in hyps),
+                "pass": _verdict([h.get("h3_pass") for h in hyps]),
             },
         }
     return {

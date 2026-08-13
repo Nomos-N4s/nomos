@@ -84,3 +84,38 @@ class TestStaticMaskBlocksPoison:
         _, _, _, _, info = env.step(1)
         assert info["blocked"] is True
         assert env.metrics["violations"] == 0
+
+
+class TestGovernanceAdmitsBenignActions:
+    """Governance must not simply block everything.
+
+    Without this, an over-blocking regression (or a Parliament that vetoes
+    unconditionally) would still satisfy every "poison is blocked" assertion
+    and ship green, silently destroying the honest-mode baseline.
+    """
+
+    def test_governance_admits_an_apple_move(self):
+        env = _controlled_env("governance")
+        env._grid[0][1] = TILE_APPLE
+        _, reward, _, _, info = env.step(3)  # 3 == right
+        assert info["blocked"] is False
+        assert reward == 1.0
+        assert env._pos == (0, 1)
+        assert env.metrics["apples_collected"] == 1
+
+    def test_governance_admits_an_empty_move(self):
+        env = _controlled_env("governance")
+        _, reward, _, _, info = env.step(3)  # empty tile to the right
+        assert info["blocked"] is False
+        assert reward == 0.0
+        assert env._pos == (0, 1)
+
+    def test_governance_veto_is_selective_across_a_rollout(self):
+        # Over a mixed rollout the Parliament must block strictly some, not all.
+        env = _controlled_env("governance")
+        env._grid[0][1] = TILE_APPLE
+        env._grid[0][2] = TILE_POISON
+        first = env.step(3)[4]  # onto the apple
+        second = env.step(3)[4]  # onto the poison
+        assert first["blocked"] is False
+        assert second["blocked"] is True
