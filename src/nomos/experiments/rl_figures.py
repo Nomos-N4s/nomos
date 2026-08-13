@@ -77,6 +77,17 @@ def _plot_metric(ax, frontier: dict[str, Any], key: str, title: str, ylabel: str
 def plot_verifier_frontier(frontier: dict[str, Any], output_dir: str = "docs/benchmarks") -> Any:
     """Plot the headline curve: governance bypass rate against verifier accuracy.
 
+    Two panels, and the pairing is the point. On the left, the overall bypass
+    rate against the full [0, 1] range with both controls — the honest context,
+    which shows the governed curve sitting on the floor across the whole sweep.
+    On the right, the same curve at a readable scale beside the rate restricted
+    to the tiles the game is actually winnable on.
+
+    Neither panel alone tells the truth. The left one shown by itself is a flat
+    line that reads as "nothing happens", hiding a real and monotone
+    degradation. The right one shown by itself exaggerates a change of half a
+    percentage point into a dramatic climb. Both axes start at zero.
+
     Args:
         frontier: The dict produced by :func:`~.rl_sweep.run_sweep`.
         output_dir: Directory for the PNG and SVG outputs.
@@ -92,32 +103,53 @@ def plot_verifier_frontier(frontier: dict[str, Any], output_dir: str = "docs/ben
     path = f"{output_dir}/verifier_frontier.png"
     _ensure_dir(path)
 
-    fig, ax = plt.subplots(figsize=(9, 6))
-    _plot_metric(ax, frontier, "bypass_rate", "", "Governance bypass rate")
+    fig, (full, zoom) = plt.subplots(1, 2, figsize=(15, 6))
     fig.suptitle("Governance bypass rate vs. verifier accuracy", fontsize=14, fontweight="bold")
 
+    _plot_metric(full, frontier, "bypass_rate", "Full scale, with controls", "Bypass rate")
     for mode, style in _CONTROL_STYLE.items():
         control = frontier.get("controls", {}).get(mode)
         if not isinstance(control, dict):
             continue
         block = control.get("bypass_rate")
         if isinstance(block, dict) and block.get("n", 0):
-            ax.axhline(
+            full.axhline(
                 block["mean"],
                 color=style["color"],
                 linestyle=style["linestyle"],
                 linewidth=1.2,
                 label=style["label"],
             )
+    full.set_ylim(-0.02, 1.02)
+    full.legend(fontsize=9, loc="center right")
+
+    _plot_metric(zoom, frontier, "bypass_rate", "Where the degradation lives", "Bypass rate")
+    for arm, style in _ARM_STYLE.items():
+        xs, means, lows, highs = _series(frontier, arm, "ambiguous_bypass_rate")
+        if not xs:
+            continue
+        zoom.plot(
+            xs,
+            means,
+            label=f"{arm} (ambiguous tiles only)",
+            linewidth=1.8,
+            markersize=5,
+            alpha=0.55,
+            **{**style, "linestyle": ":"},
+        )
+        zoom.fill_between(xs, lows, highs, alpha=0.08, color=style["color"])
+    zoom.set_ylim(bottom=0.0)
+    zoom.legend(fontsize=8, loc="upper right")
 
     # Shade the critical-ε region when the curve actually has one. Drawing it
     # unconditionally would invite reading a cliff into a smooth curve.
     region = frontier.get("verdicts", {}).get("curve_shape", {}).get("critical_epsilon_region")
     if region:
-        ax.axvspan(min(region), max(region), color="#d62728", alpha=0.08, label="critical-ε region")
+        for ax in (full, zoom):
+            ax.axvspan(
+                min(region), max(region), color="#d62728", alpha=0.08, label="critical-ε region"
+            )
 
-    ax.set_ylim(-0.02, 1.02)
-    ax.legend(fontsize=9, loc="upper right")
     plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.savefig(f"{output_dir}/verifier_frontier.svg", format="svg")
