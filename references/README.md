@@ -9,6 +9,11 @@ The bibliography serves two functions:
 1. **Anchor claims.** Every assertion about prior art, existing limitations, or conceptual precursors is backed by a citation in `bibliography.md`.
 2. **Pre-empt criticism.** By explicitly documenting related work and stating where our approach differs, we address "this is just X" objections before they arrive.
 
+The sustained version of (2) is [Chapter 5: Related Work](../book/chapter-05/05-related-work.md),
+which places Nomos against its nearest neighbors — shielding, CMDPs, reward
+machines, guaranteed-safe AI, and the agent-governance frameworks — on four
+axes, and states the concession as well as the delta for each.
+
 ## Citation Key Convention
 
 Every entry in `bibliography.md` has an anchor key of the form:
@@ -16,6 +21,11 @@ Every entry in `bibliography.md` has an anchor key of the form:
     [AuthorShort Year]
 
 Examples: `[Minsky 1986]`, `[Bai 2022]`, `[Friston 2010]`
+
+When two entries would collide on author surname and year, disambiguate with a
+lowercase suffix assigned in publication order: `[Wang 2025a]` (AgentSpec, March
+2025) precedes `[Wang 2025b]` (MI9, August 2025). Multi-word surnames close up in
+the key: `[delaChica 2026]`.
 
 Chapters cite these keys inline. The bibliography entry provides the full citation, relevance analysis, and departure notes.
 
