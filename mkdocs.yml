@@ -86,6 +86,7 @@ nav:
     - "Appendix C: Data Types": book/appendix-c-data-types.md
     - "Appendix D: Experiment Protocol": book/appendix-d-experiment-protocol.md
     - "Appendix E: RL Adversary": book/appendix-e-rl-adversary.md
+    - "Appendix E (pre-registration): H1–H3": book/appendix-e-preregistration.md
   - API Reference: api/index.md
   - Server Endpoints: server.md
   - Benchmarks: benchmarks/index.md

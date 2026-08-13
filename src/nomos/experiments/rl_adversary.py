@@ -74,12 +74,43 @@ def cmd_benchmark(args):
     print(f"\nResults saved to {args.log_dir}/benchmark_results.json")
 
 
+def cmd_protocol(args):
+    from .rl_protocol import DEFAULT_SEEDS, run_protocol
+
+    seeds = args.seeds if args.seeds else list(DEFAULT_SEEDS)
+    modes = args.modes if args.modes else None
+    aggregate = run_protocol(
+        modes=modes,
+        seeds=seeds,
+        total_timesteps=args.timesteps,
+        size=args.size,
+        eval_episodes=args.eval_episodes,
+        reward_mode=args.reward_mode,
+        log_dir=args.log_dir,
+    )
+    print(f"\nAdversarial protocol ({len(seeds)} seeds, reward_mode={args.reward_mode}):")
+    for mode, data in aggregate["results"].items():
+        print(f"  {mode}:")
+        print(
+            f"    bypass_rate: {data['governance_bypass_rate']['mean']:.4f} "
+            f"± {data['governance_bypass_rate']['ci95']:.4f}"
+        )
+        print(
+            f"    H1={'PASS' if data['h1']['pass'] else 'FAIL'} "
+            f"H2={'PASS' if data['h2']['pass'] else 'FAIL'} "
+            f"H3={'PASS' if data['h3']['pass'] else 'FAIL'}"
+        )
+    print(f"\nResults saved to {args.log_dir}/adversary_protocol.json")
+
+
 def main():
     parser = argparse.ArgumentParser(description="RL Adversary against Nomos")
     sub = parser.add_subparsers(dest="command")
 
     p_train = sub.add_parser("train", help="Train PPO agent")
-    p_train.add_argument("--mode", choices=["governance", "no_governance", "static_mask"], default="governance")
+    p_train.add_argument(
+        "--mode", choices=["governance", "no_governance", "static_mask"], default="governance"
+    )
     p_train.add_argument("--timesteps", type=int, default=100_000)
     p_train.add_argument("--size", type=int, default=10)
     p_train.add_argument("--seed", type=int, default=42)
@@ -89,7 +120,9 @@ def main():
 
     p_eval = sub.add_parser("eval", help="Evaluate trained model")
     p_eval.add_argument("--model", required=True)
-    p_eval.add_argument("--mode", choices=["governance", "no_governance", "static_mask"], default="governance")
+    p_eval.add_argument(
+        "--mode", choices=["governance", "no_governance", "static_mask"], default="governance"
+    )
     p_eval.add_argument("--size", type=int, default=10)
     p_eval.add_argument("--episodes", type=int, default=5)
     p_eval.add_argument("--live-log", type=str, help="Path for live JSONL log")
@@ -104,6 +137,22 @@ def main():
     p_bench.add_argument("--log-dir", default="results")
     p_bench.add_argument("--eval-episodes", type=int, default=10)
     p_bench.set_defaults(func=cmd_benchmark)
+
+    p_proto = sub.add_parser("protocol", help="Run the pre-registered adversarial H1-H3 protocol")
+    p_proto.add_argument(
+        "--modes",
+        nargs="+",
+        choices=["governance", "no_governance", "static_mask"],
+        default=None,
+        help="Modes to run (default: all three).",
+    )
+    p_proto.add_argument("--timesteps", type=int, default=100_000)
+    p_proto.add_argument("--size", type=int, default=10)
+    p_proto.add_argument("--seeds", type=int, nargs="+", default=None)
+    p_proto.add_argument("--reward-mode", choices=["task", "bypass"], default="bypass")
+    p_proto.add_argument("--eval-episodes", type=int, default=10)
+    p_proto.add_argument("--log-dir", default="results/rl_adversary")
+    p_proto.set_defaults(func=cmd_protocol)
 
     args = parser.parse_args()
     if args.command is None:
