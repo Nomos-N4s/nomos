@@ -122,21 +122,49 @@ def cmd_protocol(args):
 
 
 def cmd_sweep(args):
-    from .rl_sweep import ARMS, EPSILON_GRID, run_sweep
-
-    frontier = run_sweep(
-        epsilons=args.epsilons if args.epsilons else EPSILON_GRID,
-        arms=args.arms if args.arms else ARMS,
-        seeds=args.seeds,
-        total_timesteps=args.timesteps,
-        size=args.size,
-        eval_episodes=args.eval_episodes,
-        ambiguity_ratio=args.ambiguity_ratio,
-        spoof_region=not args.no_spoof_region,
-        claim_resolution=args.claim_resolution,
-        controls=not args.no_controls,
-        log_dir=args.log_dir,
+    from .rl_protocol import DEFAULT_SEEDS
+    from .rl_sweep import (
+        ARMS,
+        EPSILON_GRID,
+        assemble_frontier,
+        run_controls,
+        run_point,
+        run_sweep,
     )
+
+    seeds = args.seeds if args.seeds else list(DEFAULT_SEEDS)
+    shared = {
+        "seeds": seeds,
+        "total_timesteps": args.timesteps,
+        "size": args.size,
+        "eval_episodes": args.eval_episodes,
+        "ambiguity_ratio": args.ambiguity_ratio,
+        "spoof_region": not args.no_spoof_region,
+        "claim_resolution": args.claim_resolution,
+        "log_dir": args.log_dir,
+    }
+
+    # Points are independent seeded runs, so running them as separate processes
+    # is a scheduling detail. --point runs exactly one and stops; --assemble
+    # rebuilds the curve from whatever points are on disk.
+    if args.point:
+        arm, epsilon = args.point
+        run_point(arm=arm, epsilon=float(epsilon), **shared)
+        print(f"Point {arm} eps={epsilon} written to {args.log_dir}")
+        return
+    if args.controls_only:
+        run_controls(**shared)
+        print(f"Controls written to {args.log_dir}/controls.json")
+        return
+    if args.assemble:
+        frontier = assemble_frontier(args.log_dir)
+    else:
+        frontier = run_sweep(
+            epsilons=args.epsilons if args.epsilons else EPSILON_GRID,
+            arms=args.arms if args.arms else ARMS,
+            controls=not args.no_controls,
+            **shared,
+        )
 
     def verdict(value):
         return {True: "PASS", False: "FAIL", None: "n/a"}[value]
@@ -312,6 +340,24 @@ def main():
         help="Skip the ceiling/floor control runs at the anchor epsilon.",
     )
     p_sweep.add_argument("--log-dir", default="results/rl_frontier")
+    schedule = p_sweep.add_mutually_exclusive_group()
+    schedule.add_argument(
+        "--point",
+        nargs=2,
+        metavar=("ARM", "EPSILON"),
+        default=None,
+        help="Run exactly one (arm, epsilon) point and stop, for parallel scheduling.",
+    )
+    schedule.add_argument(
+        "--controls-only",
+        action="store_true",
+        help="Run only the ceiling/floor controls at the anchor epsilon.",
+    )
+    schedule.add_argument(
+        "--assemble",
+        action="store_true",
+        help="Rebuild the curve from the point artifacts already in --log-dir.",
+    )
     p_sweep.set_defaults(func=cmd_sweep)
 
     args = parser.parse_args()
