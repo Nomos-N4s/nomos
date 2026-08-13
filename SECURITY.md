@@ -24,7 +24,7 @@ Appendix A and covers:
 
 ### Known Residual Risks
 
-These are fundamental physical-world limits, acknowledged by the review panel:
+These are fundamental physical-world limits, acknowledged in the AI-generated adversarial review process:
 
 1. **Social engineering** — no TEE can prevent authorized users from being coerced
 2. **Hardware supply chain** — malicious silicon cannot be detected post-fabrication

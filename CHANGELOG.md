@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.14.1](https://github.com/Nomos-N4s/nomos/compare/v0.14.0...v0.14.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* **docs:** drop the "Provably Bounded" overclaim and label AI review panels ([cb578ce](https://github.com/Nomos-N4s/nomos/commit/cb578ce93d92bb6c8165d69d3a2797deca6f8d27)), closes [#254](https://github.com/Nomos-N4s/nomos/issues/254)
+
 ## [0.14.0](https://github.com/Nomos-N4s/nomos/compare/v0.13.1...v0.14.0) (2026-08-13)
 
 
@@ -315,7 +322,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - RL adversary CLI for testing governance robustness
 - Ontology backends: abstract + in-memory + Neo4j
 - Dashboard auto-detection of Neo4j from `.env`
-- Final review panel response (Phase 5.2) with three fixes
+- Final AI-generated review panel response (Phase 5.2) with three fixes
 
 ### Changed
 - Speaker state machine initialization to resolve sentinel-string bug
@@ -324,7 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Theoretical framework: Chapters 1–4 and Appendix A
-- Responses to first review panel (5 rounds, all fixes accepted)
+- Responses to first AI-generated review panel (5 rounds, all fixes accepted)
 - Reference implementation: Speaker state machine (deterministic falsification counter)
 - Project setup: `pyproject.toml` (uv), `.env.example`, `results/` directory
 

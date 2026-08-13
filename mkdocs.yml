@@ -92,8 +92,8 @@ nav:
   - Server Endpoints: server.md
   - Benchmarks: benchmarks/index.md
   - Review Responses:
-    - "First Review Panel": book/responses/response-to-review-panel.md
-    - "Harder Review Panel": book/responses/response-to-expert-panel-harder-review.md
+    - "First AI Review Panel": book/responses/response-to-review-panel.md
+    - "Harder AI Review Panel": book/responses/response-to-expert-panel-harder-review.md
   - Changelog:
     - changelog/index.md
     - changelog/2026-08-10.md
