@@ -144,3 +144,44 @@ Each entry returned by `compute_effect_sizes()` includes: `scenario`, `governanc
 - [x] Aggregated results: `results/benchmark_summary.csv`
 - [x] Figures: `results/figures/`
 - [x] Source code tagged at registration point: `v0.1.0-preregistered`
+
+---
+
+## D.7 RL Adversary Reproducibility
+
+The PPO governance adversary (Appendix E) has its own reproducibility surface.
+
+**Single seeding entrypoint.** `nomos.experiments.rl_seeding.seed_everything`
+seeds the Python `random` module, NumPy, PyTorch, and stable-baselines3 from one
+place; the protocol runner calls it before each `(mode, seed)` run. Determinism
+caveats are documented in that module: PPO on CPU is deterministic given
+identical seeds *and* library versions; GPU cuDNN kernels and multi-threaded
+BLAS may not be bit-exact (set `OMP_NUM_THREADS=1` for the strictest run).
+
+**Pinned environment.** The published run uses the `rl-repro` extra, which pins
+`numpy`, `gymnasium`, `torch`, and `stable-baselines3` to the exact versions
+behind the reported numbers:
+
+```bash
+uv sync --extra rl-repro
+```
+
+**CI smoke run.** `.github/workflows/rl-adversary-smoke.yml` trains and evaluates
+a few hundred steps per mode on every push/PR and asserts the canonical metrics
+are finite and in range via `nomos.experiments.rl_validate` — guarding against
+silent breakage of the harness between paper revisions.
+
+**Artifact archiving.** Each published run archives, per `(mode, seed)`:
+
+| Artifact | Location | Tracked? |
+|----------|----------|----------|
+| Trained model checkpoint | `results/rl_adversary/ppo_<mode>_seed<seed>.zip` | no (gitignored working file) |
+| Per-seed machine-readable result | `results/rl_adversary/result_<mode>_seed<seed>.json` | no |
+| Aggregate (mean ± CI, verdicts) | `results/rl_adversary/adversary_protocol.json` | no |
+| **Published summary + manifest** | `book/appendix-e-data/` | **yes** |
+
+The exact command line, seed set, and library versions are captured inside the
+aggregate JSON (`protocol` and `environment` blocks) and copied into
+`book/appendix-e-data/` for the published run. See
+`book/appendix-e-data/README.md` and the pre-registration in
+`book/appendix-e-preregistration.md`.

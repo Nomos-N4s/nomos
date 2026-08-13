@@ -26,6 +26,7 @@ from .rl_metrics import (
     step_record_from_info,
     summarize_episodes,
 )
+from .rl_seeding import seed_everything
 from .rl_train import MODES, make_env
 
 # ── Pre-registered protocol constants ──────────────────────────────────────
@@ -156,6 +157,7 @@ def run_protocol(
     for mode in modes:
         for seed in seeds:
             print(f"  [protocol] training {mode} seed={seed} ({total_timesteps} steps)...")
+            seed_everything(seed)
             env = make_env(
                 mode=mode,
                 size=size,
@@ -244,6 +246,7 @@ def aggregate_runs(
             "total_timesteps": total_timesteps,
             "reward_mode": reward_mode,
             "eval_deterministic": True,
+            "seeding": "nomos.experiments.rl_seeding.seed_everything",
             "hyperparameters": PPO_HYPERPARAMS,
         },
         "environment": _environment_info(),
