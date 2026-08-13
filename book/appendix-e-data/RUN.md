@@ -61,6 +61,14 @@ every supported interpreter. numpy is marker-split: the published run used
 [Appendix D §D.7](../appendix-d-experiment-protocol.md) and in
 `nomos/experiments/rl_seeding.py`.
 
+**On the torch build.** The run used `torch==2.13.0+cpu`, the CPU-only build
+from the PyTorch index; `uv sync --extra rl-repro` resolves plain
+`torch==2.13.0` from PyPI. These are the same release and produce identical
+results here — the experiment is CPU-only and touches no CUDA path — but the
+local-version suffix is recorded above because it is what the environment
+capture reported. The extra installs on every interpreter the project supports
+(3.10–3.14); torch 2.13.0 publishes wheels for cp310 through cp314.
+
 ## Artifacts
 
 Working artifacts are written to `results/rl_adversary/` and are **not** tracked
