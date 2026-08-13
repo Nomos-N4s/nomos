@@ -156,7 +156,7 @@
 
 **Insight we borrow:** The formal separation between the objective being maximized and the quantities being capped — governance quantities are constraints, not reward terms.
 
-**Where we depart:** CMDP constraints bind the *expectation* of a cost over trajectories, which permits arbitrarily bad individual episodes as long as the average holds. The κ₂ budget is a per-cycle hard cap evaluated before a proposal is admitted to the agenda, so it binds every cycle rather than the mean over cycles. It is also the one Nomos invariant with a machine-checked proof (`BudgetEnforcement.lean`), where a CMDP guarantee is asymptotic.
+**Where we depart:** CMDP constraints bind the *expectation* of a cost over trajectories, which permits arbitrarily bad individual episodes as long as the average holds. The κ₂ budget is a per-cycle hard cap evaluated before a proposal is admitted to the agenda, so it binds every cycle rather than the mean over cycles. It is also the one Nomos invariant with a machine-checked proof — `BudgetEnforcement.lean`'s `budget_never_exceeded`, which quantifies over arbitrary proposal sequences within a single cycle — where a CMDP guarantee is asymptotic. The theorem is about an abstract model of the gate, not about `speaker.py`; see Chapter 5 §7. Note the reverse limitation too: a per-cycle cap says nothing about behavior accumulated across cycles, which is the regime CMDP theory exists to handle.
 
 ---
 
