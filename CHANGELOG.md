@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.15.1](https://github.com/Nomos-N4s/nomos/compare/v0.15.0...v0.15.1) (2026-08-13)
+
+
+### Documentation
+
+* **book:** add Chapter 5 — Related Work against the hard neighbors ([d52838d](https://github.com/Nomos-N4s/nomos/commit/d52838d2d34b943f281bc82168bd03e316585430)), closes [#255](https://github.com/Nomos-N4s/nomos/issues/255)
+* **references:** add the hard-neighbor bibliography entries ([6d8004d](https://github.com/Nomos-N4s/nomos/commit/6d8004da30d4a295f8840a04899e5be650d564a7)), closes [#255](https://github.com/Nomos-N4s/nomos/issues/255)
+* tighten the Lean claim and scope the adversary claim (review) ([b612a11](https://github.com/Nomos-N4s/nomos/commit/b612a11f28e633563c62a18dd5c43722c6c9d701)), closes [#255](https://github.com/Nomos-N4s/nomos/issues/255)
+* wire Chapter 5 into the chapters, README, and review response ([f1adb84](https://github.com/Nomos-N4s/nomos/commit/f1adb84559a77c4f321355676e0b12a5e587f040)), closes [#255](https://github.com/Nomos-N4s/nomos/issues/255)
+
 ## [0.15.0](https://github.com/Nomos-N4s/nomos/compare/v0.14.1...v0.15.0) (2026-08-13)
 
 
