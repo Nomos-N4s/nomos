@@ -1,0 +1,44 @@
+name: RL Adversary Smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rl-adversary-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv
+        run: pip install uv
+      - name: Sync dependencies
+        run: uv sync
+      - name: Install package with RL extra
+        run: uv pip install -e ".[rl]"
+      - name: Run a short adversarial protocol (2 modes, 1 seed, 200 steps)
+        run: |
+          uv run python -m src.nomos.experiments.rl_adversary protocol \
+            --modes governance no_governance \
+            --seeds 1 \
+            --timesteps 200 \
+            --size 6 \
+            --eval-episodes 1 \
+            --log-dir results/rl_adversary
+      - name: Assert the result is finite and sane (schema, not values)
+        run: |
+          uv run python -m src.nomos.experiments.rl_validate results/rl_adversary
+          test -f results/rl_adversary/adversary_protocol.json && echo "Aggregate found"
+          ls -la results/rl_adversary/

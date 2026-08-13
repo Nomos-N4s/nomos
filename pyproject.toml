@@ -32,6 +32,14 @@ rl = [
     "torch>=2.0",
     "stable-baselines3>=2.3",
 ]
+# Exact pins for the published RL adversary run (E6, #264). Reproduces the
+# environment behind Appendix E §E.4/§E.5. Install with: uv sync --extra rl-repro
+rl-repro = [
+    "numpy==2.5.1",
+    "gymnasium==0.29.1",
+    "torch==2.13.0",
+    "stable-baselines3==2.9.0",
+]
 minigrid = [
     "minigrid>=3.1",
     "pygame-ce>=2.4",
