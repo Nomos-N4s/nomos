@@ -24,10 +24,16 @@ jobs:
           python-version: "3.11"
       - name: Install uv
         run: pip install uv
-      - name: Sync dependencies
-        run: python -m uv sync
-      - name: Install package with RL extra
-        run: python -m uv pip install -e ".[rl]"
+      # One sync, with the extra, so the RL stack provably lands in the same
+      # .venv the steps below execute from. The previous two-step form relied
+      # on `uv pip install` discovering that venv, which it does not do when uv
+      # is invoked as `python -m uv` — it targeted the hosted interpreter
+      # instead, and stable-baselines3 installed successfully into an
+      # environment nothing ever ran from.
+      - name: Sync dependencies with the RL extra
+        run: python -m uv sync --extra rl
+      - name: Show where the RL stack actually landed
+        run: .venv/bin/python -c "import stable_baselines3, torch; print('sb3', stable_baselines3.__version__, '| torch', torch.__version__)"
       - name: Run a short adversarial protocol (2 modes, 1 seed, 200 steps)
         run: |
           .venv/bin/python -m src.nomos.experiments.rl_adversary protocol \
