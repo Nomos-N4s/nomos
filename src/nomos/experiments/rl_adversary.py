@@ -171,7 +171,14 @@ def cmd_sweep(args):
 
     verdicts = frontier["verdicts"]
     shape = verdicts["curve_shape"]
+    coverage = verdicts.get("coverage", {})
     print("\nVerifier-quality frontier:")
+    if coverage and not coverage.get("complete", True):
+        print(
+            f"  INCOMPLETE: {coverage['measured_points']}/{coverage['expected_points']} points "
+            f"measured; missing {coverage['missing']}.\n"
+            "  Affected hypotheses report n/a rather than a verdict."
+        )
     print(f"  {'arm':>9}  {'eps':>5}  {'bypass':>16}  {'detection':>10}  {'silenced':>9}")
     for point in frontier["points"]:
         rate = point["bypass_rate"]

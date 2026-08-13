@@ -163,6 +163,21 @@ def validate_sweep(frontier: Mapping[str, Any]) -> list[str]:
             problems.append(f"verdicts.{hypothesis}.pass is not a bool or None")
     if "curve_shape" not in verdicts:
         problems.append("verdicts: missing curve_shape")
+
+    # A partial sweep is not a curve. Scoring silently over whichever points
+    # happen to be on disk would make "every point passed" and "the point that
+    # would have failed never ran" indistinguishable — the 0/0-as-0.0 defect one
+    # level up. The verdicts already degrade to None when coverage is short;
+    # this makes the incompleteness itself an error rather than a footnote.
+    coverage = verdicts.get("coverage")
+    if not isinstance(coverage, Mapping):
+        problems.append("verdicts: missing coverage block")
+    elif not coverage.get("complete", False):
+        missing = coverage.get("missing") or []
+        problems.append(
+            f"verdicts.coverage: sweep is incomplete — "
+            f"{len(missing)} expected (arm, epsilon) point(s) absent: {missing[:8]}"
+        )
     return problems
 
 
