@@ -113,6 +113,12 @@ exclude = [
     "src/nomos/experiments/gym_env.py",
     "src/nomos/experiments/rl_train.py",
     "src/nomos/experiments/rl_adversary.py",
+    # Import torch / stable-baselines3, which the typecheck CI job does not
+    # install (it syncs without the `rl` extra). rl_metrics.py and
+    # rl_validate.py stay checked — they hold the metric logic and need no
+    # optional dependency.
+    "src/nomos/experiments/rl_protocol.py",
+    "src/nomos/experiments/rl_seeding.py",
     "src/nomos/agents/pydantic_adapter.py",
 ]
 
