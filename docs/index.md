@@ -5,7 +5,7 @@ description: "Nomos is a formal framework that bounds autonomous AI with a Neura
 
 # Nomos
 
-## Provably Bounded Governance for Autonomous AI
+## Invariant-Checked Governance for Autonomous AI
 
 **Created by Carlos Pinto (xcoder-es)**
 

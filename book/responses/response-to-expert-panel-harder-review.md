@@ -1,9 +1,11 @@
 ---
-title: "Response to the second expert panel harder review"
-description: "Response to the harder expert panel review that graded the framework C-, addressing every AI systems, philosophy, engineering, and security critique in order."
+title: "Response to the second AI-generated review panel (harder pass)"
+description: "Response to the harder AI-generated adversarial review that graded the framework C-, addressing every AI systems, philosophy, engineering, and security critique in order."
 ---
 
-# Response to Expert Panel Harder Review
+# Response to the AI-Generated Review Panel (Harder Pass)
+
+> **Provenance:** This "panel" is an AI assistant prompted to role-play five expert personas and adversarially review the project — not a human peer-review panel. See the raw output in [`expert-panel-harder-review.txt`](expert-panel-harder-review.txt).
 
 > *"Our second panel tests whether the implementation matches the theory. The first panel asked 'is it right?'. This panel asks 'does it work?'"*
 
@@ -13,7 +15,7 @@ description: "Response to the harder expert panel review that graded the framewo
 
 ---
 
-We received the harder expert-panel review on 2026-07-26 — 5 experts from AI Systems, Political Philosophy, Software Engineering, Experimental Design, and Security. The panel assigned an overall grade of **C-** with the summary: *"Promising concept, immature execution, misleading claims."*
+We received the harder AI-generated adversarial review on 2026-07-26 — a single AI assistant simulating 5 personas across AI Systems, Political Philosophy, Software Engineering, Experimental Design, and Security. The simulated panel assigned an overall grade of **C-** with the summary: *"Promising concept, immature execution, misleading claims."*
 
 This response addresses every critique in order. Where valid, we concede and fix. Where invalid, we explain why. All code fixes are committed alongside this document.
 
