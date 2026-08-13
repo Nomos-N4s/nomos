@@ -51,11 +51,17 @@ jobs:
       # The frontier harness has more moving parts than the protocol it wraps —
       # a grid, two arms, provenance capture, curve scoring, figures — and a
       # break in any of them would only surface during a multi-hour publication
-      # run. A two-point grid exercises every one of those paths in seconds.
-      - name: Run a two-point epsilon-sweep (1 seed, 200 steps, no controls)
+      # run. This grid exercises every one of those paths in seconds.
+      #
+      # The epsilons are not arbitrary. H4's plateau is defined over
+      # {1.0, 0.99, 0.95}, so a grid missing any of them leaves H4 unevaluable
+      # and the smoke would pass while never once running the plateau scoring
+      # path it exists to protect. 0.5 is H6's floor. Together they make all
+      # four hypotheses return a real verdict.
+      - name: Run an epsilon-sweep covering every hypothesis (1 seed, 200 steps)
         run: |
           .venv/bin/python -m src.nomos.experiments.rl_adversary sweep \
-            --epsilons 1.0 0.5 \
+            --epsilons 1.0 0.99 0.95 0.5 \
             --arms unshaped shaped \
             --seeds 1 \
             --timesteps 200 \
@@ -66,6 +72,27 @@ jobs:
       - name: Assert the frontier is well-formed and pre-registration-backed
         run: |
           .venv/bin/python -m src.nomos.experiments.rl_validate results/rl_frontier
+      # A verdict of None is legitimate for a partial sweep, so the validator
+      # accepts it — which means the validator alone cannot tell that this smoke
+      # actually scored anything. Assert it here instead: every hypothesis must
+      # come back with a real boolean, so shrinking the grid later fails loudly
+      # rather than quietly hollowing the smoke out.
+      - name: Assert the smoke actually scored every hypothesis
+        run: |
+          .venv/bin/python -c "
+          import json, sys
+          with open('results/rl_frontier/verifier_frontier.json') as fh:
+              verdicts = json.load(fh)['verdicts']
+          unevaluated = [h for h in ('h4', 'h5', 'h6', 'h7')
+                         if not isinstance(verdicts[h]['pass'], bool)]
+          coverage = verdicts['coverage']
+          print('coverage:', coverage['measured_points'], '/', coverage['expected_points'])
+          print({h: verdicts[h]['pass'] for h in ('h4', 'h5', 'h6', 'h7')})
+          if unevaluated:
+              sys.exit(f'smoke did not exercise the scoring path for: {unevaluated}')
+          if not coverage['complete']:
+              sys.exit(f'smoke grid incomplete: {coverage[\"missing\"]}')
+          "
       - name: Render the frontier figures
         run: |
           .venv/bin/python -c "
