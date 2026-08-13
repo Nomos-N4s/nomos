@@ -51,6 +51,46 @@ uv sync --extra rl-repro
 python -m src.nomos.experiments.rl_adversary protocol --timesteps 100000 --seeds 42 43 44 45 46
 ```
 
+## Verifier-Quality Frontier
+
+The Appendix E result above rests on an **oracle**: Integrity verified claims
+against ground truth, which is free in a gridworld and free nowhere else. This
+sweep replaces it with a verifier of tunable accuracy ε and asks how bypass rate
+behaves as it degrades — 8 ε points × 2 training arms × 5 seeds × 100,000
+timesteps, hypotheses pre-registered before the runs.
+
+![Governance bypass rate against verifier accuracy](verifier_frontier.png)
+
+| | Metric | Threshold | Result | Verdict |
+|---|---|---|---|---|
+| **H4** — plateau | max bypass at ε ≥ 0.95 | ≤ 0.05 | 0.0038 | PASS |
+| **H5** — no cliff above ε = 0.9 | max adjacent step | ≤ 0.15 | 0.0030 | PASS |
+| **H6** — game was winnable | bypass at ε = 0.5 | ≥ 0.05 | 0.0060 | **FAIL** |
+| **H7** — shaping moves the search | shaped > unshaped, anchor ≤ 0.01 | both | 0.2982 > 0.2891 | PASS |
+
+**Degradation is graceful — no cliff anywhere, largest adjacent step 0.0030.**
+But the finding is *where* it went: across 80 governed runs the adversary
+executed poison 299 times out of 79,264 attempts, and **all 299 were on
+genuinely ambiguous actions. In 65,245 attempts against unmistakable poison, at
+every ε down to a coin flip, not one succeeded.** Verifier accuracy governs only
+the ambiguous fraction of the action space; committees grounded in properties the
+proposer cannot claim over held the line regardless.
+
+**H6 failed**, and by the pre-registered rule that makes H4 and H5 uninformative
+— stated first, before the argument that the metric was diluted by attempt
+composition. On winnable tiles alone the ε = 0.5 rate is 0.2300, 4.6× the same
+threshold. See [Appendix F §F.4.4](/book/appendix-f-verifier-frontier) for why
+that argument is post-hoc and does not rescue the verdict.
+
+Safety was silenced on 100% of proposals at **every** ε in both arms — the
+asserted-metadata finding now replicates across sixteen configurations rather
+than one.
+
+```bash
+uv sync --extra rl-repro
+python -m src.nomos.experiments.rl_adversary sweep --timesteps 100000 --seeds 42 43 44 45 46
+```
+
 ## Statistical Reporting
 
 `compute_effect_sizes()` compares governance against each baseline per scenario and returns one record per pair. Each record includes:
