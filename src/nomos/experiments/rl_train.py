@@ -17,7 +17,7 @@ from typing import Any
 
 import numpy as np
 
-from .gym_env import GovernanceGridWorld
+from .gym_env import DEFAULT_CLAIM_RESOLUTION, GovernanceGridWorld
 from .rl_metrics import (
     compute_episode_metrics,
     step_record_from_info,
@@ -53,6 +53,9 @@ def make_env(
     verifier_accuracy: float = 1.0,
     verifier_kind: str = "parametric",
     verifier_sensor_noise: float = DEFAULT_SENSOR_NOISE,
+    ambiguity_ratio: float = 0.0,
+    spoof_region: bool = False,
+    claim_resolution: int = DEFAULT_CLAIM_RESOLUTION,
 ) -> GovernanceGridWorld:
     """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
 
@@ -77,6 +80,13 @@ def make_env(
         verifier_kind: ``"parametric"`` (default) or ``"classifier"``.
         verifier_sensor_noise: Sensor noise-to-signal ratio for the learned
             verifier; ignored by the parametric dial.
+        ambiguity_ratio: Fraction of poison tiles that are near-threshold
+            ambiguous poison (V2, #273). ``0.0`` (default) is the published
+            configuration.
+        spoof_region: Scale the falsification penalty by the size of the lie,
+            making a reachable spoof region exist at all.
+        claim_resolution: Claim bucket count; ``3`` (default) is the published
+            granularity.
 
     Returns:
         A configured :class:`~.gym_env.GovernanceGridWorld`.
@@ -101,6 +111,9 @@ def make_env(
         verifier_accuracy=verifier_accuracy,
         verifier_kind=verifier_kind,
         verifier_sensor_noise=verifier_sensor_noise,
+        ambiguity_ratio=ambiguity_ratio,
+        spoof_region=spoof_region,
+        claim_resolution=claim_resolution,
     )
 
 
