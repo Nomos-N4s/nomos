@@ -67,3 +67,28 @@ def seed_everything(seed: int, *, deterministic_torch: bool = False) -> int:
         pass
 
     return seed
+
+
+def derive_rng(seed: int, stream: str) -> random.Random:
+    """Return a dedicated, deterministic RNG for one named source of randomness.
+
+    Sources of noise that are *part of the experiment* — the verifier's error
+    process (V1, #272), for instance — must not be drawn from an RNG that also
+    drives something else. Sharing a stream makes the number of draws
+    load-bearing: turning noise on would shift the grid layout, and the ε = 1.0
+    configuration would stop reproducing the published run. Each stream gets its
+    own generator, derived from the run seed so the whole set stays reproducible
+    from one number.
+
+    Seeding from a string is deliberate: ``random.Random`` hashes it with SHA-512
+    internally, so the derivation is stable across processes and unaffected by
+    ``PYTHONHASHSEED``.
+
+    Args:
+        seed: The run seed, as passed to :func:`seed_everything`.
+        stream: A stable name for the noise source (e.g. ``"verifier"``).
+
+    Returns:
+        A :class:`random.Random` private to ``(seed, stream)``.
+    """
+    return random.Random(f"nomos:{stream}:{seed}")
