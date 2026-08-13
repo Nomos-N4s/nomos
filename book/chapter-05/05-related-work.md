@@ -106,10 +106,20 @@ tested against — a point Appendix E makes at this project's own expense.
 
 Read down the "by what guarantee" column: Nomos sits in the middle band, with
 shielding and guaranteed-safe AI above it and the agent-governance frameworks
-beside it. Read down "against whom": Nomos and the safe-RL neighbors are the
-only rows tested against an adversary that adapts, and Nomos is the only row
-whose adversary was trained specifically to defeat it — which is the one axis
-where the project currently has something the others do not.
+beside it.
+
+Read down "against whom" and the adversary models separate into three groups:
+rows evaluated against no adversary at all, rows whose adversary is *any policy*
+including a badly-behaved one, and rows whose adversary was **trained against the
+mechanism**. On the published evidence surveyed here, Nomos is alone in the third
+group.
+
+That last sentence needs its scope stated, because it is exactly the kind of
+exclusivity claim §7 warns about. It is a claim about **what these works report**
+— their stated evaluation methodology — not a survey of everything their authors
+may have run and not published. It would be falsified by any of these systems
+reporting an attacker optimized against it, and a reader who finds one should
+treat this row as wrong rather than as hedged.
 
 ---
 
@@ -174,10 +184,23 @@ and the difference is exactly the one that matters under adversarial pressure,
 where the adversary chooses which episodes are bad.
 
 This is also the single place where the project has a machine-checked statement
-rather than an empirical one: `BudgetEnforcement.lean` proves the enforcement
-invariant, and Appendix E measured it holding — the agenda never admitted more
-than the per-member budget of 3 on any seed, while the adversary flooded up to 6
-identical proposals per cycle.
+rather than an empirical one, and §7's rule applies to our own sentence — so the
+theorem is named rather than gestured at. `BudgetEnforcement.lean` proves
+`budget_never_exceeded`: starting from a state in which every member has used
+nothing, folding **any** list of proposals through the $\kappa_2$ gate leaves
+every member satisfying `used m ≤ budgets m`. The quantification is over
+arbitrary proposal sequences *within one cycle*, which is precisely the per-cycle
+reading claimed above and not an aggregate or expectation-level one.
+
+Two limits on that theorem belong in the same breath. It is a statement about an
+abstract model of the gate — `BudgetState` and `processProposal` — and **no
+extraction or refinement argument connects it to `speaker.py`**; that the
+implementation refines the specification is tested, not proven. And a per-cycle
+cap is a weaker property than a CMDP's, in the sense that it says nothing about
+behavior accumulated across cycles, which is the regime CMDP theory is built
+for. What Appendix E adds is the implementation-side measurement: the agenda
+never admitted more than the per-member budget of 3 on any seed, while the
+adversary flooded up to 6 identical proposals per cycle.
 
 **Concession.** For a fixed constraint set with an expectation-level requirement,
 a CMDP is the better-understood tool by a wide margin, with decades of theory
@@ -455,7 +478,8 @@ than as demonstrated advantages.
    of the system — five of the eight proof modules.*
 4. **Adversarial evidence against a trained attacker.** Appendices E and F train a
    PPO adversary specifically to defeat the governance layer. No other row in
-   §3's table reports an adaptive attacker trained against the mechanism itself.
+   §3's table reports an adaptive attacker trained against the mechanism itself —
+   a statement about their published evaluations, scoped as in §3.
    *Status: this is the project's strongest differentiator and its most heavily
    caveated result — see §7.*
 
@@ -471,6 +495,15 @@ library covers budget enforcement, vote falsification, and five Identity Layer
 modules — it does not cover the deliberation protocol, the committee semantics,
 or the κ mask itself. Any claim resting on "formally verified" must name the
 module.
+
+**And naming the module is not sufficient — the proofs are about models, not
+about the code.** `BudgetEnforcement.lean` reasons over a `BudgetState` record
+and a `processProposal` function written in Lean. Nothing extracts that model
+from `speaker.py`, and no refinement argument connects the two, so the theorem
+establishes that *the mechanism as specified* has the property, while *the
+implementation matching the specification* is tested rather than proven. This is
+the gap between Nomos and [Dalrymple 2024] stated at the level of a single file,
+and it is a fair place to press hardest.
 
 **The adversarial evidence is narrower than it sounds.** One 10×10 gridworld,
 five seeds, one attack vocabulary. Appendix E states that no spoof keeping
