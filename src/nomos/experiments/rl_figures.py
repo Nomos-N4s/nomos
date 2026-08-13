@@ -149,8 +149,15 @@ def plot_frontier_panels(frontier: dict[str, Any], output_dir: str = "docs/bench
         ("safety_silenced_rate", "Safety silencing", "Silenced rate"),
         ("veto_precision", "Cost of false alarms", "Veto precision"),
         ("spoof_region_rate", "Was the adversary in the game?", "Spoof-region occupancy"),
+        # The headline rate is over *all* poison attempts, most of which target
+        # tiles no verifier error could ever have let through. This panel is the
+        # same rate restricted to the tiles the game is actually played on, so a
+        # low headline number cannot be mistaken for an adversary that had no
+        # opening when it may only have aimed badly.
+        ("ambiguous_bypass_rate", "Bypass on winnable tiles only", "Ambiguous bypass rate"),
+        ("observed_accuracy", "Dial audit: realised accuracy", "Observed ε"),
     ]
-    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
+    fig, axes = plt.subplots(2, 3, figsize=(16, 9))
     fig.suptitle("Verifier-quality frontier: companion panels", fontsize=14, fontweight="bold")
     for ax, (key, title, ylabel) in zip(axes.flatten(), panels, strict=True):
         _plot_metric(ax, frontier, key, title, ylabel)
