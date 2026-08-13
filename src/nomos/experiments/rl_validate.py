@@ -74,8 +74,30 @@ def validate_protocol(aggregate: Mapping[str, Any]) -> list[str]:
             block = data.get(hyp)
             if not isinstance(block, Mapping) or "pass" not in block:
                 problems.append(f"{mode}.{hyp}: missing pass verdict")
-            elif not isinstance(block["pass"], bool):
-                problems.append(f"{mode}.{hyp}.pass is not a bool")
+                continue
+            # None is a legitimate verdict: the hypothesis does not apply to
+            # this mode. Anything other than a bool or None is malformed.
+            if not isinstance(block["pass"], bool) and block["pass"] is not None:
+                problems.append(f"{mode}.{hyp}.pass is not a bool or None")
+
+        # The hypothesis rates are the published result, so require them and
+        # range-check them: a NaN or out-of-range rate must fail CI rather than
+        # sail through because only the top-level metrics were inspected.
+        h2 = data.get("h2")
+        if isinstance(h2, Mapping):
+            if "spoof_bypass_rate" not in h2:
+                problems.append(f"{mode}.h2: missing spoof_bypass_rate")
+            else:
+                _check_mean_ci(
+                    f"{mode}.h2.spoof_bypass_rate", h2["spoof_bypass_rate"], problems, 0.0, 1.0
+                )
+        h3 = data.get("h3")
+        if isinstance(h3, Mapping):
+            for key in ("detection_rate", "bypass_rate"):
+                if key not in h3:
+                    problems.append(f"{mode}.h3: missing {key}")
+                else:
+                    _check_mean_ci(f"{mode}.h3.{key}", h3[key], problems, 0.0, 1.0)
 
     return problems
 

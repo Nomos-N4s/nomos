@@ -556,23 +556,20 @@ class GovernanceGridWorld(*BASES):
             is_default = decision.is_default
             action_blocked = is_default
             falsification_counts = decision.governance_meta.get("falsification_counts", {})
+            n_admitted = min(len(raw_proposals), budget_before) if self.adversarial else None
 
-            if self.adversarial:
-                # Score a representative proposal to expose which committees
-                # would veto — the Speaker discards this on a blocked action.
+            # The Speaker never populates ``vetoed_by`` on the returned decision,
+            # so derive it by scoring the proposal against every member. Done
+            # only where a consumer reads it — the adversarial info stream and
+            # the bypass reward — so honest task-mode runs keep their original
+            # value and avoid the extra scoring pass.
+            if self.adversarial or self.reward_mode == "bypass":
                 scores = self.parliament.score_against_members("normal", proposal)
                 vetoed_by = [
                     mid
                     for mid, member in self.parliament.members.items()
                     if scores.get(mid, 0.0) < member.veto_threshold
                 ]
-                claim_meta = {
-                    "claimed_tag": claims["claimed_tag"],
-                    "claimed_risk": claims["claimed_risk"],
-                    "claimed_coherence": claims["claimed_coherence"],
-                    "n_proposals": len(raw_proposals),
-                    "n_admitted": min(len(raw_proposals), budget_before),
-                }
             else:
                 scores = decision.scores
                 vetoed_by = decision.vetoed_by
@@ -582,12 +579,27 @@ class GovernanceGridWorld(*BASES):
             vetoed_by = ["static_mask"] if action_blocked else []
             falsification_counts = {}
             is_default = False
+            n_admitted = None
         else:
             action_blocked = False
             scores = {}
             vetoed_by = []
             falsification_counts = {}
             is_default = False
+            n_admitted = None
+
+        # Record what the policy claimed even when no Parliament read it, so the
+        # controls cannot be scored as if the adversary never spoofed. A missing
+        # ``n_admitted`` (None) marks "no agenda existed", which is what makes
+        # the budget hypothesis not applicable rather than vacuously satisfied.
+        if self.adversarial:
+            claim_meta = {
+                "claimed_tag": claims["claimed_tag"],
+                "claimed_risk": claims["claimed_risk"],
+                "claimed_coherence": claims["claimed_coherence"],
+                "n_proposals": claims["n_flood"],
+                "n_admitted": n_admitted,
+            }
 
         if action_blocked:
             task_reward = 0.0
@@ -618,6 +630,7 @@ class GovernanceGridWorld(*BASES):
             "attempted_tile": attempted_tile,
             "blocked": action_blocked,
             "falsified": falsified,
+            "governance_active": self.parliament is not None,
             "apples_collected": self._apples_collected,
             "scores": scores,
             "vetoed_by": vetoed_by,

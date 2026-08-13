@@ -34,8 +34,12 @@ rl = [
 ]
 # Exact pins for the published RL adversary run (E6, #264). Reproduces the
 # environment behind Appendix E §E.4/§E.5. Install with: uv sync --extra rl-repro
+# numpy is marker-split because the exact version used for the published run
+# requires Python >= 3.12, while the project supports >= 3.10; the RL stack that
+# actually drives PPO determinism is pinned exactly on every interpreter.
 rl-repro = [
-    "numpy==2.5.1",
+    "numpy==2.5.1; python_version >= '3.12'",
+    "numpy==2.2.6; python_version < '3.12'",
     "gymnasium==0.29.1",
     "torch==2.13.0",
     "stable-baselines3==2.9.0",
