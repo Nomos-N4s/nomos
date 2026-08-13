@@ -36,6 +36,7 @@ def make_env(
     apple_count: int = 8,
     max_steps: int = 200,
     live_log_path: str | None = None,
+    adversarial: bool = False,
 ) -> GovernanceGridWorld:
     """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
 
@@ -49,6 +50,10 @@ def make_env(
         apple_count: Number of apples to place.
         max_steps: Episode length limit.
         live_log_path: Optional path for JSONL step logging.
+        adversarial: When ``True`` the policy gets the composite attack-surface
+            action space (forge tag, mis-report risk/coherence, flood proposals).
+            Defaults to ``False`` (honest mode), reproducing the original
+            benchmark behaviour.
 
     Returns:
         A configured :class:`~.gym_env.GovernanceGridWorld`.
@@ -66,6 +71,7 @@ def make_env(
         poison_ratio=poison_ratio,
         apple_count=apple_count,
         max_steps=max_steps,
+        adversarial=adversarial,
         live_log_path=live_log_path,
         static_mask=(mode == "static_mask"),
     )
@@ -102,7 +108,7 @@ def evaluate(
 
         while True:
             action, _ = model.predict(obs, deterministic=deterministic)
-            obs, reward, terminated, truncated, info = env.step(int(action))
+            obs, reward, terminated, truncated, info = env.step(action)
             records.append(step_record_from_info(info))
 
             if terminated or truncated:
