@@ -1,9 +1,11 @@
 ---
-title: "Response to the first expert review panel"
-description: "Formal rebuttal to the initial expert panel's critiques of Chapters 1 and 2, including the infinite regress objection and residual physical-world risks."
+title: "Response to the first AI-generated review panel"
+description: "Formal rebuttal to the initial AI-generated adversarial review's critiques of Chapters 1 and 2, including the infinite regress objection and residual physical-world risks."
 ---
 
-# Response to Expert Review Panel
+# Response to the First AI-Generated Review Panel
+
+> **Provenance:** The critiques this document responds to were produced by an AI assistant prompted to adversarially review the project, not by human domain experts. "Panel" and "reviewer" below refer to that simulated AI review.
 
 > Formal rebuttal and acknowledgment of critiques received on Chapters 1-2.
 
