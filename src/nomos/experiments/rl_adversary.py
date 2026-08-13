@@ -18,6 +18,7 @@ Usage:
 import argparse
 import sys
 
+from .gym_env import DEFAULT_CLAIM_RESOLUTION
 from .rl_train import benchmark, evaluate, make_env, train_ppo
 from .rl_verifier import DEFAULT_SENSOR_NOISE, VERIFIER_KINDS
 
@@ -91,6 +92,10 @@ def cmd_protocol(args):
         verifier_accuracy=args.verifier_accuracy,
         verifier_kind=args.verifier_kind,
         verifier_sensor_noise=args.verifier_sensor_noise,
+        ambiguity_ratio=args.ambiguity_ratio,
+        spoof_region=args.spoof_region,
+        claim_resolution=args.claim_resolution,
+        shaped=args.shaped,
     )
 
     def verdict(value):
@@ -185,7 +190,37 @@ def main():
         default=DEFAULT_SENSOR_NOISE,
         help="Sensor noise-to-signal ratio for the learned verifier; ignored by the dial.",
     )
-    p_proto.set_defaults(func=cmd_protocol)
+    p_proto.add_argument(
+        "--ambiguity-ratio",
+        type=float,
+        default=0.0,
+        help="Fraction of poison that is near-threshold ambiguous poison (default 0.0).",
+    )
+    p_proto.add_argument(
+        "--spoof-region",
+        action="store_true",
+        help="Scale the falsification penalty by the size of the lie, making a spoof region exist.",
+    )
+    p_proto.add_argument(
+        "--claim-resolution",
+        type=int,
+        default=DEFAULT_CLAIM_RESOLUTION,
+        help="Number of claim buckets (default 3, the published granularity).",
+    )
+    arm = p_proto.add_mutually_exclusive_group()
+    arm.add_argument(
+        "--shaped",
+        dest="shaped",
+        action="store_true",
+        help="Train with partial credit for progress against Integrity. Evaluation stays unshaped.",
+    )
+    arm.add_argument(
+        "--unshaped",
+        dest="shaped",
+        action="store_false",
+        help="Train on the unshaped bypass reward (default).",
+    )
+    p_proto.set_defaults(func=cmd_protocol, shaped=False)
 
     args = parser.parse_args()
     if args.command is None:
