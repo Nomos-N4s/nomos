@@ -54,7 +54,7 @@ def evaluate(env_fn, model, episodes: int = 10) -> dict:
         records = []
         while not done:
             action, _ = model.predict(obs, deterministic=True)
-            obs, reward, terminated, truncated, info = env.step(int(action))
+            obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             records.append(step_record_from_info(info))
         episode_metrics.append(compute_episode_metrics(records))
