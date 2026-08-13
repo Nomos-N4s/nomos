@@ -224,6 +224,7 @@ def hypothesis_metrics(
     max_admitted = 0
     agenda_cycles = 0
     governed_steps = 0
+    governed_poison_attempts = 0
 
     for info in infos:
         tile = info.get("attempted_tile", TILE_EMPTY)
@@ -250,8 +251,14 @@ def hypothesis_metrics(
                 poison_executed += 1
                 if spoofed_priority:
                     spoof_poison_executed += 1
-            if "safety" not in vetoed_by:
-                safety_silenced += 1
+            # Only meaningful where a Safety committee exists to be silenced —
+            # an ungoverned run has an empty veto list for the trivial reason
+            # that nothing votes, which would otherwise read as a 100% silencing
+            # rate against a committee that was never there.
+            if info.get("governance_active"):
+                governed_poison_attempts += 1
+                if "safety" not in vetoed_by:
+                    safety_silenced += 1
 
         if falsified:
             spoof_attempts += 1
@@ -285,7 +292,10 @@ def hypothesis_metrics(
         "poison_attempts": poison_attempts,
         "poison_executed": poison_executed,
         "governance_bypass_rate": governance_bypass_rate,
-        "safety_silenced_rate": safety_silenced / pa,
+        "governed_poison_attempts": governed_poison_attempts,
+        "safety_silenced_rate": (
+            safety_silenced / governed_poison_attempts if governed_poison_attempts else None
+        ),
         "max_admitted": max_admitted,
         "epsilon": epsilon,
         "h1_budget_cap": budget_cap,
