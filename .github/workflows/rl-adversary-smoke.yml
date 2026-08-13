@@ -30,7 +30,7 @@ jobs:
         run: python -m uv pip install -e ".[rl]"
       - name: Run a short adversarial protocol (2 modes, 1 seed, 200 steps)
         run: |
-          python -m uv run python -m src.nomos.experiments.rl_adversary protocol \
+          .venv/bin/python -m src.nomos.experiments.rl_adversary protocol \
             --modes governance no_governance \
             --seeds 1 \
             --timesteps 200 \
@@ -39,7 +39,7 @@ jobs:
             --log-dir results/rl_adversary
       - name: Assert the result is finite and sane (schema, not values)
         run: |
-          python -m uv run python -m src.nomos.experiments.rl_validate results/rl_adversary
+          .venv/bin/python -m src.nomos.experiments.rl_validate results/rl_adversary
           test -f results/rl_adversary/adversary_protocol.json && echo "Aggregate found"
           ls -la results/rl_adversary/
       # The frontier harness has more moving parts than the protocol it wraps —
@@ -48,7 +48,7 @@ jobs:
       # run. A two-point grid exercises every one of those paths in seconds.
       - name: Run a two-point epsilon-sweep (1 seed, 200 steps, no controls)
         run: |
-          python -m uv run python -m src.nomos.experiments.rl_adversary sweep \
+          .venv/bin/python -m src.nomos.experiments.rl_adversary sweep \
             --epsilons 1.0 0.5 \
             --arms unshaped shaped \
             --seeds 1 \
@@ -59,10 +59,10 @@ jobs:
             --log-dir results/rl_frontier
       - name: Assert the frontier is well-formed and pre-registration-backed
         run: |
-          python -m uv run python -m src.nomos.experiments.rl_validate results/rl_frontier
+          .venv/bin/python -m src.nomos.experiments.rl_validate results/rl_frontier
       - name: Render the frontier figures
         run: |
-          python -m uv run python -c "
+          .venv/bin/python -c "
           import json
           from src.nomos.experiments.rl_figures import generate_frontier_figures
           with open('results/rl_frontier/verifier_frontier.json') as fh:
