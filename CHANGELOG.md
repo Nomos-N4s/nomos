@@ -8,6 +8,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.15.0](https://github.com/Nomos-N4s/nomos/compare/v0.14.1...v0.15.0) (2026-08-13)
+
+
+### Features
+
+* **experiments:** add the sweep subcommand ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([2cfb6bb](https://github.com/Nomos-N4s/nomos/commit/2cfb6bbc7d8fe0c8a72525ed9d71749365fbc087))
+* **experiments:** add tunable-accuracy Integrity verifiers ([#272](https://github.com/Nomos-N4s/nomos/issues/272)) ([8b6d318](https://github.com/Nomos-N4s/nomos/commit/8b6d31893304739a3a5f68cba7370d7ce042c8ef))
+* **experiments:** audit the accuracy the verifier actually realised ([#272](https://github.com/Nomos-N4s/nomos/issues/272)) ([c876e1d](https://github.com/Nomos-N4s/nomos/commit/c876e1deb8ac3a3f3ce0a79e1790ec477725c6f6))
+* **experiments:** derive per-stream RNGs from the seeding entrypoint ([6e1939b](https://github.com/Nomos-N4s/nomos/commit/6e1939bd8d4b4b933a0540c913b33b812841555a))
+* **experiments:** epsilon-sweep runner and curve scoring ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([821a402](https://github.com/Nomos-N4s/nomos/commit/821a40203564a7e710f28cae8e5dc48eb1581241))
+* **experiments:** expose the spoof-region knobs through make_env ([#273](https://github.com/Nomos-N4s/nomos/issues/273)) ([b39c883](https://github.com/Nomos-N4s/nomos/commit/b39c88382c113aaa196a3076ab33cb72e48302ca))
+* **experiments:** expose the verifier dial through the runner and CLI ([#272](https://github.com/Nomos-N4s/nomos/issues/272)) ([7c47584](https://github.com/Nomos-N4s/nomos/commit/7c47584931afab76a0c37abc174afed21451d9da))
+* **experiments:** frontier figures — headline curve and companions ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([271951d](https://github.com/Nomos-N4s/nomos/commit/271951d7186f36df8d7f0b15c9264351798c1173))
+* **experiments:** ground Integrity in what it observes, not the truth ([#272](https://github.com/Nomos-N4s/nomos/issues/272)) ([b2e9acc](https://github.com/Nomos-N4s/nomos/commit/b2e9accb3767ac9bafc76a7382549798e4208381))
+* **experiments:** make Integrity attackable in principle ([#273](https://github.com/Nomos-N4s/nomos/issues/273)) ([706c745](https://github.com/Nomos-N4s/nomos/commit/706c7457a36957ba9aee5ac8de38924304e458c3))
+* **experiments:** measure where the spoof region is actually occupied ([#273](https://github.com/Nomos-N4s/nomos/issues/273)) ([ecf3667](https://github.com/Nomos-N4s/nomos/commit/ecf366701b1618e55ecb09e9b5112e98cb8865ac))
+* **experiments:** pay partial credit for progress against Integrity ([#274](https://github.com/Nomos-N4s/nomos/issues/274)) ([fc64912](https://github.com/Nomos-N4s/nomos/commit/fc64912cadb0ed74ff399e6c4c953aee6d6e2857))
+* **experiments:** run sweep points independently so they can be scheduled ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([9971b96](https://github.com/Nomos-N4s/nomos/commit/9971b96daea6192ac08ee0976f37b0c5d3c5c59e))
+* **experiments:** select the shaped/unshaped arm from the runner ([#274](https://github.com/Nomos-N4s/nomos/issues/274)) ([8555805](https://github.com/Nomos-N4s/nomos/commit/8555805f5862bebb4782ce4bff2f0cd99499c7d0))
+* **experiments:** validate the frontier artifact ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([aeb43dd](https://github.com/Nomos-N4s/nomos/commit/aeb43ddec2e3f4372270bc2c15107759bd52b965))
+
+
+### Bug Fixes
+
+* **ci:** run the RL smoke steps with the venv interpreter directly ([e1ccf07](https://github.com/Nomos-N4s/nomos/commit/e1ccf07ffdf06df11ac03af4776dd154a18561de))
+* **ci:** sync the RL extra into the venv the smoke actually runs from ([44f834b](https://github.com/Nomos-N4s/nomos/commit/44f834b1e9809a336d4480ee97e16cec62eb4bb1))
+* **experiments:** an incomplete sweep can no longer pass a hypothesis ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([fc84992](https://github.com/Nomos-N4s/nomos/commit/fc84992e0e3a0e1752c9e2ef82a84420f251d964))
+* **experiments:** do not print a false reading when H6 fails ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([421e434](https://github.com/Nomos-N4s/nomos/commit/421e434f27780cfa565209f9adc535b66bc3f78b))
+* **experiments:** make the headline figure legible at both scales ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([4280fd8](https://github.com/Nomos-N4s/nomos/commit/4280fd88118b6599232c7a7b252247a7d479dc1a))
+* **experiments:** reject an out-of-range verifier accuracy at the factory ([#272](https://github.com/Nomos-N4s/nomos/issues/272)) ([868f719](https://github.com/Nomos-N4s/nomos/commit/868f719790960f7f498462bc36aad05a32d7c103))
+
+
+### Documentation
+
+* **benchmarks:** add the verifier-frontier curve and companion panels ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([7207b02](https://github.com/Nomos-N4s/nomos/commit/7207b0287f36de97e203ad668d88b2e99bd835c7))
+* **book:** consolidate and re-state Appendix E limitation 2 ([#273](https://github.com/Nomos-N4s/nomos/issues/273)) ([01cad39](https://github.com/Nomos-N4s/nomos/commit/01cad3985c7699200208c301056b521c4d3b6f8e))
+* **book:** pre-register the verifier-quality frontier sweep (H4-H7) ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([c5ab0bd](https://github.com/Nomos-N4s/nomos/commit/c5ab0bdb2af3891bd949289cc8a24fd6d5cad9be))
+* **book:** publish Appendix F — the verifier-quality frontier ([#270](https://github.com/Nomos-N4s/nomos/issues/270), [#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([976f134](https://github.com/Nomos-N4s/nomos/commit/976f134e650b1e13ce51f4a1bb96ea11e19cfb13))
+* **book:** record the coverage defect in Appendix F ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([287204a](https://github.com/Nomos-N4s/nomos/commit/287204ad32104597356ed3693644ad59b890f3e6))
+* **book:** report bypass on winnable tiles beside H6 ([#275](https://github.com/Nomos-N4s/nomos/issues/275)) ([5c66bc7](https://github.com/Nomos-N4s/nomos/commit/5c66bc7d23d73ba214f71221d60dfcd74d32599a))
+
 ## [0.14.1](https://github.com/Nomos-N4s/nomos/compare/v0.14.0...v0.14.1) (2026-08-13)
 
 
