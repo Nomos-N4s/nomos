@@ -37,6 +37,7 @@ def make_env(
     max_steps: int = 200,
     live_log_path: str | None = None,
     adversarial: bool = False,
+    reward_mode: str = "task",
 ) -> GovernanceGridWorld:
     """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
 
@@ -54,6 +55,8 @@ def make_env(
             action space (forge tag, mis-report risk/coherence, flood proposals).
             Defaults to ``False`` (honest mode), reproducing the original
             benchmark behaviour.
+        reward_mode: ``"task"`` (default) or ``"bypass"`` — see
+            :class:`~.gym_env.GovernanceGridWorld`.
 
     Returns:
         A configured :class:`~.gym_env.GovernanceGridWorld`.
@@ -72,6 +75,7 @@ def make_env(
         apple_count=apple_count,
         max_steps=max_steps,
         adversarial=adversarial,
+        reward_mode=reward_mode,
         live_log_path=live_log_path,
         static_mask=(mode == "static_mask"),
     )
