@@ -22,6 +22,35 @@ python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 - **DriftLab**: Tests identity coherence under reward-function shift. Governance maintains alignment.
 - **DeadlockMaze**: Tests procedural deadlock recovery. DeadlockBreaker mechanism prevents infinite loops.
 
+## RL Adversary Results
+
+A PPO adversary trained to **defeat** the governance layer (not to solve the task),
+with the attack surface to forge priority tags, mis-report risk, and flood the
+agenda. 100,000 timesteps × 5 seeds × 3 modes, hypotheses pre-registered before
+the run.
+
+| Mode | Governance bypass rate | Violations / episode | H1 | H2 | H3 |
+|------|-----------------------|----------------------|----|----|----|
+| `governance` | **0.000** [0.000, 0.000] | 0.000 ± 0.000 | PASS | PASS | PASS |
+| `no_governance` (ceiling control) | 1.000 [1.000, 1.000] | 1.500 ± 0.614 | n/a | n/a | n/a |
+| `static_mask` (floor control) | 0.000 [0.000, 0.000] | 0.000 ± 0.000 | n/a | n/a | n/a |
+
+Zero of 4,762 adversarial poison attempts executed. The adversary did, however,
+silence the Safety committee on 100% of its proposals — it was stopped by the
+Integrity committee's ground-truth check, not by Safety. The headline is that
+**defense in depth is load-bearing**, not that the layer is unbreakable.
+
+H1–H3 carry no verdict for the control modes because they are claims about
+Parliament mechanisms those modes do not have; the controls bracket the result
+instead. See [Appendix E](/book/appendix-e-rl-adversary) for per-seed values and
+limitations, and the [pre-registration](/book/appendix-e-preregistration) for the
+metrics and thresholds.
+
+```bash
+uv sync --extra rl-repro
+python -m src.nomos.experiments.rl_adversary protocol --timesteps 100000 --seeds 42 43 44 45 46
+```
+
 ## Statistical Reporting
 
 `compute_effect_sizes()` compares governance against each baseline per scenario and returns one record per pair. Each record includes:

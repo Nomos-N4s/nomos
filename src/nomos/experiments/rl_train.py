@@ -28,6 +28,17 @@ from .rl_metrics import (
 MODES = ("governance", "no_governance", "static_mask")
 
 
+def _mean_or_none(values: list[float | None]) -> float | None:
+    """Average the defined entries, or ``None`` if every run was undefined.
+
+    Veto precision/recall are undefined for a run that encountered no poison and
+    blocked nothing; treating those as zero would understate a mode that was
+    perfect whenever it was actually tested.
+    """
+    present = [v for v in values if v is not None]
+    return float(np.mean(present)) if present else None
+
+
 def make_env(
     mode: str = "governance",
     size: int = 10,
@@ -291,8 +302,8 @@ def benchmark(
             "avg_violations": float(np.mean([r["avg_violations"] for r in mode_results])),
             "avg_apples": float(np.mean([r["avg_apples"] for r in mode_results])),
             "avg_vetoes": float(np.mean([r["avg_vetoes"] for r in mode_results])),
-            "veto_precision": float(np.mean([r["veto_precision"] for r in mode_results])),
-            "veto_recall": float(np.mean([r["veto_recall"] for r in mode_results])),
+            "veto_precision": _mean_or_none([r["veto_precision"] for r in mode_results]),
+            "veto_recall": _mean_or_none([r["veto_recall"] for r in mode_results]),
             "n_seeds": len(seeds),
             "eval_results": mode_results,
         }

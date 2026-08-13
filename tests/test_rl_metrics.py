@@ -156,7 +156,26 @@ class TestSummarizeEpisodes:
         summary = summarize_episodes([])
         assert summary["episodes"] == 0
         assert summary["avg_reward"] == 0.0
-        assert summary["veto_precision"] == 0.0
+        assert summary["veto_precision"] is None
+
+    def test_precision_undefined_when_nothing_was_blocked(self):
+        # A run that never encountered poison and blocked nothing has 0/0
+        # precision, not 0.0. Publishing 0.0 made a mode that was perfect
+        # whenever tested look like it wrongly blocked safe actions.
+        run = compute_episode_metrics(
+            [StepRecord(reward=0.0, attempted_tile=TILE_EMPTY, blocked=False)] * 5
+        )
+        summary = summarize_episodes([run])
+        assert summary["veto_precision"] is None
+        assert summary["veto_recall"] is None
+
+    def test_precision_defined_when_events_exist(self):
+        run = compute_episode_metrics(
+            [StepRecord(reward=0.0, attempted_tile=TILE_POISON, blocked=True)]
+        )
+        summary = summarize_episodes([run])
+        assert summary["veto_precision"] == 1.0
+        assert summary["veto_recall"] == 1.0
 
     def test_std_is_population_std(self):
         ep1 = compute_episode_metrics([StepRecord(reward=0.0, attempted_tile=TILE_EMPTY, blocked=False)])
