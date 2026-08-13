@@ -19,6 +19,7 @@ import argparse
 import sys
 
 from .gym_env import DEFAULT_CLAIM_RESOLUTION
+from .rl_sweep import SWEEP_AMBIGUITY_RATIO, SWEEP_CLAIM_RESOLUTION
 from .rl_train import benchmark, evaluate, make_env, train_ppo
 from .rl_verifier import DEFAULT_SENSOR_NOISE, VERIFIER_KINDS
 
@@ -118,6 +119,61 @@ def cmd_protocol(args):
             f"H3={verdict(data['h3']['pass'])}"
         )
     print(f"\nResults saved to {args.log_dir}/adversary_protocol.json")
+
+
+def cmd_sweep(args):
+    from .rl_sweep import ARMS, EPSILON_GRID, run_sweep
+
+    frontier = run_sweep(
+        epsilons=args.epsilons if args.epsilons else EPSILON_GRID,
+        arms=args.arms if args.arms else ARMS,
+        seeds=args.seeds,
+        total_timesteps=args.timesteps,
+        size=args.size,
+        eval_episodes=args.eval_episodes,
+        ambiguity_ratio=args.ambiguity_ratio,
+        spoof_region=not args.no_spoof_region,
+        claim_resolution=args.claim_resolution,
+        controls=not args.no_controls,
+        log_dir=args.log_dir,
+    )
+
+    def verdict(value):
+        return {True: "PASS", False: "FAIL", None: "n/a"}[value]
+
+    verdicts = frontier["verdicts"]
+    shape = verdicts["curve_shape"]
+    print("\nVerifier-quality frontier:")
+    print(f"  {'arm':>9}  {'eps':>5}  {'bypass':>16}  {'detection':>10}  {'silenced':>9}")
+    for point in frontier["points"]:
+        rate = point["bypass_rate"]
+        detection = (
+            point["detection_rate"]["mean"] if point["detection_rate"]["n"] else float("nan")
+        )
+        silenced = (
+            point["safety_silenced_rate"]["mean"]
+            if point["safety_silenced_rate"]["n"]
+            else float("nan")
+        )
+        print(
+            f"  {point['arm']:>9}  {point['epsilon']:>5}  "
+            f"{rate['mean']:.4f} +/- {rate['ci95']:.4f}  {detection:>10.4f}  {silenced:>9.4f}"
+        )
+    print(
+        f"\n  H4={verdict(verdicts['h4']['pass'])} "
+        f"H5={verdict(verdicts['h5']['pass'])} "
+        f"H6={verdict(verdicts['h6']['pass'])} "
+        f"H7={verdict(verdicts['h7']['pass'])}"
+    )
+    print(f"  curve shape: {'CLIFF' if shape['cliff'] else 'graceful'}")
+    if shape["critical_epsilon_region"]:
+        print(f"  critical-epsilon region: {shape['critical_epsilon_region']}")
+    if verdicts["h6"]["pass"] is False:
+        print(
+            "\n  WARNING: H6 failed — the adversary could not win at any epsilon, so the\n"
+            "  H4/H5 verdicts describe a game it could not play and carry no information."
+        )
+    print(f"\nResults saved to {args.log_dir}/verifier_frontier.json")
 
 
 def main():
@@ -221,6 +277,42 @@ def main():
         help="Train on the unshaped bypass reward (default).",
     )
     p_proto.set_defaults(func=cmd_protocol, shaped=False)
+
+    p_sweep = sub.add_parser(
+        "sweep", help="Run the pre-registered epsilon-sweep and score H4-H7 (#275)"
+    )
+    p_sweep.add_argument(
+        "--epsilons",
+        type=float,
+        nargs="+",
+        default=None,
+        help="Verifier accuracy grid (default: the pre-registered grid).",
+    )
+    p_sweep.add_argument(
+        "--arms",
+        nargs="+",
+        choices=["unshaped", "shaped"],
+        default=None,
+        help="Training arms (default: both).",
+    )
+    p_sweep.add_argument("--seeds", type=int, nargs="+", default=None)
+    p_sweep.add_argument("--timesteps", type=int, default=100_000)
+    p_sweep.add_argument("--size", type=int, default=10)
+    p_sweep.add_argument("--eval-episodes", type=int, default=10)
+    p_sweep.add_argument("--ambiguity-ratio", type=float, default=SWEEP_AMBIGUITY_RATIO)
+    p_sweep.add_argument("--claim-resolution", type=int, default=SWEEP_CLAIM_RESOLUTION)
+    p_sweep.add_argument(
+        "--no-spoof-region",
+        action="store_true",
+        help="Disable graded falsification severity (ablation: removes the reachable region).",
+    )
+    p_sweep.add_argument(
+        "--no-controls",
+        action="store_true",
+        help="Skip the ceiling/floor control runs at the anchor epsilon.",
+    )
+    p_sweep.add_argument("--log-dir", default="results/rl_frontier")
+    p_sweep.set_defaults(func=cmd_sweep)
 
     args = parser.parse_args()
     if args.command is None:
