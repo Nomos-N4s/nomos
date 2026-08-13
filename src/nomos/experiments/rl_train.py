@@ -23,6 +23,7 @@ from .rl_metrics import (
     step_record_from_info,
     summarize_episodes,
 )
+from .rl_verifier import DEFAULT_SENSOR_NOISE
 
 #: The governance modes that actually exist as distinct code paths.
 MODES = ("governance", "no_governance", "static_mask")
@@ -49,6 +50,9 @@ def make_env(
     live_log_path: str | None = None,
     adversarial: bool = False,
     reward_mode: str = "task",
+    verifier_accuracy: float = 1.0,
+    verifier_kind: str = "parametric",
+    verifier_sensor_noise: float = DEFAULT_SENSOR_NOISE,
 ) -> GovernanceGridWorld:
     """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
 
@@ -68,6 +72,11 @@ def make_env(
             benchmark behaviour.
         reward_mode: ``"task"`` (default) or ``"bypass"`` — see
             :class:`~.gym_env.GovernanceGridWorld`.
+        verifier_accuracy: ε ∈ [0, 1] for the Integrity verifier (V1, #272).
+            ``1.0`` (default) is the oracle of the published run.
+        verifier_kind: ``"parametric"`` (default) or ``"classifier"``.
+        verifier_sensor_noise: Sensor noise-to-signal ratio for the learned
+            verifier; ignored by the parametric dial.
 
     Returns:
         A configured :class:`~.gym_env.GovernanceGridWorld`.
@@ -89,6 +98,9 @@ def make_env(
         reward_mode=reward_mode,
         live_log_path=live_log_path,
         static_mask=(mode == "static_mask"),
+        verifier_accuracy=verifier_accuracy,
+        verifier_kind=verifier_kind,
+        verifier_sensor_noise=verifier_sensor_noise,
     )
 
 
