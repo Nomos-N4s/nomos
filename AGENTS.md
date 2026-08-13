@@ -19,7 +19,7 @@
 
 ## Work State
 ### Completed
-- **Chapters 1-4** — All written. Ch1 (motivation), Ch2 (Neural Parliament, 560 lines), Ch3 (Ulysses Contracts, 359 lines), Ch4 (Identity Layer, 573 lines). Ch4 includes: formal tuple $\mathcal{I} = \langle \mathcal{O}, \mathcal{C}_{\text{core}}, \mathcal{K}, \mathcal{P} \rangle$, four-tier mutability, genesis bootstrapping with 3-of-5 multisig, ontology extension with sandboxed isolation buffer (empirical property measurement via independent monitors), runtime integrity hashes for action bindings, liveness exception for hardware deadlock breaker, constitutional contracts.
+- **Chapters 1-5** — All written. Ch1 (motivation), Ch2 (Neural Parliament, 560 lines), Ch3 (Ulysses Contracts, 359 lines), Ch4 (Identity Layer, 573 lines), Ch5 (Related Work — positions Nomos against shielding, CMDPs, reward machines, guaranteed-safe AI, AgentSpec/MI9/AgentBound on four axes; attributes the term "bounded autonomy"; issue #255). Ch4 includes: formal tuple $\mathcal{I} = \langle \mathcal{O}, \mathcal{C}_{\text{core}}, \mathcal{K}, \mathcal{P} \rangle$, four-tier mutability, genesis bootstrapping with 3-of-5 multisig, ontology extension with sandboxed isolation buffer (empirical property measurement via independent monitors), runtime integrity hashes for action bindings, liveness exception for hardware deadlock breaker, constitutional contracts.
 - **Appendix A** — TEE threat model, SGX/SEV/TrustZone, hardware watchdog, constant-time execution, Merkle-tree batch verification, single-enclave architecture with multi-enclave consensus addendum, deadlock breaker cold-boot recovery (§A.9.5).
 - **Response to AI-generated review panel** — `book/responses/response-to-review-panel.md`. All 5 phases documented. Phase 5.2 concedes all three Chapter 4 Identity Layer attacks: isolation buffer sandbox (§5.2 fix), runtime integrity hashes (§2.1/§6.1 fix), deadlock breaker (§A.9.5 fix).
 - **MVP code** — `src/nomos/speaker.py`. Reference implementation with deterministic falsification counter. Runs successfully.
@@ -91,6 +91,8 @@ Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration
 - `book/chapter-02/02-neural-parliament.md`: Chapter 2 — Neural Parliament architecture (560 lines)
 - `book/chapter-03/03-ulysses-contracts.md`: Chapter 3 — Ulysses Contracts formalism (359 lines)
 - `book/chapter-04/04-identity-layer.md`: Chapter 4 — Identity Layer (573 lines)
+- `book/chapter-05/05-related-work.md`: Chapter 5 — Related Work; four-axis comparison against the hard neighbors, honest deltas and concessions, "bounded autonomy" term attribution
+- `references/bibliography.md`: living bibliography — hard-neighbor entries added 2026-08-13 (Alshiekh/Altman/Achiam/ToroIcarte/Dalrymple/Wang×2/Kaul/Ye/delaChica/Sohail/Guo)
 - `book/appendix-a/tee-isolation.md`: TEE threat model, hardware watchdog, constant-time, Merkle-tree batching, single-enclave architecture, deadlock breaker
 - `book/responses/response-to-review-panel.md`: all 5 phases of review responses (accepts all three Phase 5.2 fixes)
 - `book/responses/response-to-expert-panel-harder-review.md`: response to second harder review (baseline bug fix, 11-point rebuttal)

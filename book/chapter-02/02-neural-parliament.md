@@ -494,6 +494,12 @@ The Neural Parliament is the only architecture in this comparison that:
 4. Maintains a **gradient barrier** between governance and optimization (discrete protocol operations are non-differentiable)
 5. Supports self-modification of its own governance process
 
+These are the comparisons a general AI audience proposes. The harder ones —
+shielding, constrained MDPs, reward machines, guaranteed-safe AI, and the
+agent-governance frameworks — are treated in
+[Chapter 5: Related Work](../chapter-05/05-related-work.md), which also states
+what the Parliament concedes to each.
+
 ---
 
 ## 5. Testable Predictions

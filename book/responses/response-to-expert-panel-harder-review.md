@@ -182,6 +182,8 @@ This is genuine scope for future work. The current "formal framework" is **mathe
 
 The fixed benchmarks now show meaningful differentiation across 4 scenarios × 5 strategies. The Gymnasium environment (`gym_env.py`) is compatible with the Gymnasium ecosystem and can be plugged into standard RL training pipelines.
 
+**Update (2026-08-13).** The panel named three specific baselines — Constrained MDPs, Reward Machines, and shielding — and the original response addressed only the environment question, not the positioning question underneath it. That gap is now closed on the conceptual side by [Chapter 5: Related Work](../chapter-05/05-related-work.md), which compares Nomos against all three ([Altman 1999]/[Achiam 2017], [ToroIcarte 2022], [Alshiekh 2018]) plus guaranteed-safe AI [Dalrymple 2024] and the agent-governance frameworks, on four axes, and concedes where each is stronger. **The empirical half of the critique stands unaddressed:** no benchmark in this repository runs Nomos against a CMDP solver, a reward-machine agent, or a synthesized shield. Chapter 5 is positioning, not a head-to-head result, and it is labelled as such.
+
 **Specific technical responses to the panel's experimental-design critiques:**
 
 | Critique | Response |

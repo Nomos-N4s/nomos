@@ -324,6 +324,13 @@ Meta-constraints are ephemeral (apply to the next cycle). Contracts are persiste
 | Economic commitment | N/A (external) | Yes (revocable) | Financial penalty | N/A (human) |
 | Orseau & Ring 2011 | Yes (self-modification) | Partially (irreversible) | Value preservation proof | N/A (theoretical) |
 
+The "Constrained MDP" and "RL action masking" rows above are the compressed form
+of a longer argument. [Chapter 5: Related Work](../chapter-05/05-related-work.md)
+gives it in full — why the $\kappa_2$ budget is not a CMDP constraint (theirs
+binds an expectation, ours binds every cycle), why a Ulysses Contract is not a
+shield [Alshiekh 2018] or a reward machine [ToroIcarte 2022], and how contracts
+differ from the delegated-authority contracts of [Ye 2026] and [Kaul 2026].
+
 ---
 
 ## 6. Testable Predictions
@@ -379,3 +386,7 @@ Key citations for this chapter:
 - [Orseau 2011] — Self-modification and mortality in artificial agents: formal analysis of self-modification risk
 - [Frankfurt 1971] — Higher-order desires: identity layer foundation
 - [Schmidhuber 1987] — Self-referential meta-learning: earliest computational treatment of self-modification
+- [Altman 1999], [Achiam 2017] — Constrained MDPs: expectation-level constraints, contrasted in §5
+- [Alshiekh 2018] — Shielding: runtime action filtering from a designer-authored specification
+- [ToroIcarte 2022] — Reward machines: task structure as reward rather than prohibition
+- [Kaul 2026], [Ye 2026] — Delegated-authority contracts: externally authored, contrasted with self-imposition
