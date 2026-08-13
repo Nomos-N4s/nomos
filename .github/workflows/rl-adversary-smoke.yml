@@ -42,3 +42,30 @@ jobs:
           uv run python -m src.nomos.experiments.rl_validate results/rl_adversary
           test -f results/rl_adversary/adversary_protocol.json && echo "Aggregate found"
           ls -la results/rl_adversary/
+      # The frontier harness has more moving parts than the protocol it wraps —
+      # a grid, two arms, provenance capture, curve scoring, figures — and a
+      # break in any of them would only surface during a multi-hour publication
+      # run. A two-point grid exercises every one of those paths in seconds.
+      - name: Run a two-point epsilon-sweep (1 seed, 200 steps, no controls)
+        run: |
+          uv run python -m src.nomos.experiments.rl_adversary sweep \
+            --epsilons 1.0 0.5 \
+            --arms unshaped shaped \
+            --seeds 1 \
+            --timesteps 200 \
+            --size 6 \
+            --eval-episodes 1 \
+            --no-controls \
+            --log-dir results/rl_frontier
+      - name: Assert the frontier is well-formed and pre-registration-backed
+        run: |
+          uv run python -m src.nomos.experiments.rl_validate results/rl_frontier
+      - name: Render the frontier figures
+        run: |
+          uv run python -c "
+          import json
+          from src.nomos.experiments.rl_figures import generate_frontier_figures
+          with open('results/rl_frontier/verifier_frontier.json') as fh:
+              generate_frontier_figures(json.load(fh), output_dir='results/rl_frontier')
+          "
+          ls -la results/rl_frontier/
