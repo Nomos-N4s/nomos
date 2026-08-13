@@ -285,6 +285,13 @@ def aggregate_runs(
             "verifier_observed_accuracy": _mean_ci(
                 [h.get("verifier_observed_accuracy") for h in hyps]
             ),
+            # Reported alongside the verdicts rather than buried: a PASS is only
+            # meaningful if the region the adversary was aiming at was occupied,
+            # and these are the numbers that say whether it was.
+            "spoof_region_rate": _mean_ci([h.get("spoof_region_rate") for h in hyps]),
+            "falsified_integrity_mean": _mean_ci([h.get("falsified_integrity_mean") for h in hyps]),
+            "falsified_integrity_max": _mean_ci([h.get("falsified_integrity_max") for h in hyps]),
+            "ambiguous_bypass_rate": _mean_ci([h.get("ambiguous_bypass_rate") for h in hyps]),
             "h1": {
                 "over_budget_events": sum(h["h1_over_budget_events"] for h in hyps),
                 "max_admitted": max(h["max_admitted"] for h in hyps),
