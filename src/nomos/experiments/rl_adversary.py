@@ -197,10 +197,21 @@ def cmd_sweep(args):
     if shape["critical_epsilon_region"]:
         print(f"  critical-epsilon region: {shape['critical_epsilon_region']}")
     if verdicts["h6"]["pass"] is False:
+        h6 = verdicts["h6"]
+        ambiguous = h6.get("best_arm_ambiguous_bypass")
         print(
-            "\n  WARNING: H6 failed — the adversary could not win at any epsilon, so the\n"
-            "  H4/H5 verdicts describe a game it could not play and carry no information."
+            f"\n  WARNING: H6 failed — overall bypass at epsilon={h6['epsilon']} is "
+            f"{h6['best_arm_bypass']:.4f}, below the {h6['threshold']} winnability bar.\n"
+            "  By the pre-registered rule, H4/H5 must therefore be read as uninformative."
         )
+        # The overall rate is diluted by attempt composition, so it can fail while
+        # the adversary was in fact winning. Printing only the pre-registered
+        # reading would state something false whenever that happens.
+        if ambiguous is not None:
+            print(
+                f"  On winnable (ambiguous) tiles alone the rate is {ambiguous:.4f}. "
+                "Read both\n  before concluding the adversary could not play."
+            )
     print(f"\nResults saved to {args.log_dir}/verifier_frontier.json")
 
 
