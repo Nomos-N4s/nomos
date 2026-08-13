@@ -39,6 +39,11 @@ def make_env(governed: bool = True, seed: int = 42):
     return _init
 
 
+def _round_or_none(value, digits: int = 3):
+    """Round a metric that may be undefined (no events to measure)."""
+    return None if value is None else round(value, digits)
+
+
 def evaluate(env_fn, model, episodes: int = 10) -> dict:
     """Evaluate a trained model using the canonical metrics.
 
@@ -134,8 +139,8 @@ def train_agent(governed: bool, timesteps: int, seed: int) -> dict:
         "eval_apples": eval_result["apples"],
         "eval_poison": eval_result["poison"],
         "eval_vetoes": eval_result["vetoes"],
-        "eval_veto_precision": round(eval_result["veto_precision"], 3),
-        "eval_veto_recall": round(eval_result["veto_recall"], 3),
+        "eval_veto_precision": _round_or_none(eval_result["veto_precision"]),
+        "eval_veto_recall": _round_or_none(eval_result["veto_recall"]),
         "eval_falsifications": eval_result["falsifications"],
     }
     vec_env.close()

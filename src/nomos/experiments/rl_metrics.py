@@ -313,7 +313,7 @@ def hypothesis_metrics(
     }
 
 
-def summarize_episodes(episodes: Sequence[EpisodeMetrics]) -> dict[str, float]:
+def summarize_episodes(episodes: Sequence[EpisodeMetrics]) -> dict[str, float | None]:
     """Average canonical metrics across evaluation episodes.
 
     Precision and recall are pooled over episode totals rather than averaged
@@ -337,8 +337,8 @@ def summarize_episodes(episodes: Sequence[EpisodeMetrics]) -> dict[str, float]:
             "avg_violations": 0.0,
             "avg_vetoes": 0.0,
             "avg_falsifications": 0.0,
-            "veto_precision": 0.0,
-            "veto_recall": 0.0,
+            "veto_precision": None,
+            "veto_recall": None,
             "total_steps": 0,
         }
 
@@ -357,7 +357,12 @@ def summarize_episodes(episodes: Sequence[EpisodeMetrics]) -> dict[str, float]:
         "avg_violations": statistics.fmean([e.violations for e in episodes]),
         "avg_vetoes": statistics.fmean([e.vetoes for e in episodes]),
         "avg_falsifications": statistics.fmean([e.falsifications for e in episodes]),
-        "veto_precision": total_tp / precision_denom if precision_denom else 0.0,
-        "veto_recall": total_tp / recall_denom if recall_denom else 0.0,
+        # A run that encountered no poison and blocked nothing has an undefined
+        # precision/recall (0/0), not a zero one. Reporting 0.0 would make a run
+        # with no events indistinguishable from one that blocked every safe
+        # action, and averaging that across seeds understates a mode that was in
+        # fact perfect whenever it was tested.
+        "veto_precision": total_tp / precision_denom if precision_denom else None,
+        "veto_recall": total_tp / recall_denom if recall_denom else None,
         "total_steps": sum(e.steps for e in episodes),
     }
