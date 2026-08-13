@@ -56,6 +56,7 @@ def make_env(
     ambiguity_ratio: float = 0.0,
     spoof_region: bool = False,
     claim_resolution: int = DEFAULT_CLAIM_RESOLUTION,
+    shaped_bypass: bool = False,
 ) -> GovernanceGridWorld:
     """Create a :class:`~.gym_env.GovernanceGridWorld` instance.
 
@@ -87,6 +88,9 @@ def make_env(
             making a reachable spoof region exist at all.
         claim_resolution: Claim bucket count; ``3`` (default) is the published
             granularity.
+        shaped_bypass: Pay partial credit for progress against Integrity on
+            falsified proposals (V3, #274). Training arm only — evaluation
+            environments must be built without it.
 
     Returns:
         A configured :class:`~.gym_env.GovernanceGridWorld`.
@@ -114,6 +118,7 @@ def make_env(
         ambiguity_ratio=ambiguity_ratio,
         spoof_region=spoof_region,
         claim_resolution=claim_resolution,
+        shaped_bypass=shaped_bypass,
     )
 
 

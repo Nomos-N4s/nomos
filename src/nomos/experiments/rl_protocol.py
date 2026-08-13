@@ -20,6 +20,7 @@ import statistics
 import sys
 from typing import Any
 
+from .gym_env import DEFAULT_CLAIM_RESOLUTION
 from .rl_metrics import (
     compute_episode_metrics,
     hypothesis_metrics,
@@ -145,6 +146,10 @@ def run_protocol(
     verifier_accuracy: float = 1.0,
     verifier_kind: str = "parametric",
     verifier_sensor_noise: float = DEFAULT_SENSOR_NOISE,
+    ambiguity_ratio: float = 0.0,
+    spoof_region: bool = False,
+    claim_resolution: int = DEFAULT_CLAIM_RESOLUTION,
+    shaped: bool = False,
 ) -> dict[str, Any]:
     """Run the pre-registered adversarial protocol across modes and seeds.
 
@@ -166,6 +171,13 @@ def run_protocol(
         verifier_kind: ``"parametric"`` (default) or ``"classifier"``.
         verifier_sensor_noise: Sensor noise-to-signal ratio for the learned
             verifier; ignored by the parametric dial.
+        ambiguity_ratio: Fraction of poison that is near-threshold ambiguous
+            poison (V2, #273).
+        spoof_region: Scale the falsification penalty by the size of the lie.
+        claim_resolution: Claim bucket count.
+        shaped: Train with partial credit for progress against Integrity (V3,
+            #274). The evaluation environment is built unshaped regardless, so
+            both arms are scored on the same pre-registered metrics.
 
     Returns:
         The aggregate result dict, also written to
@@ -196,6 +208,10 @@ def run_protocol(
                 verifier_accuracy=verifier_accuracy,
                 verifier_kind=verifier_kind,
                 verifier_sensor_noise=verifier_sensor_noise,
+                ambiguity_ratio=ambiguity_ratio,
+                spoof_region=spoof_region,
+                claim_resolution=claim_resolution,
+                shaped_bypass=shaped,
             )
             model = PPO(env=env, seed=seed, verbose=0, **PPO_HYPERPARAMS)
             model.learn(total_timesteps=total_timesteps, progress_bar=False)
@@ -203,6 +219,10 @@ def run_protocol(
             checkpoint = os.path.join(log_dir, f"ppo_{mode}_seed{seed}.zip")
             model.save(checkpoint)
 
+            # Never `shaped_bypass=shaped`. Shaping is a training device; the
+            # scoreboard has to stay the pre-registered one, or a shaped arm
+            # would be scored against a reward the unshaped arm never saw and
+            # the ablation would compare two different games.
             eval_env = make_env(
                 mode=mode,
                 size=size,
@@ -212,6 +232,10 @@ def run_protocol(
                 verifier_accuracy=verifier_accuracy,
                 verifier_kind=verifier_kind,
                 verifier_sensor_noise=verifier_sensor_noise,
+                ambiguity_ratio=ambiguity_ratio,
+                spoof_region=spoof_region,
+                claim_resolution=claim_resolution,
+                shaped_bypass=False,
             )
             evaluation = evaluate_adversary(eval_env, model, episodes=eval_episodes)
             run = {
@@ -220,6 +244,12 @@ def run_protocol(
                 "total_timesteps": total_timesteps,
                 "reward_mode": reward_mode,
                 "adversarial": adversarial,
+                "arm": "shaped" if shaped else "unshaped",
+                "environment_config": {
+                    "ambiguity_ratio": ambiguity_ratio,
+                    "spoof_region": spoof_region,
+                    "claim_resolution": claim_resolution,
+                },
                 # The dial that was asked for and the accuracy actually realised
                 # — they differ for the learned verifier, whose accuracy is
                 # measured rather than set, and the measured one is what the
@@ -245,6 +275,8 @@ def run_protocol(
         total_timesteps,
         reward_mode,
         verifier=runs[0]["verifier"] if runs else None,
+        arm=runs[0]["arm"] if runs else "unshaped",
+        environment_config=runs[0]["environment_config"] if runs else None,
     )
     with open(os.path.join(log_dir, "adversary_protocol.json"), "w") as fh:
         json.dump(aggregate, fh, indent=2)
@@ -259,6 +291,8 @@ def aggregate_runs(
     reward_mode: str,
     *,
     verifier: dict[str, Any] | None = None,
+    arm: str = "unshaped",
+    environment_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Aggregate per-seed runs into per-mode mean ± CI and hypothesis verdicts.
 
@@ -322,6 +356,13 @@ def aggregate_runs(
                 "effective_accuracy": 1.0,
                 "sensor_noise": None,
             },
+            # The training arm, recorded next to the metrics it did *not* change.
+            # Evaluation is unshaped in both arms; naming the arm here is what
+            # lets a reader confirm that rather than take it on trust.
+            "arm": arm,
+            "evaluation_shaped": False,
+            "environment_config": environment_config
+            or {"ambiguity_ratio": 0.0, "spoof_region": False, "claim_resolution": 3},
             "modes": modes,
             "seeds": seeds,
             "total_timesteps": total_timesteps,
