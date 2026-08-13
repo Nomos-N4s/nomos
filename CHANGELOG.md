@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.14.0](https://github.com/Nomos-N4s/nomos/compare/v0.13.1...v0.14.0) (2026-08-13)
+
+
+### Features
+
+* **book:** publish real RL adversary results, replacing Appendix E placeholders ([#263](https://github.com/Nomos-N4s/nomos/issues/263)) ([19d11ce](https://github.com/Nomos-N4s/nomos/commit/19d11ce05b94ace7dba07df08a1dd1421e989243))
+* **experiments:** adversarial bypass reward + pre-registered H1-H3 protocol ([#262](https://github.com/Nomos-N4s/nomos/issues/262)) ([15fd544](https://github.com/Nomos-N4s/nomos/commit/15fd5444b913243fa68ce795351fbf060a3d11a1))
+* **experiments:** expose the adversary attack surface ([#261](https://github.com/Nomos-N4s/nomos/issues/261)) ([41ab893](https://github.com/Nomos-N4s/nomos/commit/41ab893781534a68500a28c6e679c80cf29bda32))
+* **experiments:** RL adversary reproducibility & CI smoke ([#264](https://github.com/Nomos-N4s/nomos/issues/264)) ([882933f](https://github.com/Nomos-N4s/nomos/commit/882933f6e0762cfdd69ae8c476bb841d975eb7f6))
+
+
+### Bug Fixes
+
+* **ci:** exclude optional-dependency RL modules from ty ([a7e53ba](https://github.com/Nomos-N4s/nomos/commit/a7e53ba108fe139fb1c73181cdde2a8134c0a190))
+* **experiments:** canonical RL metrics — one source of truth ([#259](https://github.com/Nomos-N4s/nomos/issues/259)) ([bbb4b95](https://github.com/Nomos-N4s/nomos/commit/bbb4b95f2ca51b3aba7137049fefd81c2c2287e9))
+* **experiments:** correct vacuous hypothesis verdicts found by adversarial review ([25546d3](https://github.com/Nomos-N4s/nomos/commit/25546d3bd242b4bb18ea1d1c0d04f554b4961491))
+* **experiments:** do not report Safety silencing where no Safety committee exists ([6db1d82](https://github.com/Nomos-N4s/nomos/commit/6db1d827e11eac9eb23f468cee055b44e4e0a2f4))
+* **experiments:** implement real static_mask RL mode ([#260](https://github.com/Nomos-N4s/nomos/issues/260)) ([2367830](https://github.com/Nomos-N4s/nomos/commit/2367830d7f09bb6e412b2e56a788a96f2f27fc95))
+
+
+### Documentation
+
+* **book:** record the torch build provenance in the run manifest ([b2612e9](https://github.com/Nomos-N4s/nomos/commit/b2612e9a282dc951dfe062c57edb5611633bc04a))
+
 ## [0.13.1](https://github.com/Nomos-N4s/nomos/compare/v0.13.0...v0.13.1) (2026-08-12)
 
 
