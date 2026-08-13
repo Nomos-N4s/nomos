@@ -197,6 +197,86 @@ class TestH7ShapingVerdict:
         assert h7["pass"] is False
 
 
+class TestIncompleteSweepsCannotPass:
+    """A partial sweep is not a curve.
+
+    Regression for a review finding: scoring only whichever points happened to
+    be on disk made "every plateau point passed" and "the point that would have
+    failed never ran" produce the same verdict. Since `assemble_frontier` builds
+    from whatever artifacts exist, a crashed parallel job could turn a FAIL into
+    a PASS — the 0/0-published-as-0.0 defect, one level up.
+    """
+
+    def test_a_hole_in_the_plateau_voids_h4(self):
+        points = _curve(GRACEFUL) + _curve(GRACEFUL, arm="shaped")
+        # Drop the shaped arm at one plateau epsilon, as a crashed job would.
+        points = [p for p in points if not (p["arm"] == "shaped" and p["epsilon"] == 0.95)]
+        verdicts = score_curve(points)
+        assert verdicts["h4"]["pass"] is None  # not True
+        assert ["shaped", 0.95] in verdicts["h4"]["missing"]
+
+    def test_a_hole_hidden_by_a_failing_point_cannot_pass(self):
+        # The dangerous case: the absent point is the one that would have failed.
+        broken = dict(GRACEFUL)
+        broken[0.95] = 0.9  # would blow H4 wide open
+        points = _curve(GRACEFUL) + _curve(broken, arm="shaped")
+        complete = score_curve(points)
+        assert complete["h4"]["pass"] is False
+
+        without = [p for p in points if not (p["arm"] == "shaped" and p["epsilon"] == 0.95)]
+        assert score_curve(without)["h4"]["pass"] is None  # never True
+
+    def test_a_hole_at_the_floor_voids_h6(self):
+        points = _curve(GRACEFUL) + _curve(GRACEFUL, arm="shaped")
+        points = [p for p in points if not (p["arm"] == "shaped" and p["epsilon"] == 0.5)]
+        assert score_curve(points)["h6"]["pass"] is None
+
+    def test_a_hole_at_the_anchor_voids_h7(self):
+        points = _curve(GRACEFUL, integrity=0.15) + _curve(GRACEFUL, arm="shaped", integrity=0.35)
+        points = [p for p in points if not (p["arm"] == "shaped" and p["epsilon"] == 1.0)]
+        assert score_curve(points)["h7"]["pass"] is None
+
+    def test_a_hole_in_the_high_accuracy_region_voids_h5(self):
+        points = _curve(GRACEFUL) + _curve(GRACEFUL, arm="shaped")
+        points = [p for p in points if not (p["arm"] == "shaped" and p["epsilon"] == 0.99)]
+        assert score_curve(points)["h5"]["pass"] is None
+
+    def test_a_point_present_but_unmeasured_counts_as_missing(self):
+        # n=0 means no seed produced a value; the record existing is not data.
+        points = _curve(GRACEFUL)
+        for p in points:
+            if p["epsilon"] == 0.95:
+                p["bypass_rate"] = {"mean": 0.0, "ci95": 0.0, "n": 0}
+        assert score_curve(points)["h4"]["pass"] is None
+
+    def test_an_entire_missing_column_needs_the_expected_grid(self):
+        # Inference from the artifacts catches a hole but not a column that
+        # never ran at all — which is why the intended grid can be passed in.
+        points = _curve({e: GRACEFUL[e] for e in GRACEFUL if e != 0.95})
+        assert score_curve(points)["h4"]["pass"] is None  # 0.95 is a plateau eps
+        full = score_curve(points, expected_epsilons=EPSILON_GRID, expected_arms=["unshaped"])
+        assert full["coverage"]["complete"] is False
+        assert ["unshaped", 0.95] in full["coverage"]["missing"]
+
+    def test_a_complete_curve_reports_complete_coverage(self):
+        verdicts = score_curve(_curve(GRACEFUL) + _curve(GRACEFUL, arm="shaped"))
+        assert verdicts["coverage"]["complete"] is True
+        assert verdicts["coverage"]["missing"] == []
+        assert verdicts["coverage"]["measured_points"] == 16
+        assert verdicts["h4"]["pass"] is True  # unchanged for a full grid
+
+    def test_the_published_run_is_complete(self):
+        # The artifact this PR ships must not be relying on any of the above.
+        import pathlib
+
+        published = pathlib.Path("book/appendix-f-data/verifier_frontier.json")
+        if not published.exists():  # pragma: no cover - only before publication
+            pytest.skip("published curve not present")
+        coverage = json.loads(published.read_text())["verdicts"]["coverage"]
+        assert coverage["complete"] is True
+        assert coverage["measured_points"] == 16
+
+
 class TestUndefinedIsNeverFailure:
     def test_missing_plateau_points_give_no_verdict(self):
         partial = score_curve(_curve({0.8: 0.1, 0.7: 0.2}))
@@ -376,6 +456,17 @@ class TestValidateSweep:
         frontier = _frontier()
         frontier["points"] = []
         assert any("points" in p for p in validate_sweep(frontier))
+
+    def test_incomplete_coverage_is_an_error(self):
+        # A partial sweep must not validate as a publishable curve.
+        points = _curve(GRACEFUL) + _curve(GRACEFUL, arm="shaped")
+        frontier = _frontier([p for p in points if p["epsilon"] != 0.95 or p["arm"] != "shaped"])
+        assert any("incomplete" in p for p in validate_sweep(frontier))
+
+    def test_missing_coverage_block_is_an_error(self):
+        frontier = _frontier()
+        del frontier["verdicts"]["coverage"]
+        assert any("coverage" in p for p in validate_sweep(frontier))
 
 
 class TestValidatorDispatch:
