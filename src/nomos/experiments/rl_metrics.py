@@ -204,6 +204,12 @@ def hypothesis_metrics(
       so ``h3_applicable`` is ``False`` and ``h3_detection_rate``/``h3_pass``
       are ``None`` rather than a misleading ``0.0``/``False``.
 
+    Also reports ``verifier_observed_accuracy`` — the fraction of verifications
+    in which the Integrity verifier actually saw the true tile (V1, #272). It is
+    the audit of the accuracy dial: a run's ε must be read from what the verifier
+    *did*, not only from what it was configured to do, which is the only way the
+    learned verifier's measured accuracy can be compared with the parametric one.
+
     Args:
         infos: Step info dicts, flattened across episodes.
         budget_cap: The per-member proposal budget the flood must not exceed.
@@ -225,6 +231,8 @@ def hypothesis_metrics(
     agenda_cycles = 0
     governed_steps = 0
     governed_poison_attempts = 0
+    verifier_steps = 0
+    verifier_correct = 0
 
     for info in infos:
         tile = info.get("attempted_tile", TILE_EMPTY)
@@ -237,6 +245,12 @@ def hypothesis_metrics(
 
         if info.get("governance_active"):
             governed_steps += 1
+        # Present only where a claim was actually verified, so the denominator is
+        # verifications rather than steps. This is the audit of the ε dial: what
+        # the verifier was configured to do versus what it did.
+        if info.get("verifier_correct") is not None:
+            verifier_steps += 1
+            verifier_correct += bool(info["verifier_correct"])
         if n_admitted is not None:
             agenda_cycles += 1
             max_admitted = max(max_admitted, int(n_admitted))
@@ -297,6 +311,13 @@ def hypothesis_metrics(
             safety_silenced / governed_poison_attempts if governed_poison_attempts else None
         ),
         "max_admitted": max_admitted,
+        "verifier_verifications": verifier_steps,
+        # 0/0 where nothing was verified — a mode with no Parliament, or an
+        # honest run with no claims. Reporting 0.0 would read as a verifier that
+        # was wrong every time.
+        "verifier_observed_accuracy": (
+            verifier_correct / verifier_steps if verifier_steps else None
+        ),
         "epsilon": epsilon,
         "h1_budget_cap": budget_cap,
         "h1_applicable": h1_applicable,
