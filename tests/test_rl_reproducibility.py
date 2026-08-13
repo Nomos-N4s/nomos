@@ -4,6 +4,8 @@ import json
 import random
 import tempfile
 
+import pytest
+
 from src.nomos.experiments.rl_seeding import seed_everything
 from src.nomos.experiments.rl_validate import main, validate_protocol
 
@@ -29,7 +31,9 @@ class TestSeedEverything:
         assert a == b
 
     def test_torch_is_reproducible(self):
-        import torch
+        # torch ships in the optional `rl` extra; the default test environment
+        # does not install it.
+        torch = pytest.importorskip("torch")
 
         seed_everything(5)
         a = torch.rand(3)

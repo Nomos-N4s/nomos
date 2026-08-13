@@ -289,6 +289,10 @@ class TestAggregateRuns:
 @pytest.mark.slow
 class TestProtocolSmoke:
     def test_tiny_protocol_runs_end_to_end(self):
+        # Training needs stable-baselines3 from the optional `rl` extra, which
+        # the default test environment does not install. The rest of this file
+        # exercises the protocol's metric and aggregation logic without it.
+        pytest.importorskip("stable_baselines3")
         with tempfile.TemporaryDirectory() as d:
             agg = run_protocol(
                 modes=["governance", "no_governance"],
