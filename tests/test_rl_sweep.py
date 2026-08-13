@@ -103,12 +103,16 @@ class TestPreregistrationProvenance:
                 fh.write("H4: bypass <= 0.05")
             with open(b, "w") as fh:
                 fh.write("H4: bypass <= 0.50")
-            assert preregistration_provenance(a)["sha256"] != preregistration_provenance(b)["sha256"]
+            assert (
+                preregistration_provenance(a)["sha256"] != preregistration_provenance(b)["sha256"]
+            )
 
 
 class TestScoreGracefulCurve:
     def setup_method(self):
-        self.verdicts = score_curve(_curve(GRACEFUL) + _curve(GRACEFUL, arm="shaped", integrity=0.3))
+        self.verdicts = score_curve(
+            _curve(GRACEFUL) + _curve(GRACEFUL, arm="shaped", integrity=0.3)
+        )
 
     def test_h4_passes_on_the_plateau(self):
         assert self.verdicts["h4"]["pass"] is True
@@ -239,6 +243,89 @@ def _frontier(points=None):
         },
         "verdicts": score_curve(points if points is not None else _curve(GRACEFUL)),
     }
+
+
+def _configured(point, **overrides):
+    config = {
+        "seeds": [42, 43, 44, 45, 46],
+        "total_timesteps": 100_000,
+        "size": 10,
+        "eval_episodes": 10,
+        "environment_config": {
+            "ambiguity_ratio": 0.5,
+            "spoof_region": True,
+            "claim_resolution": 17,
+        },
+    }
+    config.update(overrides)
+    return {**point, "config": config}
+
+
+class TestParallelAssembly:
+    """Points are independent seeded runs, so scheduling them is not methodology.
+
+    What *would* be methodology is stitching a curve out of points that were run
+    differently, so assembly refuses to do it.
+    """
+
+    def test_assembly_reproduces_a_sequential_frontier(self):
+        from src.nomos.experiments.rl_sweep import assemble_frontier, build_frontier
+
+        points = [_configured(p) for p in _curve(GRACEFUL)]
+        with tempfile.TemporaryDirectory() as d:
+            for point in points:
+                name = f"point_{point['arm']}_eps{point['epsilon']}.json"
+                with open(os.path.join(d, name), "w") as fh:
+                    json.dump(point, fh)
+            assembled = assemble_frontier(d)
+        direct = build_frontier(points)
+        assert assembled["verdicts"] == direct["verdicts"]
+        assert len(assembled["points"]) == len(points)
+        assert assembled["sweep"]["total_timesteps"] == 100_000
+
+    def test_controls_are_picked_up_when_present(self):
+        from src.nomos.experiments.rl_sweep import assemble_frontier
+
+        with tempfile.TemporaryDirectory() as d:
+            for point in (_configured(p) for p in _curve(GRACEFUL)):
+                name = f"point_{point['arm']}_eps{point['epsilon']}.json"
+                with open(os.path.join(d, name), "w") as fh:
+                    json.dump(point, fh)
+            with open(os.path.join(d, "controls.json"), "w") as fh:
+                json.dump({"no_governance": _point(1.0, "control", 1.0)}, fh)
+            assembled = assemble_frontier(d)
+        assert "no_governance" in assembled["controls"]
+
+    def test_mismatched_configurations_are_refused(self):
+        from src.nomos.experiments.rl_sweep import build_frontier
+
+        points = [_configured(p) for p in _curve(GRACEFUL)]
+        points[-1] = _configured(points[-1], total_timesteps=50_000)
+        with pytest.raises(ValueError, match="disagree about their run configuration"):
+            build_frontier(points)
+
+    def test_mismatched_environment_is_refused(self):
+        # The subtlest way to get a wrong curve: one point run at a different
+        # ambiguity ratio is a different experiment wearing the same axes.
+        from src.nomos.experiments.rl_sweep import build_frontier
+
+        points = [_configured(p) for p in _curve(GRACEFUL)]
+        points[0] = _configured(
+            points[0],
+            environment_config={
+                "ambiguity_ratio": 0.9,
+                "spoof_region": True,
+                "claim_resolution": 17,
+            },
+        )
+        with pytest.raises(ValueError, match="disagree"):
+            build_frontier(points)
+
+    def test_assembly_needs_points(self):
+        from src.nomos.experiments.rl_sweep import assemble_frontier
+
+        with tempfile.TemporaryDirectory() as d, pytest.raises(FileNotFoundError):
+            assemble_frontier(d)
 
 
 class TestValidateSweep:
