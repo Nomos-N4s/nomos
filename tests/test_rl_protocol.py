@@ -184,6 +184,29 @@ class TestNotApplicableHypotheses:
         assert m["h2_pass"] is None
         assert m["governance_bypass_rate"] == 1.0  # the control still reports its rate
 
+    def test_safety_silencing_not_measured_without_a_safety_committee(self):
+        # An ungoverned run has an empty veto list because nothing votes, not
+        # because the adversary defeated Safety. Reporting 100% silencing there
+        # would fabricate the headline finding.
+        infos = [
+            _info(TILE_POISON, blocked=False, governance_active=False, n_admitted=None)
+        ] * 4
+        m = hypothesis_metrics(infos)
+        assert m["governed_poison_attempts"] == 0
+        assert m["safety_silenced_rate"] is None
+
+    def test_safety_silencing_measured_under_governance(self):
+        # Safety absent from vetoed_by on a real poison proposal = genuinely fooled.
+        infos = [_info(TILE_POISON, blocked=True, vetoed_by=["integrity"], n_admitted=1)] * 3
+        m = hypothesis_metrics(infos)
+        assert m["governed_poison_attempts"] == 3
+        assert m["safety_silenced_rate"] == 1.0
+
+    def test_safety_veto_counts_as_not_silenced(self):
+        infos = [_info(TILE_POISON, blocked=True, vetoed_by=["safety", "integrity"])] * 2
+        m = hypothesis_metrics(infos)
+        assert m["safety_silenced_rate"] == 0.0
+
     def test_governed_spoof_still_gets_a_real_verdict(self):
         # Sanity: the mode under test is unaffected by the n/a handling.
         infos = [

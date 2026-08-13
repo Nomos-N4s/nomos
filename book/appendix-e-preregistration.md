@@ -86,6 +86,23 @@ Tag-falsification detection → budget-halving suppresses spoofing.
 "bypasses"); `static_mask` is the **floor control** (a ground-truth filter, so
 nothing bypasses). `governance` is the hypothesis-under-test.
 
+### Scope of the hypotheses (clarification)
+
+H1, H2, and H3 are claims about **Parliament mechanisms** — the κ₂ budget cap,
+the priority agenda, and the falsification counter. The two control modes have
+none of those mechanisms, so a verdict for them would be vacuous in both
+directions: a "pass" would credit the ungoverned ceiling with an ordering
+guarantee it never had, and a "fail" would damn the static floor control for
+lacking a mechanism it was never given. The controls are therefore reported as
+**n/a** for H1–H3, and characterised by their bypass rates instead. Likewise, a
+detection rate over zero falsification attempts is 0/0 — undefined — and is
+reported as n/a rather than as `0.0`.
+
+*Provenance:* this scoping rule was added after an adversarial code review of the
+harness and **before** any result was published; it does not alter any threshold,
+and it does not affect the `governance` verdict, which is the hypothesis under
+test. It is recorded here rather than applied silently.
+
 ## Outputs
 
 Each `(mode, seed)` run writes a machine-readable result
