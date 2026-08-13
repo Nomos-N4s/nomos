@@ -221,6 +221,23 @@ src/nomos/
 
 ---
 
+## Related Work
+
+Nomos is **invariant-checked**, not proven safe in general. Where that places it
+against its nearest neighbors — shielding, constrained MDPs, reward machines,
+guaranteed-safe AI, and the agent-governance frameworks (AgentSpec, MI9,
+AgentBound) — is set out in
+[Chapter 5: Related Work](book/chapter-05/05-related-work.md), on four axes:
+what is enforced, when, by what guarantee, and against whom.
+
+Short version: shielding and guaranteed-safe AI offer a **stronger** guarantee
+than Nomos does; the agent-governance frameworks sit on the same rung with more
+deployment evidence; the one axis where Nomos currently has something they do not
+is an adversary trained specifically to defeat the mechanism
+([Appendix E](book/appendix-e-rl-adversary.md), [Appendix F](book/appendix-f-verifier-frontier.md)).
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). By submitting a PR you accept the
