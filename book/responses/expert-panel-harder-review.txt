@@ -11,10 +11,12 @@
                                              
 ---
 
-# Expert Panel Review: `nomos`
+# AI-Generated Adversarial Review: `nomos`
 ## Repository: https://github.com/Nomos-N4s/nomos
 
-*Review Date: 2026-07-26 | Panel Composition: AI Systems, Political Philosophy, Software Engineering, Experimental Design, Security*
+> **Provenance:** This is an AI-generated adversarial review — a single AI assistant prompted to critique the repository from five simulated expert personas. It is not a review by human domain experts. It is kept verbatim as an artifact of the project's adversarial self-testing process.
+
+*Review Date: 2026-07-26 | Simulated Personas: AI Systems, Political Philosophy, Software Engineering, Experimental Design, Security*
 
 ---
 
@@ -239,7 +241,7 @@ The README lists "OSF Preregistration" as "Backlog" with a placeholder DOI (`10.
 
 ---
 
-## FINAL PANEL STATEMENT
+## FINAL AI REVIEW STATEMENT
 
 This repository represents a **common failure mode in AI safety research**: taking a genuinely interesting intuition (that AI systems need mechanisms for deliberation and self-constraint) and implementing it as a shallow prototype with inflated claims. The author clearly has read widely in political philosophy and computer security, but has not done the hard work of connecting these domains rigorously.
 
@@ -251,5 +253,5 @@ The project is not without value. The modular architecture, the CLI tooling, and
 
 ---
 
-**Panel Chair**  
-*On behalf of the Review Panel*
+**AI Reviewer**
+*Simulated panel persona — AI-generated, not a human review panel*
