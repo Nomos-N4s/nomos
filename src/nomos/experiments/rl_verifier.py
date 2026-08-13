@@ -313,10 +313,16 @@ def make_verifier(
         The configured :class:`Verifier`.
 
     Raises:
-        ValueError: If ``kind`` is not one of :data:`VERIFIER_KINDS`.
+        ValueError: If ``kind`` is not one of :data:`VERIFIER_KINDS`, or if
+            ``accuracy`` is outside [0, 1]. The range is checked here as well as
+            in :class:`NoisyVerifier` because ``accuracy=1.5`` would otherwise
+            resolve to the oracle and silently pass off a typo as the published
+            configuration.
     """
     if kind not in VERIFIER_KINDS:
         raise ValueError(f"Unknown verifier kind {kind!r}; expected one of {VERIFIER_KINDS}")
+    if not 0.0 <= accuracy <= 1.0:
+        raise ValueError(f"verifier accuracy must be in [0, 1], got {accuracy!r}")
     if kind == "classifier":
         return ClassifierVerifier(profiles, sensor_noise=sensor_noise, seed=seed)
     if accuracy >= 1.0:
