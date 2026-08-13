@@ -233,10 +233,20 @@ def score_curve(points: list[dict[str, Any]]) -> dict[str, Any]:
     # game the adversary could not play, and their PASS verdicts carry no
     # information about governance at all.
     floor = _means_at(points, H6_EPSILON, "bypass_rate")
+    # Reported beside the verdict, never in place of it. The pre-registered
+    # metric is the overall bypass rate, which is diluted by attempt
+    # composition: a blocked tile is never consumed, so a policy can re-attack
+    # unwinnable plain poison indefinitely while rarely trying an ambiguous
+    # tile, and the overall rate then understates whether the game was winnable.
+    # Appendix E §E.4.2 already documents that attempt counts are not a measure
+    # of effort. So the rate restricted to the winnable tiles is shown next to
+    # H6 to make a failure legible — the threshold itself is untouched.
+    ambiguous_floor = _means_at(points, H6_EPSILON, "ambiguous_bypass_rate")
     verdicts["h6"] = {
         "threshold": H6_MIN_BYPASS,
         "epsilon": H6_EPSILON,
         "best_arm_bypass": max(floor) if floor else None,
+        "best_arm_ambiguous_bypass": max(ambiguous_floor) if ambiguous_floor else None,
         "pass": (max(floor) >= H6_MIN_BYPASS) if floor else None,
     }
 
@@ -286,6 +296,228 @@ def score_curve(points: list[dict[str, Any]]) -> dict[str, Any]:
     return verdicts
 
 
+def run_point(
+    arm: str,
+    epsilon: float,
+    seeds: list[int],
+    total_timesteps: int = 100_000,
+    size: int = 10,
+    eval_episodes: int = 10,
+    ambiguity_ratio: float = SWEEP_AMBIGUITY_RATIO,
+    spoof_region: bool = SWEEP_SPOOF_REGION,
+    claim_resolution: int = SWEEP_CLAIM_RESOLUTION,
+    log_dir: str = "results/rl_frontier",
+) -> dict[str, Any]:
+    """Run one ``(arm, ε)`` point and write its self-describing artifact.
+
+    Each point records the whole configuration it was produced under, not just
+    its own coordinates. That is what makes :func:`assemble_frontier` safe: a
+    curve stitched together from points run at different ambiguity ratios or
+    different timestep budgets would be a comparison of different experiments
+    wearing one set of axes, and self-description lets assembly refuse it
+    instead of averaging it.
+
+    Args:
+        arm: ``"unshaped"`` or ``"shaped"``.
+        epsilon: Verifier accuracy for this point.
+        seeds: Seeds to train.
+        total_timesteps: Training steps per seed.
+        size: Grid dimension.
+        eval_episodes: Evaluation episodes per trained model.
+        ambiguity_ratio: Fraction of poison that is ambiguous.
+        spoof_region: Graded falsification severity.
+        claim_resolution: Claim granularity.
+        log_dir: Frontier output root.
+
+    Returns:
+        The point record, also written to
+        ``<log_dir>/point_<arm>_eps<ε>.json``.
+    """
+    os.makedirs(log_dir, exist_ok=True)
+    print(f"[frontier] arm={arm} epsilon={epsilon} ({len(seeds)} seeds)")
+    aggregate = run_protocol(
+        modes=["governance"],
+        seeds=seeds,
+        total_timesteps=total_timesteps,
+        size=size,
+        eval_episodes=eval_episodes,
+        reward_mode="bypass",
+        log_dir=os.path.join(log_dir, f"{arm}_eps{epsilon}"),
+        verifier_accuracy=epsilon,
+        ambiguity_ratio=ambiguity_ratio,
+        spoof_region=spoof_region,
+        claim_resolution=claim_resolution,
+        shaped=arm == "shaped",
+    )
+    point = {
+        "epsilon": epsilon,
+        "arm": arm,
+        "config": _run_config(
+            seeds,
+            total_timesteps,
+            size,
+            eval_episodes,
+            ambiguity_ratio,
+            spoof_region,
+            claim_resolution,
+        ),
+        **_point_metrics(aggregate),
+    }
+    with open(os.path.join(log_dir, f"point_{arm}_eps{epsilon}.json"), "w") as fh:
+        json.dump(point, fh, indent=2)
+    return point
+
+
+def run_controls(
+    seeds: list[int],
+    total_timesteps: int = 100_000,
+    size: int = 10,
+    eval_episodes: int = 10,
+    ambiguity_ratio: float = SWEEP_AMBIGUITY_RATIO,
+    spoof_region: bool = SWEEP_SPOOF_REGION,
+    claim_resolution: int = SWEEP_CLAIM_RESOLUTION,
+    log_dir: str = "results/rl_frontier",
+) -> dict[str, Any]:
+    """Run the ceiling and floor controls once, at the anchor ε.
+
+    Under the *swept* environment configuration, so the curve is bracketed by
+    controls measured in the same world as the points they bracket.
+    """
+    os.makedirs(log_dir, exist_ok=True)
+    print(f"[frontier] controls at epsilon={ANCHOR_EPSILON}")
+    aggregate = run_protocol(
+        modes=["no_governance", "static_mask"],
+        seeds=seeds,
+        total_timesteps=total_timesteps,
+        size=size,
+        eval_episodes=eval_episodes,
+        reward_mode="bypass",
+        log_dir=os.path.join(log_dir, "controls"),
+        verifier_accuracy=ANCHOR_EPSILON,
+        ambiguity_ratio=ambiguity_ratio,
+        spoof_region=spoof_region,
+        claim_resolution=claim_resolution,
+        shaped=False,
+    )
+    controls = {
+        mode: _point_metrics(aggregate, mode=mode)
+        for mode in ("no_governance", "static_mask")
+        if mode in aggregate["results"]
+    }
+    with open(os.path.join(log_dir, "controls.json"), "w") as fh:
+        json.dump(controls, fh, indent=2)
+    return controls
+
+
+def _run_config(
+    seeds: list[int],
+    total_timesteps: int,
+    size: int,
+    eval_episodes: int,
+    ambiguity_ratio: float,
+    spoof_region: bool,
+    claim_resolution: int,
+) -> dict[str, Any]:
+    """The configuration every point must agree on for a curve to be one curve."""
+    return {
+        "seeds": list(seeds),
+        "total_timesteps": total_timesteps,
+        "size": size,
+        "eval_episodes": eval_episodes,
+        "environment_config": {
+            "ambiguity_ratio": ambiguity_ratio,
+            "spoof_region": spoof_region,
+            "claim_resolution": claim_resolution,
+        },
+    }
+
+
+def build_frontier(
+    points: list[dict[str, Any]],
+    controls: dict[str, Any] | None = None,
+    log_dir: str | None = None,
+) -> dict[str, Any]:
+    """Assemble scored points into the frontier artifact.
+
+    Args:
+        points: Point records from :func:`run_point`.
+        controls: Control records from :func:`run_controls`, if any.
+        log_dir: When given, also write ``verifier_frontier.json`` there.
+
+    Returns:
+        The frontier dict.
+
+    Raises:
+        ValueError: If the points disagree about the configuration they were
+            produced under. Averaging across such points would present two
+            experiments as one curve.
+    """
+    configs = {json.dumps(p.get("config"), sort_keys=True) for p in points}
+    if len(configs) > 1:
+        raise ValueError(
+            f"points disagree about their run configuration ({len(configs)} distinct); "
+            "a curve assembled from them would compare different experiments"
+        )
+    config = points[0]["config"] if points and points[0].get("config") else {}
+
+    frontier = {
+        "preregistration": preregistration_provenance(),
+        "sweep": {
+            "epsilons": sorted({p["epsilon"] for p in points}, reverse=True),
+            "arms": sorted({p["arm"] for p in points}),
+            "seeds": config.get("seeds"),
+            "total_timesteps": config.get("total_timesteps"),
+            "size": config.get("size"),
+            "eval_episodes": config.get("eval_episodes"),
+            "mode": "governance",
+            "anchor_epsilon": ANCHOR_EPSILON,
+            "environment_config": config.get("environment_config"),
+        },
+        "points": points,
+        "controls": controls or {},
+        "verdicts": score_curve(points),
+    }
+    if log_dir:
+        with open(os.path.join(log_dir, "verifier_frontier.json"), "w") as fh:
+            json.dump(frontier, fh, indent=2)
+    return frontier
+
+
+def assemble_frontier(log_dir: str = "results/rl_frontier") -> dict[str, Any]:
+    """Rebuild the frontier from per-point artifacts left by parallel runs.
+
+    Points are independent by construction — each is its own seeded protocol run
+    — so running them as concurrent processes is a scheduling detail rather than
+    a methodological one. This reassembles the curve afterwards, refusing to
+    stitch together points that disagree about their configuration.
+
+    Args:
+        log_dir: Directory holding ``point_*.json`` and optionally
+            ``controls.json``.
+
+    Returns:
+        The frontier dict, also written to ``<log_dir>/verifier_frontier.json``.
+
+    Raises:
+        FileNotFoundError: If no point artifacts are present.
+    """
+    names = sorted(n for n in os.listdir(log_dir) if n.startswith("point_") and n.endswith(".json"))
+    if not names:
+        raise FileNotFoundError(f"no point_*.json artifacts in {log_dir}")
+    points = []
+    for name in names:
+        with open(os.path.join(log_dir, name)) as fh:
+            points.append(json.load(fh))
+    points.sort(key=lambda p: (p["arm"], -p["epsilon"]))
+
+    controls_path = os.path.join(log_dir, "controls.json")
+    controls = None
+    if os.path.isfile(controls_path):
+        with open(controls_path) as fh:
+            controls = json.load(fh)
+    return build_frontier(points, controls, log_dir=log_dir)
+
+
 def run_sweep(
     epsilons: tuple[float, ...] | list[float] = EPSILON_GRID,
     arms: tuple[str, ...] | list[str] = ARMS,
@@ -319,62 +551,35 @@ def run_sweep(
         The frontier dict, also written to ``<log_dir>/verifier_frontier.json``.
     """
     seeds = seeds or list(DEFAULT_SEEDS)
-    os.makedirs(log_dir, exist_ok=True)
+    points: list[dict[str, Any]] = []
+    for arm in arms:
+        for epsilon in epsilons:
+            points.append(
+                run_point(
+                    arm=arm,
+                    epsilon=epsilon,
+                    seeds=seeds,
+                    total_timesteps=total_timesteps,
+                    size=size,
+                    eval_episodes=eval_episodes,
+                    ambiguity_ratio=ambiguity_ratio,
+                    spoof_region=spoof_region,
+                    claim_resolution=claim_resolution,
+                    log_dir=log_dir,
+                )
+            )
 
-    def _protocol(modes: list[str], accuracy: float, shaped: bool, point_dir: str):
-        return run_protocol(
-            modes=modes,
+    control_points: dict[str, Any] = {}
+    if controls:
+        control_points = run_controls(
             seeds=seeds,
             total_timesteps=total_timesteps,
             size=size,
             eval_episodes=eval_episodes,
-            reward_mode="bypass",
-            log_dir=os.path.join(log_dir, point_dir),
-            verifier_accuracy=accuracy,
             ambiguity_ratio=ambiguity_ratio,
             spoof_region=spoof_region,
             claim_resolution=claim_resolution,
-            shaped=shaped,
+            log_dir=log_dir,
         )
 
-    points: list[dict[str, Any]] = []
-    for arm in arms:
-        for epsilon in epsilons:
-            print(f"[frontier] arm={arm} epsilon={epsilon} ({len(seeds)} seeds)")
-            aggregate = _protocol(["governance"], epsilon, arm == "shaped", f"{arm}_eps{epsilon}")
-            point = {"epsilon": epsilon, "arm": arm, **_point_metrics(aggregate)}
-            points.append(point)
-            with open(os.path.join(log_dir, f"point_{arm}_eps{epsilon}.json"), "w") as fh:
-                json.dump(point, fh, indent=2)
-
-    control_points: dict[str, Any] = {}
-    if controls:
-        print(f"[frontier] controls at epsilon={ANCHOR_EPSILON}")
-        aggregate = _protocol(["no_governance", "static_mask"], ANCHOR_EPSILON, False, "controls")
-        for mode in ("no_governance", "static_mask"):
-            control_points[mode] = _point_metrics(aggregate, mode=mode)
-
-    frontier = {
-        "preregistration": preregistration_provenance(),
-        "sweep": {
-            "epsilons": list(epsilons),
-            "arms": list(arms),
-            "seeds": seeds,
-            "total_timesteps": total_timesteps,
-            "size": size,
-            "eval_episodes": eval_episodes,
-            "mode": "governance",
-            "anchor_epsilon": ANCHOR_EPSILON,
-            "environment_config": {
-                "ambiguity_ratio": ambiguity_ratio,
-                "spoof_region": spoof_region,
-                "claim_resolution": claim_resolution,
-            },
-        },
-        "points": points,
-        "controls": control_points,
-        "verdicts": score_curve(points),
-    }
-    with open(os.path.join(log_dir, "verifier_frontier.json"), "w") as fh:
-        json.dump(frontier, fh, indent=2)
-    return frontier
+    return build_frontier(points, control_points, log_dir=log_dir)
