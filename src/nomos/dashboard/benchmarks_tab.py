@@ -16,7 +16,7 @@ Real-world analogy:
 import json
 import os
 from typing import Any
-
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -140,6 +140,45 @@ def _log_benchmark_to_backend(backend: OntologyBackend | None, benchmarks: dict)
     except Exception:
         pass
 
+def _render_benchmark_comparison(rows: list[dict]):
+    row_a, row_b = rows
+    label_a = f"{row_a['strategy']} ({row_a['scenario']})"
+    label_b = f"{row_b['strategy']} ({row_b['scenario']})"
+
+    st.subheader(f"Comparison: {label_a} vs {label_b}")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(label_a, f"Reward: {row_a['reward']}")
+        st.caption(f"Violations: {row_a['violations']} · Deadlocks: {row_a['deadlocks']}")
+    with col2:
+        st.metric(label_b, f"Reward: {row_b['reward']}")
+        st.caption(f"Violations: {row_b['violations']} · Deadlocks: {row_b['deadlocks']}")
+
+    st.divider()
+    st.subheader("Δ Difference")
+    diff_df = pd.DataFrame(
+        {
+            "Metric": ["Reward", "Violations", "Deadlocks"],
+            label_a: [row_a["reward"], row_a["violations"], row_a["deadlocks"]],
+            label_b: [row_b["reward"], row_b["violations"], row_b["deadlocks"]],
+        }
+    )
+    diff_df["Δ"] = diff_df[label_a] - diff_df[label_b]
+
+    bar = (
+        alt.Chart(diff_df)
+        .mark_bar()
+        .encode(
+            x=alt.X("Metric:N"),
+            y=alt.Y("Δ:Q", title=f"Δ ({label_a} − {label_b})"),
+            color=alt.condition(alt.datum.Δ > 0, alt.value("#2ca02c"), alt.value("#d62728")),
+            tooltip=["Metric", "Δ"],
+        )
+        .properties(height=250)
+    )
+    st.altair_chart(bar, use_container_width=True)
+    st.dataframe(diff_df, use_container_width=True, hide_index=True)
 
 def render_benchmarks_tab(backend: OntologyBackend | None = None):
     st.header("📊 Benchmark Results")
@@ -211,9 +250,18 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
 
     agg_df = pd.DataFrame(aggregates)
 
+    show_statistics = st.checkbox(
+        "Show confidence intervals",
+        value=True,
+    )
+
     st.subheader("Per-Scenario Results")
+
+    selected_rows = []
+
     for scenario in agg_df["scenario"].unique():
         sub = agg_df[agg_df["scenario"] == scenario]
+
         with st.expander(scenario, expanded=True):
             display = sub.rename(
                 columns={
@@ -225,21 +273,98 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
                     "num_seeds": "Seeds",
                 }
             )
-            st.dataframe(display, use_container_width=True, hide_index=True)
+
+            if show_statistics:
+                if "ci_lower" in display.columns and "ci_upper" in display.columns:
+                    display["95% CI"] = (
+                        display["ci_lower"].round(2).astype(str)
+                        + " – "
+                        + display["ci_upper"].round(2).astype(str)
+                    )
+
+            display = display.drop(
+                columns=["ci_lower", "ci_upper"],
+                errors="ignore",
+            )
+
+            display = display.copy()
+            display.insert(0, "Compare", False)
+
+            edited = st.data_editor(
+                display,
+                key=f"benchmark_compare_{scenario}",
+                column_config={
+                    "Compare": st.column_config.CheckboxColumn(
+                        required=True
+                    )
+                },
+                disabled=[c for c in display.columns if c != "Compare"],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+            picked = edited[edited["Compare"]]
+
+            for _, row in picked.iterrows():
+                selected_rows.append(
+                    {
+                        "scenario": scenario,
+                        "strategy": row["Strategy"],
+                        "reward": row["Reward"],
+                        "violations": row.get("Violations"),
+                        "deadlocks": row.get("Deadlocks"),
+                    }
+                )
+
+    if selected_rows:
+        col_a, col_b = st.columns([4, 1])
+
+        with col_b:
+            if st.button(
+                "Reset comparison",
+                key="benchmark_compare_reset",
+            ):
+                for scenario in agg_df["scenario"].unique():
+                    st.session_state.pop(
+                        f"benchmark_compare_{scenario}",
+                        None,
+                    )
+                st.rerun()
+
+    if len(selected_rows) == 2:
+        st.divider()
+        _render_benchmark_comparison(selected_rows)
+
+    elif len(selected_rows) > 2:
+        st.warning(
+            f"{len(selected_rows)} rows selected — please select exactly 2 to compare."
+        )
 
     st.divider()
     st.subheader("Aggregate Comparison")
+
     pivot = agg_df.pivot_table(
         index="strategy",
         columns="scenario",
         values="mean_reward",
         aggfunc="first",
     )
-    st.dataframe(pivot, use_container_width=True)
+
+    st.dataframe(
+        pivot,
+        use_container_width=True,
+    )
 
     effect_sizes = benchmarks.get("effect_sizes", [])
+
     if effect_sizes:
         st.divider()
         st.subheader("Effect Sizes (Cohen's d)")
+
         es_df = pd.DataFrame(effect_sizes)
-        st.dataframe(es_df, use_container_width=True, hide_index=True)
+
+        st.dataframe(
+            es_df,
+            use_container_width=True,
+            hide_index=True,
+        )
