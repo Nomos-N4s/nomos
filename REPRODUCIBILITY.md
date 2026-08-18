@@ -80,7 +80,7 @@ verify it from the `Identity drift:` line the runner prints for each run
 | Governance | 3.0 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 999 deadlocks |
 | MonolithicRL | — | — | — | — |
 | Random | — | — | — | — |
-| StaticMasking | not applicable | 2000.0 reward, 0 violations | 0 reward, 0 violations | 1000 deadlocks (total inaction — see below) |
+| StaticMasking | not applicable | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 1000 deadlocks (total inaction — see below) |
 | VetoOnly | — | — | — | — |
 
 *Dash entries are filled after the full 20-seed run completes.*
@@ -138,7 +138,13 @@ strategy list has to be passed explicitly:
 | VetoOnly | 1000.0 | 0 | 0.0 |
 | Random | 2639.4 / 2584.5 | 503 / 485 | 0.0785 / 0.0746 |
 | MonolithicRL | 4249.25 | 1000 | 0.1647 |
-| StaticMasking | 4249.25 | 1000 | 0.1647 |
+| StaticMasking | 1000.0 | 0 | 0.0 |
+
+StaticMasking matches Governance here rather than MonolithicRL because
+DriftLab declares `classify_harmful_as_safe` in its static blocklist, so the
+arm never executes the violating action. Before per-scenario blocklists it
+ran with an empty set and reproduced MonolithicRL's row exactly, which is
+the defect that made this arm meaningless.
 
 DriftLab never consults its RNG and the governed path is deterministic, so
 every strategy except Random reports identical values on both seeds; Random
