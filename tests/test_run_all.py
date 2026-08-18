@@ -93,6 +93,31 @@ class TestStaticMaskingBlocklist:
         assert strategies == ["monolithic_rl"]
 
 
+class TestStaticMaskingDivergesFromMonolithicRL:
+    def _rewards_and_violations(self, scenario_class, steps=30):
+        reports = _run_experiment_set(
+            scenario_class, {}, steps=steps, seeds=1,
+            strategies=["monolithic_rl", "static_masking"],
+        )
+        by_strategy = {r.metadata["strategy"]: r for r in reports}
+        assert set(by_strategy) == {"monolithic_rl", "static_masking"}
+        return by_strategy
+
+    def test_temptation_bank_arms_differ(self):
+        arms = self._rewards_and_violations(TemptationBank)
+        mono, static = arms["monolithic_rl"], arms["static_masking"]
+        assert (mono.total_reward, mono.constraint_violations) != (
+            static.total_reward,
+            static.constraint_violations,
+        )
+        assert static.constraint_violations < mono.constraint_violations
+
+    def test_drift_lab_arms_differ(self):
+        arms = self._rewards_and_violations(DriftLab)
+        mono, static = arms["monolithic_rl"], arms["static_masking"]
+        assert static.constraint_violations < mono.constraint_violations
+
+
 class TestRunScenario:
     def test_gridworld_with_governance(self):
         report = _run_scenario(GridWorld, {"size": 4, "seed": 42}, "governance", steps=5, seed=0)
