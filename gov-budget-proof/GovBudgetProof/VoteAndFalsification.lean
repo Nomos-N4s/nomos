@@ -335,11 +335,14 @@ def applyGovernance (p : FalsificationParams) (c : Change) (t : Tier) : Falsific
 /-- §3.1, in full generality: at the immutable tier a governance step is the
     identity, for every change `c` and every proposed rewrite `edit`.
 
-    This is derived from `IdentityTiers.immutable_parameters_never_change`,
-    which is the only reason the `else` branch is taken: that theorem supplies
-    the `¬ isPermitted Tier.immutable c` that `if_neg` consumes, so it appears
-    in this proof term and the two modules' tier models are linked by an
-    import rather than by prose. -/
+    The equation is definitional: `isPermitted Tier.immutable c` reduces to
+    `False`, so `rfl` closes this goal on its own. It is nevertheless routed
+    through `IdentityTiers.immutable_parameters_never_change`, which supplies
+    the `¬ isPermitted Tier.immutable c` that `if_neg` consumes. That is a
+    choice about provenance, not a necessity of the proof: it puts the tier
+    theorem in the elaborated proof term, so the two modules' tier models are
+    linked by an import that `#print` can see rather than by prose, and the
+    guard in `tests/test_lean_claims.py` can check that link. -/
 theorem governance_step_unchanged_at_immutable_tier
     (edit : FalsificationParams → FalsificationParams)
     (p : FalsificationParams) (c : Change) :
