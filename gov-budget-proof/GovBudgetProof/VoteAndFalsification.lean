@@ -328,6 +328,65 @@ def relaxFalsificationBar (p : FalsificationParams) : FalsificationParams :=
 def applyGovernance (p : FalsificationParams) (c : Change) (t : Tier) : FalsificationParams :=
   applyGovernanceWith relaxFalsificationBar p c t
 
+/-- §3.1, in full generality: at the immutable tier a governance step is the
+    identity, for every change `c` and every proposed rewrite `edit`.
+
+    This is derived from `IdentityTiers.immutable_parameters_never_change`,
+    which is the only reason the `else` branch is taken: that theorem supplies
+    the `¬ isPermitted Tier.immutable c` that `if_neg` consumes, so it appears
+    in this proof term and the two modules' tier models are linked by an
+    import rather than by prose. -/
+theorem governance_step_unchanged_at_immutable_tier
+    (edit : FalsificationParams → FalsificationParams)
+    (p : FalsificationParams) (c : Change) :
+    applyGovernanceWith edit p c Tier.immutable = p :=
+  if_neg (immutable_parameters_never_change c)
+
+/-- The falsification parameters are unchanged by any governance step taken at
+    the immutable tier, for every change presented — whatever quorum and
+    cooling-off period it carries.
+
+    Two hypotheses are doing work and neither is proved here. That the
+    parameters are held at `Tier.immutable` is the declaration
+    `falsificationParamsTier`, not a theorem; and that every parameter write in
+    the running system goes through `applyGovernance` is an implementation
+    obligation on the reference implementation. Granted those, the conclusion
+    is unconditional in `c`. -/
+theorem falsification_params_unchanged_at_immutable_tier
+    (p : FalsificationParams) (c : Change) :
+    applyGovernance p c Tier.immutable = p :=
+  governance_step_unchanged_at_immutable_tier relaxFalsificationBar p c
+
+/-- What the block-level invariance means for behaviour: the falsification
+    test and the budget update induced by the parameters answer the same way
+    after a governance step at the immutable tier as before it. -/
+theorem falsification_bar_unchanged_at_immutable_tier
+    (p : FalsificationParams) (c : Change) (integrityScore oldBudget fc : Nat) :
+    isFalsificationWith (applyGovernance p c Tier.immutable) integrityScore
+      = isFalsificationWith p integrityScore ∧
+    budgetAfterFalsificationWith (applyGovernance p c Tier.immutable) oldBudget fc
+      = budgetAfterFalsificationWith p oldBudget fc := by
+  rw [falsification_params_unchanged_at_immutable_tier]
+  exact ⟨rfl, rfl⟩
+
+/-- Non-vacuity, part one: the proposed rewrite really moves the parameters,
+    so the theorems above are not invariance under a disguised identity. -/
+example : relaxFalsificationBar defaultFalsificationParams ≠ defaultFalsificationParams := by
+  decide
+
+/-- Non-vacuity, part two: the same step at a tier that does admit changes
+    installs the rewrite. `applyGovernance` is therefore not constant in its
+    tier argument, and the immutable-tier result is a property of that tier
+    rather than of the transition function. -/
+example : applyGovernance defaultFalsificationParams
+    { quorum := 3, cooldownDays := 30 } Tier.constitutional ≠ defaultFalsificationParams := by
+  decide
+
+/-- The same change, at the immutable tier, is refused. -/
+example : applyGovernance defaultFalsificationParams
+    { quorum := 3, cooldownDays := 30 } Tier.immutable = defaultFalsificationParams := by
+  decide
+
 /-
   Falsification parameters are immutable-tier: no governance procedure
   can change TAG_COMPLIANCE_THRESHOLD or FALSIFICATION_BUDGET_CUTOFF.
