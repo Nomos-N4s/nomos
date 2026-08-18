@@ -43,22 +43,33 @@ class BatchProposal:
     batch_metadata: dict[str, Any] = field(default_factory=dict)
 
 
+# Domain-separation tags. Without them a leaf and an internal node live in
+# the same hash space, so the digest pair of any node can be replayed as a
+# single leaf item and yield the same root — the classic second-preimage
+# shape. The empty-tree sentinel below is separated by construction: no
+# prefixed preimage can equal b"empty".
+_LEAF_TAG = b"\x00"
+_NODE_TAG = b"\x01"
+
+
 def _hash_leaf(item: bytes) -> str:
-    """Hash a single tree leaf into its hex digest."""
-    return hashlib.sha256(item).hexdigest()
+    """Hash a single tree leaf into its hex digest, tagged as a leaf."""
+    return hashlib.sha256(_LEAF_TAG + item).hexdigest()
 
 
 def _hash_node(left: str, right: str) -> str:
-    """Hash two child digests into their parent's hex digest."""
-    return hashlib.sha256((left + right).encode()).hexdigest()
+    """Hash two child digests into their parent's hex digest, tagged as a node."""
+    return hashlib.sha256(_NODE_TAG + (left + right).encode()).hexdigest()
 
 
 def merkle_root(items: list[bytes]) -> str:
     """Compute the Merkle root of a list of byte items.
 
     Uses SHA-256 as the hash function. For an empty list, returns the
-    hash of the string ``"empty"``. For a single item, returns the
+    hash of the string ``"empty"``. For a single item, returns the tagged
     hash of that item. Otherwise, recursively builds a binary Merkle tree.
+    Leaves and internal nodes are hashed under distinct one-byte tags, so a
+    node's children cannot be replayed as a leaf.
 
     Args:
         items: The byte strings to build the tree from.
