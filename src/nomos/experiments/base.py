@@ -17,6 +17,8 @@ Real-world analogy:
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -96,6 +98,7 @@ class ExperimentScenario(ABC):
         self.speaker = speaker
         self.metrics = ExperimentMetrics()
         self._history: list[StepResult] = []
+        self._latency_window_open: bool = False
 
     @abstractmethod
     def reset(self):
@@ -195,6 +198,40 @@ class ExperimentScenario(ABC):
     # Public API — do not override
     # ------------------------------------------------------------------
 
+    @contextmanager
+    def governance_latency_window(self) -> Iterator[None]:
+        """Record the governance-cycle time spent inside the block.
+
+        The figure is read off the Speaker's own counters rather than
+        timed around the block, so it covers the governance cycles
+        alone and not the surrounding scenario work. One entry is
+        appended to ``metrics.governance_latencies`` if at least one
+        cycle ran inside the block, and none otherwise.
+
+        Re-entrant: a nested window is a no-op, so a caller that runs
+        the cycle itself and hands the result to :meth:`step` as
+        ``external_decision`` opens one window around both and still
+        gets exactly one entry for the step.
+
+        Yields:
+            ``None``. The entry, if any, is appended on exit.
+        """
+        if self._latency_window_open:
+            yield
+            return
+
+        cycles_before = self.speaker.cycle_count
+        seconds_before = self.speaker.cycle_seconds_total
+        self._latency_window_open = True
+        try:
+            yield
+        finally:
+            self._latency_window_open = False
+            if self.speaker.cycle_count > cycles_before:
+                self.metrics.governance_latencies.append(
+                    self.speaker.cycle_seconds_total - seconds_before
+                )
+
     def step(
         self,
         state: Any,
@@ -207,11 +244,11 @@ class ExperimentScenario(ABC):
         Centralized bookkeeping: appends to history, updates metrics.
         Delegates to ``_run_step()`` for scenario-specific logic.
 
-        Governance latency is read off the Speaker's own counters rather
-        than timed around ``_run_step()``, so the figure covers the
-        governance cycles alone and not the surrounding scenario work.
-        A step that runs no cycle (``external_decision`` supplied by a
-        baseline) records no latency.
+        The step runs inside :meth:`governance_latency_window`, so a
+        step whose cycle runs in ``_run_step()`` records its latency
+        here and a step that runs no cycle at all (``external_decision``
+        supplied by a baseline) records none. A caller that runs the
+        cycle itself opens the window earlier and is credited there.
 
         Args:
             state: The current world state.
@@ -223,16 +260,11 @@ class ExperimentScenario(ABC):
         Returns:
             A :class:`StepResult` with the decision, next state, and reward.
         """
-        cycles_before = self.speaker.cycle_count
-        seconds_before = self.speaker.cycle_seconds_total
-        result = self._run_step(
-            state,
-            decision_class=decision_class,
-            external_decision=external_decision,
-        )
-        if self.speaker.cycle_count > cycles_before:
-            self.metrics.governance_latencies.append(
-                self.speaker.cycle_seconds_total - seconds_before
+        with self.governance_latency_window():
+            result = self._run_step(
+                state,
+                decision_class=decision_class,
+                external_decision=external_decision,
             )
 
         self._history.append(result)
