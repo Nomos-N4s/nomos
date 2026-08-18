@@ -239,9 +239,15 @@ theorem falsification_params_are_immutable : falsificationParamsImmutable := by
 
 /-
   Combined invariant: every governance cycle computes its vote outcome with
-  the decision procedure of `decidableVotePasses` — the boolean it returns is
-  correct against the specification — and the falsification pipeline preserves
-  budget ≥ 1.
+  the decision procedure of `decidableVotePasses`, and the falsification
+  pipeline preserves budget ≥ 1.
+
+  The vote conjunct is `decide`/`Prop` agreement. That agreement is
+  definitional for any `Decidable` instance, so it is not a proved
+  correspondence between two independent definitions; what is specific to this
+  model is that the conjunct can be stated at all — the outcome is computed,
+  not postulated. What the outcome depends on is proved separately by
+  `vote_resolution_determined_by_tallies`.
 -/
 
 theorem governance_cycle_invariant (votes : List Vote) (d : DecisionClass)
