@@ -63,10 +63,12 @@ theorem vote_outcome_computes (votes : List Vote) (d : DecisionClass) :
     decide (votePasses votes d) = true ↔ votePasses votes d :=
   decide_eq_true_iff
 
-/-- Vote resolution is deterministic (law of excluded middle). -/
-theorem vote_resolution_deterministic (votes : List Vote) (d : DecisionClass) :
-    votePasses votes d ∨ ¬ votePasses votes d := by
-  apply Classical.em
+/-- Every ballot resolves one way or the other, and the resolution is reached
+    by the decision procedure above rather than by the law of excluded middle:
+    `#print axioms vote_resolution_decidable` reports no axioms. -/
+theorem vote_resolution_decidable (votes : List Vote) (d : DecisionClass) :
+    votePasses votes d ∨ ¬ votePasses votes d :=
+  Decidable.em (votePasses votes d)
 
 /-- Consistency: equal vote lists produce the same outcome. -/
 theorem vote_threshold_consistent (v1 v2 : List Vote) (d : DecisionClass)
