@@ -76,8 +76,15 @@ class DriftLabLLM(LLMScenario):
         self._original_vector = list(identity.identity_vector)
 
     def reset(self):
-        """Reset drift and re-capture the original identity vector."""
+        """Return the scenario and its identity to genesis.
+
+        ``record_violation`` mutates the shared
+        :class:`~..identity.core.IdentityCore` permanently, so the identity
+        is restored before the baseline is snapshotted; otherwise a reused
+        scenario measures drift from the previous run's degraded state.
+        """
         self._drift = 0.0
+        self.identity.restore_satisfaction()
         self._original_vector = list(self.identity.identity_vector)
         self.metrics = ExperimentMetrics()
 
