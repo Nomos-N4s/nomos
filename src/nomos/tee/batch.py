@@ -158,20 +158,30 @@ class BatchVerifier:
         root = merkle_root([str(i).encode() for i in proposal.action_indices])
         return True, f"Batch valid. Root: {root[:16]}..."
 
-    def verify_proof(self, action_index: int, proof: list[str], root: str) -> bool:
+    def verify_proof(
+        self, action_index: int, proof: list[tuple[str, bool]], root: str
+    ) -> bool:
         """Verify a Merkle proof for a single action within a batch.
 
+        :func:`merkle_root` builds internal nodes positionally, so each
+        sibling is recombined on the side it was generated from. Sorting the
+        pair instead would reconstruct a different tree and reject honest
+        paths.
+
         Args:
-            action_index: The action to verify.
-            proof: The sibling hashes on the path from the action leaf
-                to the Merkle root.
+            action_index: The action to verify. Its leaf is derived the same
+                way :meth:`validate_batch` derives it, from ``str(index)``.
+            proof: The sibling path from :func:`merkle_proof`, leaf to root,
+                as ``(sibling_digest, sibling_is_left)`` pairs.
             root: The expected Merkle root.
 
         Returns:
-            True if the proof is valid.
+            True if the path reconstructs ``root``.
         """
-        current = hashlib.sha256(str(action_index).encode()).hexdigest()
-        for sibling in proof:
-            combined = "".join(sorted([current, sibling]))
-            current = hashlib.sha256(combined.encode()).hexdigest()
+        current = _hash_leaf(str(action_index).encode())
+        for sibling, sibling_is_left in proof:
+            if sibling_is_left:
+                current = _hash_node(sibling, current)
+            else:
+                current = _hash_node(current, sibling)
         return current == root
