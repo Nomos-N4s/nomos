@@ -136,15 +136,21 @@ class UlyssesContract:
         """Move contract to REVOKED state (restrictions lifted)."""
         self.state = ContractState.REVOKED
 
-    def tick(self):
-        """Advance this contract's lifecycle by one governance cycle.
+    def tick(self, current_cycle: int | None = None):
+        """Advance this contract's clock by one governance cycle.
 
-        Decrements the timelock counter. When timelock reaches zero,
-        transitions from ENACTED to ACTIVE so restrictions take effect.
+        The lock duration is a constant: ``timelock_blocks`` is never
+        mutated. Once the clock reaches :attr:`unlock_at_cycle`, an
+        ENACTED contract transitions to ACTIVE so restrictions take
+        effect.
+
+        Args:
+            current_cycle: Absolute governance cycle to move the clock
+                to. Defaults to one cycle past the contract's current
+                position, for callers driving a contract on its own.
         """
-        if self.timelock_blocks > 0:
-            self.timelock_blocks -= 1
-        if self.state == ContractState.ENACTED and self.timelock_blocks <= 0:
+        self.current_cycle = self.current_cycle + 1 if current_cycle is None else current_cycle
+        if self.state == ContractState.ENACTED and self.current_cycle >= self.unlock_at_cycle:
             self.state = ContractState.ACTIVE
 
     def applies_to(self, action_index: int) -> bool:
