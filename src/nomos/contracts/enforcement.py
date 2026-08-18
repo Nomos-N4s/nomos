@@ -137,9 +137,18 @@ def enforce_timelock(contract: UlyssesContract, current_block: int) -> Enforceme
         the waiting period elapses.
 
     The lock is resolved against the contract's absolute
-    :attr:`~.UlyssesContract.unlock_at_cycle`, so this check agrees with
-    :meth:`~.UlyssesContract.tick` at every cycle: the contract is ACTIVE
-    exactly when the timelock reports expired.
+    :attr:`~.UlyssesContract.unlock_at_cycle`. For an ENACTED contract with
+    a positive ``timelock_blocks``, evaluated with ``current_block`` equal
+    to the contract's own :attr:`~.UlyssesContract.current_cycle`, this
+    check therefore flips to non-compliant on exactly the cycle at which
+    :meth:`~.UlyssesContract.tick` promotes the contract to ACTIVE.
+
+    Outside those conditions the two are independent. ``current_block`` is
+    caller-supplied and nothing ties it to the contract's own clock, so a
+    PROPOSED or freshly ENACTED contract can be reported expired. A
+    contract that never carried a lock reports ``"No timelock"`` forever
+    while still going ACTIVE on its first tick — the deliberate
+    distinction from a lock that has elapsed.
 
     Args:
         contract: Any object with ``timelock_blocks`` and
