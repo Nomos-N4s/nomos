@@ -24,7 +24,7 @@ request runs the `lean-build` job (`lake build`), so a broken proof blocks a mer
 | `GovBudgetProof.lean` | Manifest importing all modules below | `gov-budget-proof/` |
 | `Basic.lean` | Core definitions (budget, thresholds) | `gov-budget-proof/GovBudgetProof/` |
 | `BudgetEnforcement.lean` | Budget/threshold enforcement invariants (issues #43/#44) | `gov-budget-proof/GovBudgetProof/` |
-| `VoteAndFalsification.lean` | Vote falsification impossibility | `gov-budget-proof/GovBudgetProof/` |
+| `VoteAndFalsification.lean` | Vote-threshold determinism, falsification counting and budget halving; falsification parameters declared immutable-tier and unchanged by a governance step gated on that tier | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityTiers.lean` | Tier mutability rules — [Chapter 4, Sec 3](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityGenesis.lean` | Genesis 3-of-5 multisig bootstrapping — [Chapter 4, Sec 4](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityBuffer.lean` | Sandboxed isolation buffer protocol — [Chapter 4, Sec 5.2](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
