@@ -28,7 +28,7 @@ request runs the `lean-build` job (`lake build`), so a broken proof blocks a mer
 | `IdentityTiers.lean` | Tier mutability rules — [Chapter 4, Sec 3](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityGenesis.lean` | Genesis 3-of-5 multisig bootstrapping — [Chapter 4, Sec 4](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityBuffer.lean` | Sandboxed isolation buffer protocol — [Chapter 4, Sec 5.2](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
-| `IdentityHashes.lean` | Runtime integrity hash chains, tamper evidence, deterministic roots — [Chapter 4, Sec 2.1 and 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
+| `IdentityHashes.lean` | Runtime integrity hash chains over an uninterpreted hash; the chain root is order- and link-sensitive, and tamper evidence is conditional on an explicit collision-resistance hypothesis — [Chapter 4, Sec 2.1 and 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityCoherence.lean` | Coherence threshold guard; below-threshold actions are rejected without mutating identity state — [Chapter 4, Sec 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 
 ## Building the proofs
