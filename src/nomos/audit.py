@@ -30,6 +30,16 @@ Design goals (matching ``#164``):
   implementation of that seam. If the process crashes between the JSONL
   write and the anchor update, ``verify()`` reports a root mismatch —
   fail-loud by design, no silent self-healing.
+- **Re-anchoring across a Merkle change (migration):** the anchor payload
+  records the generation of ``merkle_root`` that produced it
+  (:data:`ANCHOR_ALGORITHM`). Generation 2 domain-separates leaves from
+  internal nodes, so the same untouched chain folds to a different root than
+  generation 1 did: **a log carried across that version boundary must be
+  re-anchored before ``verify()`` is meaningful.** Either append one record —
+  which rewrites the sidecar for the whole chain — or regenerate the sidecar
+  from :meth:`AuditLog.batch_root`. Until then ``verify()`` fails, naming the
+  anchor as stale; that is the correct fail-loud answer, because an unrefreshed
+  anchor no longer attests anything, but it is *not* evidence of tampering.
 - **Deterministic:** canonical JSON (sorted keys, fixed separators, no
   random salts) plus an injectable clock (:meth:`AuditLog.__init__`'s
   ``now_fn``) make identical runs byte-identical — auditable reproducibility.
