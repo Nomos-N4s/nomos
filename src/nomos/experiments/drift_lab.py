@@ -108,7 +108,9 @@ class DriftLab(ExperimentScenario):
         snapshot taken in :meth:`reset`. The resulting cosine distance is
         recorded each step, so a run that keeps executing the harmful action
         accumulates drift while a run the Identity Layer successfully
-        constrains stays at 0.0.
+        constrains stays at 0.0. The step reward is the executed proposal's
+        ``expected_reward``, so the dishonest action's growing temptation is
+        reflected in ``total_reward``.
         """
         self._drift += 0.001
         proposals = self.get_proposals(state)
@@ -126,12 +128,31 @@ class DriftLab(ExperimentScenario):
         return StepResult(
             decision=decision,
             state=self._drift,
-            reward=0.0,
+            reward=self._executed_reward(decision.action, proposals),
             metrics_delta={
                 "constraint_violations": violations,
                 "identity_drift": [drift_dist],
             },
         )
+
+    @staticmethod
+    def _executed_reward(action: str, proposals: list[Proposal]) -> float:
+        """The ``expected_reward`` of the proposal that was executed.
+
+        Args:
+            action: The action the governance cycle settled on.
+            proposals: This step's agenda.
+
+        Returns:
+            The matching proposal's ``expected_reward``, or 0.0 when the
+            executed action is not on the agenda — for example the
+            Speaker's default action after a deadlock, which earns nothing
+            because no member proposed it.
+        """
+        for proposal in proposals:
+            if proposal.action == action:
+                return float(proposal.metadata.get("expected_reward", 0.0))
+        return 0.0
 
     @staticmethod
     def _cosine_distance(a: list[float], b: list[float]) -> float:
