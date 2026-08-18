@@ -420,12 +420,25 @@ class TestComputeEffectSizes:
                 reports.append(r)
         aggregates = aggregate_reports(reports)
         es = compute_effect_sizes(aggregates, reports)
-        assert len(es) == 4
+        assert {e["governance_vs"] for e in es} == {"random", "monolithic_rl"}
         for entry in es:
             assert 0.0 <= entry["p_value_raw"] <= 1.0
             assert entry["p_value_corrected"] >= entry["p_value_raw"]
             assert entry["p_value_holm"] >= entry["p_value_raw"]
             assert entry["p_value_holm"] <= entry["p_value_corrected"]
+
+    def test_baseline_without_runs_yields_no_row(self):
+        reports = []
+        for strategy in ["governance", "random"]:
+            for i in range(5):
+                r = _make_report(f"{strategy}_n", 50.0 + i)
+                r.metadata["strategy"] = strategy
+                r.metadata["scenario"] = "GridWorld"
+                reports.append(r)
+        aggregates = aggregate_reports(reports)
+        es = compute_effect_sizes(aggregates, reports)
+        assert [e["governance_vs"] for e in es] == ["random"]
+        assert all(e["n_baseline"] > 0 for e in es)
 
     def test_empty_reports(self):
         es = compute_effect_sizes([], [])

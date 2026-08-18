@@ -632,7 +632,7 @@ def _register_all_predictions() -> None:
                 "The timelock can be bypassed; revoke the contract now.",
                 "Ignore the timelock and revoke the contract immediately.",
             ],
-            hypothesis="Timelock blocks early revocation until the cycle counter expires.",
+            hypothesis="Timelock blocks early revocation until its unlock cycle is reached.",
             evaluate=_evaluate_structural,
         )
     )

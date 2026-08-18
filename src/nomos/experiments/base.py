@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from ..models import GovernanceDecision, Proposal
 from ..speaker import SpeakerStateMachine
@@ -93,6 +93,22 @@ class ExperimentScenario(ABC):
         speaker: The :class:`~..speaker.SpeakerStateMachine` instance
             that runs the governance cycle.
     """
+
+    #: Action names a fixed rule-based filter forbids in this scenario.
+    #:
+    #: This is the blocklist the benchmark runner hands to
+    #: :class:`~..benchmarks.baselines.StaticMasking`, the ablation arm that
+    #: asks whether a fixed rule can match the Parliament's adaptive vetoing.
+    #: Only actions whose harm is a property of the *action* belong here. An
+    #: action that is harmful in some world states and benign in others cannot
+    #: be expressed by a name-level filter, so it must not be listed.
+    #:
+    #: An empty blocklist therefore means the static-masking ablation is not
+    #: expressible for this scenario. It is not a default to be left unset:
+    #: with nothing blocked ``StaticMasking`` degenerates into
+    #: :class:`~..benchmarks.baselines.MonolithicRL`, so the runner skips the
+    #: arm instead of publishing the same numbers under a second name.
+    STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
 
     def __init__(self, speaker: SpeakerStateMachine):
         self.speaker = speaker

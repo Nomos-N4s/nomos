@@ -43,6 +43,29 @@ _REPORTS = [
     _make_report("r6", 110, 1, 0, 0.0, 100, "B", "rand"),
 ]
 
+#: ``rand`` never ran on scenario ``B`` — the shape the benchmark suite now
+#: produces, since ``static_masking`` is skipped on GridWorld.
+_GAPPED_REPORTS = [r for r in _REPORTS if r.name != "r6"]
+
+
+def _bar_centres(fig, reports, strategy):
+    """Return the scenario indices a strategy actually has bars over.
+
+    Args:
+        fig: Figure returned by a grouped bar plotter.
+        reports: The reports the figure was built from.
+        strategy: Strategy whose bar container to inspect.
+
+    Returns:
+        Sorted scenario indices, matching the x tick positions. A scenario
+        the strategy never ran on is absent rather than present at height 0.
+    """
+    strategies = sorted(set(r.metadata["strategy"] for r in reports))
+    ax = fig.axes[0]
+    containers = [c for c in ax.containers if hasattr(c, "datavalues")]
+    container = containers[strategies.index(strategy)]
+    return sorted(round(b.get_x() + b.get_width() / 2) for b in container)
+
 
 # -- _ci_to_error --
 
@@ -148,6 +171,20 @@ def test_violation_rates_no_reports():
         assert isinstance(fig, Figure)
 
 
+def test_violation_rates_omits_bar_for_arm_that_never_ran():
+    with tempfile.TemporaryDirectory() as tmp:
+        fig = plot_violation_rates(_GAPPED_REPORTS, tmp)
+        centres = _bar_centres(fig, _GAPPED_REPORTS, "rand")
+        assert centres == [0]
+
+
+def test_violation_rates_keeps_bars_for_arms_that_did_run():
+    with tempfile.TemporaryDirectory() as tmp:
+        fig = plot_violation_rates(_GAPPED_REPORTS, tmp)
+        assert _bar_centres(fig, _GAPPED_REPORTS, "gov") == [0, 1]
+        assert _bar_centres(fig, _GAPPED_REPORTS, "mono") == [0, 1]
+
+
 # -- plot_deadlock_frequency --
 
 
@@ -179,6 +216,20 @@ def test_deadlock_frequency_no_deadlocks():
     with tempfile.TemporaryDirectory() as tmp:
         fig = plot_deadlock_frequency(clean, tmp)
         assert isinstance(fig, Figure)
+
+
+def test_deadlock_frequency_omits_bar_for_arm_that_never_ran():
+    with tempfile.TemporaryDirectory() as tmp:
+        fig = plot_deadlock_frequency(_GAPPED_REPORTS, tmp)
+        centres = _bar_centres(fig, _GAPPED_REPORTS, "rand")
+        assert centres == [0]
+
+
+def test_deadlock_frequency_keeps_bars_for_arms_that_did_run():
+    with tempfile.TemporaryDirectory() as tmp:
+        fig = plot_deadlock_frequency(_GAPPED_REPORTS, tmp)
+        assert _bar_centres(fig, _GAPPED_REPORTS, "gov") == [0, 1]
+        assert _bar_centres(fig, _GAPPED_REPORTS, "mono") == [0, 1]
 
 
 # -- plot_pareto_frontier --

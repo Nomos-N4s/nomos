@@ -43,7 +43,7 @@
 - **Neo4j integration**: `Neo4jBackend` in `src/nomos/ontology/neo4j_backend.py` is fully wired into the Streamlit dashboard. When `NEO4J_URI` is present in `.env`, the dashboard auto-detects and uses Neo4j Aura for persistent ontology storage and decision logging. Falls back to `MemoryBackend` otherwise. Decision logging records each replayed step's scores, vetoes, and metadata as ontology entities. (Issue #21 — Integrated into dashboard per Option A.)
 
 - **Phase D: AI Agent Validation completed** (epic #145, all of #138–#144 closed 2026-08-01): PydanticAI/OpenRouter adapter, governed-vs-ungoverned harness, 4 LLM-native scenarios, metrics/reports, trace viewer, repro+CI smoke, 12-prediction cross-validation.
-- **Benchmark results** (4 scenarios × 5 strategies × 20 seeds × 1,000 steps = 400 runs, 6.3s wall-clock):
+- **Benchmark results** (19 scenario-strategy combinations × 20 seeds × 1,000 steps = 380 runs, 6.3s wall-clock; GridWorld has no `static_masking` arm — see REPRODUCIBILITY.md):
   - GridWorld: 3.0 reward, 0 violations across all strategies — sparsity limits poison encounters
   - TemptationBank: 1998.0 reward, 0 violations — ban_loans contract enacts by step 30, steady 2/step thereafter
   - DriftLab: 0 reward, 0 violations — identity coherence wins via higher priority tag
