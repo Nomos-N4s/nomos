@@ -12,7 +12,7 @@ Real-world analogy:
 """
 
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from ..identity.params import DEFAULT_PARAMETER_ENVELOPE
 from ..models import PriorityTag, Proposal
@@ -40,6 +40,13 @@ class DeadlockMaze(ExperimentScenario):
         params_envelope: Optional parameter envelope (defaults to
             :const:`~..identity.params.DEFAULT_PARAMETER_ENVELOPE`).
     """
+
+    #: ``tighten_quorum`` is the action that causes the pathology this
+    #: scenario studies — raising the quorum to 0.9 gridlocks the Parliament
+    #: regardless of the state it is taken in. Blocking it by name is the
+    #: crude constitutional-entrenchment rule ("the body may not rewrite its
+    #: own voting threshold") that the deadlock breaker is the alternative to.
+    STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset({"tighten_quorum"})
 
     def __init__(
         self, speaker: SpeakerStateMachine, deadlock_breaker: DeadlockBreaker, params_envelope=None

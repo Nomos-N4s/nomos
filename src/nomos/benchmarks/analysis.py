@@ -564,7 +564,10 @@ def compute_effect_sizes(
         ``cohens_d_ci``, ``cohens_d_se``, ``mannwhitney_u``, ``p_value_raw``,
         ``p_value_corrected``, ``p_value_holm``, ``significant``,
         ``significant_holm``, ``n_governance``, ``n_baseline``, ``paired``,
-        ``normality_warning``, ``interpretation``.
+        ``normality_warning``, ``interpretation``. A scenario-baseline pair
+        with no runs on either side yields no entry, and is not counted in
+        the correction family — an arm that was never run is not a test that
+        was performed.
     """
     groups = defaultdict(list)
     for r in reports:
@@ -581,6 +584,8 @@ def compute_effect_sizes(
         control_rewards = groups.get((governance_key, scenario), [])
         for bl in baselines:
             treatment_rewards = groups.get((bl, scenario), [])
+            if not control_rewards or not treatment_rewards:
+                continue
             d = _cohens_d(control_rewards, treatment_rewards)
             d_ci = _cohens_d_ci(control_rewards, treatment_rewards)
 

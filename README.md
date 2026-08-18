@@ -75,7 +75,7 @@ Lean 4 theorems proven:          budget_invariant_holds, budget_preserves_positi
                                  vote_resolution_determined_by_tallies,
                                  falsification_params_are_immutable
 Reference implementation:        ~2,800 lines · 50+ files · 10 subpackages
-Benchmark coverage:              4 scenarios × 5 strategies × 20 seeds × 1,000 steps
+Benchmark coverage:              4 scenarios × 5 strategies (19 valid combinations) × 20 seeds × 1,000 steps
 Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual risks acknowledged
 ```
 
@@ -149,7 +149,7 @@ Every formal claim in the book chapters has a corresponding executable test:
 | 4 | Ch2 §3.7 | Tag falsification halves budget after 3+ offences | ✓ |
 | 5 | Ch3 §2.1 | Contract restricts action set (allowed ∩ restricted) | ✓ |
 | 6 | Ch3 §2.3 | Revocation threshold > enactment threshold | ✓ |
-| 7 | Ch3 §2.4 | Timelock decrements monotonically | ✓ |
+| 7 | Ch3 §2.4 | Timelock holds until its unlock cycle | ✓ |
 | 8 | Ch3 §3.0 | Mask composition: (allowed − restricted) | ✓ |
 | 9 | Ch4 §2.1 | Low-coherence proposal triggers integrity veto | ✓ |
 | 10 | Ch4 §2.5 | Tier-4 requires external multisig; lower tiers do not | ✓ |

@@ -85,6 +85,7 @@ from ..committee.members import (
     ExampleSafetyMember,
 )
 from ..contracts.contract import ContractState, UlyssesContract
+from ..contracts.enforcement import enforce_timelock
 from ..contracts.merger import apply_restrictions
 from ..identity.keys import GenesisMultisig
 from ..identity.tiers import TIER_RULES, MutabilityTier
@@ -315,25 +316,31 @@ def pred_07_timelock() -> PredictionResult:
         created_at_cycle=0,
     )
     contract.enact()
-    blocked_before_ticks = (
-        contract.state == ContractState.ENACTED and contract.timelock_blocks == 10
-    )
+    locked_at_enactment = contract.state == ContractState.ENACTED and contract.unlock_at_cycle == 10
     for _ in range(5):
         contract.tick()
-    mid_timelock = contract.timelock_blocks
+    mid = enforce_timelock(contract, contract.current_cycle)
     still_enacted = contract.state == ContractState.ENACTED
     for _ in range(5):
         contract.tick()
-    expired = contract.timelock_blocks == 0
+    elapsed = enforce_timelock(contract, contract.current_cycle)
     activated = contract.state == ContractState.ACTIVE
-    passed = blocked_before_ticks and mid_timelock == 5 and still_enacted and expired and activated
+    duration_unchanged = contract.timelock_blocks == 10
+    passed = (
+        locked_at_enactment
+        and mid.compliant
+        and still_enacted
+        and not elapsed.compliant
+        and activated
+        and duration_unchanged
+    )
     return PredictionResult(
         id=7,
         chapter="Ch3",
         section="2.4",
-        description="Timelock decrements over time, preventing immediate revocation",
+        description="Timelock holds until its unlock cycle, blocking early revocation",
         passed=passed,
-        evidence=f"Before ticks: timelock=10 state=ENACTED; after 5 ticks: timelock={mid_timelock} state={'ENACTED' if still_enacted else 'ACTIVE'}; after 10 ticks: timelock={contract.timelock_blocks} state={contract.state.name}",
+        evidence=f"Enacted at cycle 0 with timelock_blocks=10 -> unlock_at_cycle={contract.unlock_at_cycle}; at cycle 5: {mid.reason} state={'ENACTED' if still_enacted else contract.state.name}; at cycle 10: {elapsed.reason} state={contract.state.name}; timelock_blocks still {contract.timelock_blocks}",
     )
 
 

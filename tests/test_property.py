@@ -1,5 +1,6 @@
 import hashlib
 
+import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
@@ -24,7 +25,7 @@ from src.nomos.identity.ontology import compute_hash
 from src.nomos.identity.tiers import TIER_RULES, MutabilityTier
 from src.nomos.models import PriorityTag, Proposal
 from src.nomos.speaker import SpeakerStateMachine
-from src.nomos.tee.batch import merkle_root
+from src.nomos.tee.batch import BatchVerifier, merkle_proof, merkle_root
 from src.nomos.tee.constant_time import cmov, constant_time_compare, oblivious_access
 from src.nomos.tee.watchdog import DeadlockBreaker, WatchdogState, WatchdogTimer
 
@@ -386,7 +387,7 @@ class TestPropertyEnforcementMonotonicity:
             assert stacked.reason == inertia.reason
 
 
-class TestPropertyTimelockDecrement:
+class TestPropertyTimelockSemantics:
     @given(start_blocks=st.integers(min_value=0, max_value=100), ticks=st.integers(min_value=0, max_value=100))
     def test_timelock_expires_exactly_at_target_block(self, start_blocks, ticks):
         assume(start_blocks > 0)
@@ -398,24 +399,25 @@ class TestPropertyTimelockDecrement:
         assert result.compliant == (ticks < start_blocks)
 
     @given(blocks=st.integers(min_value=1, max_value=50))
-    def test_timelock_remaining_decreases_with_ticks(self, blocks):
+    def test_tick_and_enforce_timelock_agree_at_every_cycle(self, blocks):
         contract = UlyssesContract(
             contract_id="time_test", restricted_indices={1},
-            timelock_blocks=blocks, state=ContractState.ACTIVE,
+            timelock_blocks=blocks,
         )
-        from src.nomos.contracts.contract import ContractRegistry
-        reg = ContractRegistry()
-        reg.add(contract)
-        for cycle in range(blocks + 2):
-            remaining = blocks - cycle
+        contract.enact()
+        for cycle in range(blocks + 3):
             result = enforce_timelock(contract, cycle)
-            if remaining > 0:
-                assert result.compliant
-                assert "remaining" in result.reason
+            locked = cycle < blocks
+            assert contract.current_cycle == cycle
+            assert contract.timelock_blocks == blocks
+            assert result.compliant is locked
+            if locked:
+                assert f"{blocks - cycle} blocks remaining" in result.reason
+                assert contract.state == ContractState.ENACTED
             else:
-                assert not result.compliant
                 assert "expired" in result.reason
-            reg.tick_cycle()
+                assert contract.state == ContractState.ACTIVE
+            contract.tick()
 
 
 class TestPropertyTierRules:
@@ -548,6 +550,20 @@ class TestPropertyDeadlockBreaker:
 EMPTY_MERKLE_ROOT = hashlib.sha256(b"empty").hexdigest()
 
 
+def _internal_nodes(items: list[bytes]) -> list[tuple[str, str]]:
+    """Every internal node of the mid-split tree, as (child_pair, node_digest)."""
+    if len(items) < 2:
+        return []
+    mid = len(items) // 2
+    left = merkle_root(items[:mid])
+    right = merkle_root(items[mid:])
+    return [
+        *_internal_nodes(items[:mid]),
+        *_internal_nodes(items[mid:]),
+        (left + right, merkle_root(items)),
+    ]
+
+
 class TestPropertyMerkleConsistency:
     @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=0, max_size=8))
     def test_deterministic(self, items):
@@ -566,8 +582,34 @@ class TestPropertyMerkleConsistency:
 
     @given(item=st.binary(min_size=1, max_size=50))
     def test_single_item_root(self, item):
-        expected = hashlib.sha256(item).hexdigest()
+        expected = hashlib.sha256(b"\x00" + item).hexdigest()
         assert merkle_root([item]) == expected
+
+    @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=2, max_size=8))
+    def test_no_internal_node_is_reachable_as_a_leaf(self, items):
+        nodes = _internal_nodes(items)
+        assert nodes
+        for children, node in nodes:
+            assert merkle_root([children.encode()]) != node
+
+
+class TestPropertyMerkleProof:
+    @given(indices=st.lists(st.integers(min_value=0, max_value=99), min_size=1, max_size=9))
+    def test_generated_proof_verifies_for_every_leaf(self, indices):
+        verifier = BatchVerifier()
+        items = [str(i).encode() for i in indices]
+        root = merkle_root(items)
+        for position, action_index in enumerate(indices):
+            proof = merkle_proof(items, position)
+            assert verifier.verify_proof(action_index, proof, root)
+
+    @given(
+        items=st.lists(st.binary(min_size=1, max_size=8), min_size=1, max_size=9),
+        offset=st.integers(min_value=0, max_value=20),
+    )
+    def test_out_of_range_index_raises(self, items, offset):
+        with pytest.raises(IndexError):
+            merkle_proof(items, len(items) + offset)
 
 
 class TestPropertyConstantTime:
