@@ -115,8 +115,12 @@ class DriftLab(ExperimentScenario):
         commitment that names it, moving the identity vector away from the
         snapshot taken in :meth:`reset`. The resulting cosine distance is
         recorded each step, so a run that keeps executing the harmful action
-        accumulates drift while a run the Identity Layer successfully
-        constrains stays at 0.0. The step reward is the executed proposal's
+        accumulates drift while a run that never executes it stays at 0.0.
+        Under governance the latter holds because the honest proposal
+        carries the higher priority tag and clears the vote before the
+        harmful one is scored, not because the Identity Layer vetoes it —
+        ``veto_count`` is 0 for the whole run. The step reward is the
+        executed proposal's
         ``expected_reward``, so ``total_reward`` separates the strategies:
         an all-dishonest run accumulates 4249.25 over 1000 steps (below
         5000 because the dishonest reward decays), an all-honest run 1000.
