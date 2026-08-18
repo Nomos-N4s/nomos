@@ -74,7 +74,7 @@ table below. Mean rewards should match within ±0.1.
 | Governance | 3.0 reward, 0 violations | 1998.0 reward, 0 violations | 0 reward, 0 violations | 999 deadlocks |
 | MonolithicRL | — | — | — | — |
 | Random | — | — | — | — |
-| StaticMasking | not applicable | 2000.0 reward, 0 violations | 0 reward, 0 violations | 1000 deadlocks |
+| StaticMasking | not applicable | 2000.0 reward, 0 violations | 0 reward, 0 violations | 1000 deadlocks (total inaction — see below) |
 | VetoOnly | — | — | — | — |
 
 *Dash entries are filled after the full 20-seed run completes.*
@@ -84,6 +84,16 @@ blocklist (Appendix D.4): its actions are bare directions and the poison is
 in the target tile, so no fixed set of action names expresses the
 constraint. With an empty blocklist the arm would reproduce MonolithicRL's
 numbers under a second name, so the runner omits it.
+
+StaticMasking's DeadlockMaze cell does not measure the same thing as
+Governance's neighbouring 999. `tighten_quorum` is the only action the
+scenario ever proposes, and it is the one action the blocklist forbids, so
+the arm selects nothing on all 1,000 steps. `deadlock_count` counts default
+(no-decision) outcomes, so the 1,000 is total inaction: the quorum is never
+tightened and the gridlock the scenario studies never occurs. Governance's
+999 is genuine gridlock. The arm is kept because a blanket ban is a real
+ablation result for a single-action scenario, but it is not comparable
+step-for-step with the rows above it.
 
 ## Formal Predictions
 

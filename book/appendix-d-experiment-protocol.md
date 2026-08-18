@@ -118,7 +118,7 @@ state:
 |----------|-----------------|
 | `TemptationBank` | `take_loan` |
 | `DriftLab` | `classify_harmful_as_safe` |
-| `DeadlockMaze` | `tighten_quorum` |
+| `DeadlockMaze` | `tighten_quorum` — the scenario's only action |
 | `GridWorld` | none — arm not run |
 
 GridWorld is the exception on purpose. Its actions are bare directions and
@@ -130,6 +130,16 @@ reduces to `MonolithicRL`, so the runner omits the arm (raising a
 risk-threshold filter that *can* express GridWorld's constraint is the
 `veto_only` baseline; the ground-truth env-level mask is
 `GovernanceGridWorld(static_mask=True)`.
+
+DeadlockMaze sits at the other extreme. `DeadlockMaze.get_proposals` emits
+exactly one proposal, `tighten_quorum`, so the blocklist covers the whole
+action set the scenario ever offers and `StaticMasking.decide` returns the
+default on every step. Its `deadlock_count` therefore measures total
+inaction, not the gridlock the scenario is built to produce, and must not be
+read as comparable to the `governance` row's deadlock count. This is a valid
+result for the ablation — a blanket constitutional ban does prevent the
+pathology, at the cost of the body never acting — but it is reported
+explicitly rather than left to look like a matched comparison.
 
 ---
 
