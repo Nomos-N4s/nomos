@@ -76,6 +76,17 @@ class TestRunScenario:
         report = _run_scenario(DriftLab, {}, "governance", steps=5, seed=0)
         assert report.total_steps == 5
 
+    def test_drift_lab_published_metrics_separate_governance_from_adversary(self):
+        governed = _run_scenario(DriftLab, {}, "governance", steps=50, seed=0)
+        adversary = _run_scenario(
+            DriftLab, {}, "monolithic_rl", steps=50, seed=0, baseline=MonolithicRL()
+        )
+        assert governed.constraint_violations == 0
+        assert governed.final_identity_drift == 0.0
+        assert adversary.constraint_violations == 50
+        assert adversary.final_identity_drift > 0.0
+        assert adversary.total_reward > governed.total_reward > 0.0
+
     def test_deadlock_maze(self):
         report = _run_scenario(DeadlockMaze, {}, "governance", steps=5, seed=0)
         assert report.total_steps == 5
