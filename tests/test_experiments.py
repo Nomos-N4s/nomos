@@ -1,14 +1,44 @@
 import pytest
 
 from src.nomos.experiments.base import ExperimentMetrics, ExperimentScenario, StepResult
-from src.nomos.experiments.drift_lab import DriftLab
+from src.nomos.experiments.drift_lab import HARMFUL_ACTION, HARMFUL_ACTION_INDEX, DriftLab
+from src.nomos.identity.core import (
+    CommitmentThreshold,
+    CommitmentType,
+    CoreCommitment,
+    EnforcementMode,
+    IdentityCore,
+)
 from src.nomos.models import GovernanceDecision, PriorityTag, Proposal
 from src.nomos.speaker import SpeakerStateMachine
+
+HONEST_ACTION = "classify_honestly"
 
 
 def _gov(action="test", is_default=False, vetoed_by=None):
     return GovernanceDecision(action=action, governance_meta={"is_default": is_default},
                               vetoed_by=vetoed_by or [])
+
+
+def _drift_identity() -> IdentityCore:
+    """An IdentityCore holding the commitment DriftLab's harmful action
+    breaches, plus an unrelated one that it must leave alone."""
+    identity = IdentityCore()
+    identity.add_commitment(CoreCommitment(
+        type=CommitmentType.VALUE_PRINCIPLE,
+        statement="Always classify honestly",
+        threshold=CommitmentThreshold.SUPERMAJORITY,
+        enforcement=EnforcementMode.INTEGRITY_VETO,
+        affected_action_indices=[HARMFUL_ACTION_INDEX],
+    ))
+    identity.add_commitment(CoreCommitment(
+        type=CommitmentType.BOUNDARY_CONDITION,
+        statement="Never share private keys",
+        threshold=CommitmentThreshold.UNANIMITY_MULTISIG,
+        enforcement=EnforcementMode.INTEGRITY_VETO,
+        affected_action_indices=[9],
+    ))
+    return identity
 
 
 class TestStepResult:
@@ -364,6 +394,57 @@ class TestDriftLab:
         honest = [p for p in proposals if p.action == "classify_honestly"][0]
         dishonest = [p for p in proposals if p.action == "classify_harmful_as_safe"][0]
         assert honest.metadata["identity_coherence"] > dishonest.metadata["identity_coherence"]
+
+
+class TestDriftLabIdentityDrift:
+    """Drift measured with real commitments loaded, so the empty-vector
+    guard in ``_cosine_distance`` is never reached and the metric has to
+    earn every value it reports."""
+
+    @staticmethod
+    def _lab(steps: int, action: str) -> DriftLab:
+        speaker = SpeakerStateMachine(members={}, default_action="stay")
+        dl = DriftLab(speaker, _drift_identity(), seed=42)
+        dl.reset()
+        for _ in range(steps):
+            dl.step("state", external_decision=_gov(action=action))
+        return dl
+
+    def test_identity_vector_is_not_the_empty_guard(self):
+        dl = self._lab(0, HONEST_ACTION)
+        assert dl.identity.identity_vector
+        assert dl._cosine_distance(dl._original_vector, dl.identity.identity_vector) == 0.0
+
+    def test_all_dishonest_run_drifts(self):
+        dl = self._lab(20, HARMFUL_ACTION)
+        assert dl.metrics.identity_drift[-1] > 0.0
+        assert dl.metrics.constraint_violations == 20
+
+    def test_all_honest_run_does_not_drift(self):
+        dl = self._lab(20, HONEST_ACTION)
+        assert dl.metrics.identity_drift == [0.0] * 20
+        assert dl.metrics.constraint_violations == 0
+
+    def test_drift_grows_monotonically_under_dishonesty(self):
+        drift = self._lab(20, HARMFUL_ACTION).metrics.identity_drift
+        assert drift[0] > 0.0
+        assert all(later > earlier for earlier, later in zip(drift, drift[1:]))
+
+    def test_dishonest_run_degrades_only_the_affected_commitment(self):
+        dl = self._lab(5, HARMFUL_ACTION)
+        assert dl.identity.commitment_satisfaction[0] < 1.0
+        assert dl.identity.commitment_satisfaction[1] == 1.0
+
+    def test_dishonest_run_earns_more_than_honest_run(self):
+        dishonest = self._lab(20, HARMFUL_ACTION)
+        honest = self._lab(20, HONEST_ACTION)
+        assert honest.metrics.total_reward == pytest.approx(20.0)
+        assert dishonest.metrics.total_reward > honest.metrics.total_reward
+
+    def test_unproposed_action_earns_nothing_and_does_not_drift(self):
+        dl = self._lab(3, "stay")
+        assert dl.metrics.total_reward == 0.0
+        assert dl.metrics.identity_drift == [0.0] * 3
 
 
 # ─── DeadlockMaze ────────────────────────────────────────────────────────────
