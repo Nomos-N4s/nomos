@@ -361,6 +361,17 @@ theorem falsification_params_unchanged_at_immutable_tier
     applyGovernance p c Tier.immutable = p :=
   governance_step_unchanged_at_immutable_tier relaxFalsificationBar p c
 
+/-- The same conclusion at the tier these parameters are actually declared
+    at. `falsificationParamsTier` reduces to `Tier.immutable`, so this is the
+    theorem above; it is stated separately to make the declaration
+    load-bearing. Refile the parameters under a weaker tier and this stops
+    type-checking, rather than leaving the invariance stranded at a tier
+    nothing in this module is filed under. -/
+theorem falsification_params_unchanged_at_declared_tier
+    (p : FalsificationParams) (c : Change) :
+    applyGovernance p c falsificationParamsTier = p :=
+  falsification_params_unchanged_at_immutable_tier p c
+
 /-- What the block-level invariance means for behaviour: the falsification
     test and the budget update induced by the parameters answer the same way
     after a governance step at the immutable tier as before it. -/
