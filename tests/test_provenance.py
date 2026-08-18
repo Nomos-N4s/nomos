@@ -5,6 +5,8 @@ import os
 import subprocess
 import tempfile
 
+import pytest
+
 from src.nomos.experiments.provenance import (
     commit_is_ancestor,
     content_digest,
@@ -15,6 +17,49 @@ from src.nomos.experiments.provenance import (
 from src.nomos.experiments.rl_validate import validate_sweep
 
 PREREG = "book/appendix-e-preregistration.md"
+
+
+@pytest.fixture
+def orphan_repo():
+    """A throwaway repo containing a commit unreachable from HEAD.
+
+    Built rather than borrowed from this repository's own history: CI checks out
+    shallow, so real commits may be absent and ancestry becomes *unknown* rather
+    than false. The distinction is the point of the test, so it needs a history
+    it controls.
+    """
+    with tempfile.TemporaryDirectory() as d:
+        repo = os.path.join(d, "repo")
+        os.makedirs(repo)
+
+        def git(*args):
+            return subprocess.run(
+                ["git", *args], cwd=repo, capture_output=True, text=True, check=True
+            )
+
+        git("init", "-q", "-b", "main")
+        git("config", "user.email", "t@example.com")
+        git("config", "user.name", "t")
+        with open(os.path.join(repo, "prereg.md"), "wb") as fh:
+            fh.write(b"H4: bypass <= 0.05\n")
+        git("add", "prereg.md")
+        git("commit", "-q", "-m", "certify")
+        head = git("rev-parse", "HEAD").stdout.strip()
+
+        git("checkout", "-q", "-b", "side")
+        with open(os.path.join(repo, "other.md"), "wb") as fh:
+            fh.write(b"unmerged\n")
+        git("add", "other.md")
+        git("commit", "-q", "-m", "orphan")
+        orphan = git("rev-parse", "HEAD").stdout.strip()
+        git("checkout", "-q", "main")
+
+        cwd = os.getcwd()
+        os.chdir(repo)
+        try:
+            yield {"head": head, "orphan": orphan, "repo": repo}
+        finally:
+            os.chdir(cwd)
 
 
 class TestNewlineNormalisation:
@@ -71,9 +116,9 @@ class TestCommitReachability:
         ).stdout.strip()
         assert commit_is_ancestor(head) is True
 
-    def test_orphaned_commit_is_detected(self):
-        # 6fde9c9 was rebased away; it is not reachable from main.
-        assert commit_is_ancestor("6fde9c978e5699177f28c94a22320165ca4a9d4b") is False
+    def test_orphaned_commit_is_detected(self, orphan_repo):
+        assert commit_is_ancestor(orphan_repo["orphan"]) is False
+        assert commit_is_ancestor(orphan_repo["head"]) is True
 
     def test_unknown_revision_is_unknown_not_false(self):
         assert commit_is_ancestor("0" * 40) is None
@@ -89,9 +134,10 @@ class TestVerifyPreregistration:
         problems = verify_preregistration(block)
         assert any("does not match" in p for p in problems)
 
-    def test_unreachable_commit_is_caught(self):
-        block = preregistration_provenance()
-        block["commit"] = "6fde9c978e5699177f28c94a22320165ca4a9d4b"
+    def test_unreachable_commit_is_caught(self, orphan_repo):
+        block = preregistration_provenance("prereg.md")
+        assert block["sha256"] is not None
+        block["commit"] = orphan_repo["orphan"]
         problems = verify_preregistration(block)
         assert any("not an ancestor" in p for p in problems)
 
@@ -122,4 +168,6 @@ class TestPublishedFrontierIsVerifiable:
         # certified content digest stays checkable against the tag.
         assert superseded["sha256_as_recorded"].startswith("c6ea78a0")
         assert superseded["sha256_certified_content"].startswith("f0ce46a1")
-        assert commit_is_ancestor(pre["commit"]) is True
+        # None on a shallow clone (the object is absent) - but never provably
+        # unreachable, which is the defect this replaced.
+        assert commit_is_ancestor(pre["commit"]) is not False
