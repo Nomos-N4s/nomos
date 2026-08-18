@@ -101,10 +101,12 @@ theorem head_binding_self_consistent (a b : ActionBinding)
 def bindingDigest (b : ActionBinding) : Nat :=
   MIX * MIX * hashImpl b.implementation + MIX * b.bindingHash + b.prevHash
 
-/-- The chain root: deterministic fold of the runtime hashes of all bound
-    implementations, seeded by the genesis commitment. -/
+/-- The chain root: a positional (Horner) fold of the per-binding digests,
+    seeded by the genesis commitment. The step `acc ↦ MIX * acc + digest` is
+    not commutative, so — unlike the plain sum this replaced — the root
+    distinguishes orderings and sees every field of every record. -/
 def chainRoot (bs : List ActionBinding) : Nat :=
-  bs.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH
+  bs.foldl (fun acc b => MIX * acc + bindingDigest hashImpl b) GENESIS_HASH
 
 /-- The implementation reaches the digest: two bindings that commit the same
     hash and the same link, but whose implementations hash apart, have
@@ -148,49 +150,59 @@ theorem bindingDigest_ne_of_valid_commitments_and_hash_ne (b b' : ActionBinding)
   simp only [bindingDigest, MIX, hb, hb', hLink]
   omega
 
-/-- Auxiliary: the fold accumulator is a function of the accumulator —
-    equal fold results over the same suffix force equal accumulators
-    (the combine step is injective on its first argument). -/
-theorem foldl_combine_acc_determines_result (suffix : List ActionBinding) :
-    ∀ (a₁ a₂ : Nat),
-      suffix.foldl (fun acc b => hashImpl b.implementation + acc) a₁ =
-      suffix.foldl (fun acc b => hashImpl b.implementation + acc) a₂ → a₁ = a₂ := by
+/-- Auxiliary: the fold accumulator is determined by the fold result — equal
+    roots over the same suffix force equal accumulators, because the combine
+    step `acc ↦ MIX * acc + d` is injective in `acc` (`MIX ≠ 0`). -/
+theorem foldl_mix_acc_determines_result (suffix : List ActionBinding) :
+    ∀ a₁ a₂ : Nat,
+      suffix.foldl (fun acc b => MIX * acc + bindingDigest hashImpl b) a₁ =
+      suffix.foldl (fun acc b => MIX * acc + bindingDigest hashImpl b) a₂ → a₁ = a₂ := by
   induction suffix with
   | nil =>
       intro a₁ a₂ h
       simpa using h
   | cons b rest ih =>
       intro a₁ a₂ h
-      have h' : hashImpl b.implementation + a₁ = hashImpl b.implementation + a₂ :=
-        ih (hashImpl b.implementation + a₁) (hashImpl b.implementation + a₂)
-          (by simpa [List.foldl_cons] using h)
-      omega
+      have h' : MIX * a₁ + bindingDigest hashImpl b = MIX * a₂ + bindingDigest hashImpl b :=
+        ih _ _ (by simpa [List.foldl_cons] using h)
+      have hMul : MIX * a₁ = MIX * a₂ := Nat.add_right_cancel h'
+      exact Nat.eq_of_mul_eq_mul_left MIX_pos hMul
 
-/-- Claim 2 (tamper evidence): modifying any past binding — the candidate
-    alone, prefix and suffix untouched — changes the chain root, provided
-    the hash of the modified implementation differs (collision-resistance
-    assumption, explicit hypothesis `hImpl`). -/
-theorem tamper_changes_chain_root (pre suf : List ActionBinding)
+/-- Claim 2 (tamper evidence), general form: replacing one binding — prefix
+    and suffix untouched — changes the chain root, **provided the two
+    bindings have different digests**. That hypothesis is the
+    collision-resistance assumption of the real system. It cannot be
+    discharged inside this file, because `hashImpl` is uninterpreted, which
+    is why it is named in the theorem's name rather than left implied. -/
+theorem tamper_changes_chain_root_of_distinct_digests (pre suf : List ActionBinding)
     (orig new : ActionBinding)
-    (hImpl : hashImpl orig.implementation ≠ hashImpl new.implementation) :
+    (hDigest : bindingDigest hashImpl orig ≠ bindingDigest hashImpl new) :
     chainRoot hashImpl (pre ++ orig :: suf) ≠ chainRoot hashImpl (pre ++ new :: suf) := by
   intro hEq
   unfold chainRoot at hEq
-  simp [List.foldl_append] at hEq
-  have hAcc :
-      hashImpl orig.implementation + pre.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH
-        = hashImpl new.implementation + pre.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH := by
-    exact foldl_combine_acc_determines_result hashImpl suf _ _ (by simpa [List.foldl_cons] using hEq)
-  have hSame : hashImpl orig.implementation = hashImpl new.implementation := by
-    omega
-  exact hImpl hSame
+  simp only [List.foldl_append, List.foldl_cons] at hEq
+  have hAcc := foldl_mix_acc_determines_result hashImpl suf _ _ hEq
+  exact hDigest (Nat.add_left_cancel hAcc)
 
-/-- Claim 2 at the level of a single modification: if a binding is swapped
-    for one with a different implementation hash, the root changes. -/
-theorem tamper_evidence_single_binding (b₁ b₂ : ActionBinding)
-    (hImpl : hashImpl b₁.implementation ≠ hashImpl b₂.implementation) :
-    chainRoot hashImpl [b₁] ≠ chainRoot hashImpl [b₂] := by
-  simpa [List.foldl] using tamper_changes_chain_root hashImpl [] [] b₁ b₂ hImpl
+/-- Claim 2 in the §2.1 shape: an implementation swap that leaves the
+    record's committed hash and link in place, and whose two
+    implementations hash apart, changes the root. -/
+theorem tamper_changes_chain_root_of_hash_change (pre suf : List ActionBinding)
+    (orig new : ActionBinding)
+    (hCommit : orig.bindingHash = new.bindingHash)
+    (hLink : orig.prevHash = new.prevHash)
+    (hImpl : hashImpl orig.implementation ≠ hashImpl new.implementation) :
+    chainRoot hashImpl (pre ++ orig :: suf) ≠ chainRoot hashImpl (pre ++ new :: suf) :=
+  tamper_changes_chain_root_of_distinct_digests hashImpl pre suf orig new
+    (bindingDigest_ne_of_impl_hash_ne hashImpl orig new hCommit hLink hImpl)
+
+/-- Claim 2 at the level of a single modification: swapping the one binding
+    of a one-element chain for a binding with a different digest changes the
+    root. -/
+theorem tamper_evidence_single_binding_of_distinct_digests (b₁ b₂ : ActionBinding)
+    (hDigest : bindingDigest hashImpl b₁ ≠ bindingDigest hashImpl b₂) :
+    chainRoot hashImpl [b₁] ≠ chainRoot hashImpl [b₂] :=
+  tamper_changes_chain_root_of_distinct_digests hashImpl [] [] b₁ b₂ hDigest
 
 /-- Claim 3 (determinism): the chain root is a function of the binding
     sequence — equal sequences give equal roots. -/
@@ -262,7 +274,8 @@ example
         [{ implementation := "tampered_impl", bindingHash := 13, prevHash := 0 }]
       ≠ chainRoot hashImpl
         [{ implementation := "benign_impl", bindingHash := 11, prevHash := 0 }] := by
-  refine tamper_evidence_single_binding hashImpl _ _ ?_
+  refine tamper_evidence_single_binding_of_distinct_digests hashImpl _ _
+    (bindingDigest_ne_of_valid_commitments_and_hash_ne hashImpl _ _ hTampered hBenign rfl ?_)
   unfold BindingValid at hTampered hBenign
   dsimp only at hTampered hBenign ⊢
   omega
