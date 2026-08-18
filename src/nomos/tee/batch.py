@@ -1,5 +1,5 @@
 """
-Merkle-tree batch verification for TEE throughput optimisation (Appendix A §8).
+Merkle-tree batch verification for TEE throughput optimisation (Appendix A §11).
 
 The optimisation layer submits a batch of action indices as a single Merkle
 root hash. The TEE validates the macro-trajectory (aggregate risk, diversity)

@@ -1,7 +1,7 @@
 """
 Tamper-evident, append-only audit log (hash-chained JSONL) — #164.
 
-The operational face of the TEE Merkle batch verification (Appendix A §8):
+The operational face of the TEE Merkle batch verification (Appendix A §11):
 every governance event lands in an append-only JSONL store whose records are
 linked by content hashes, so any mutation of history is detected at the exact
 broken record.
@@ -20,7 +20,7 @@ Design goals (matching ``#164``):
   hash or the next record's ``prev_hash`` link.
 - **Merkle anchoring (CWE-345):** :meth:`AuditLog.batch_root` folds every
   record hash into a single Merkle root via the TEE module's ``merkle_root``
-  (Appendix A §8). That root is additionally persisted in a **sidecar anchor
+  (Appendix A §11). That root is additionally persisted in a **sidecar anchor
   file** (``<path>.root``) *outside* the JSONL store, updated atomically on
   every append. ``verify()`` compares the on-disk chain's root against the
   anchor — a writer who rewrites every record and rehashes the whole chain
@@ -511,7 +511,7 @@ class AuditLog:
         return AuditVerification(True, None, f"chain intact: {len(lines)} records verified")
 
     def batch_root(self) -> str:
-        """Merkle root over every record hash (TEE batch verification, Appendix A §8).
+        """Merkle root over every record hash (TEE batch verification, Appendix A §11).
 
         Anchors the entire log in one value; deterministic for a given chain.
         """
