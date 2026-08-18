@@ -1,5 +1,6 @@
 import hashlib
 
+import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
@@ -24,7 +25,7 @@ from src.nomos.identity.ontology import compute_hash
 from src.nomos.identity.tiers import TIER_RULES, MutabilityTier
 from src.nomos.models import PriorityTag, Proposal
 from src.nomos.speaker import SpeakerStateMachine
-from src.nomos.tee.batch import merkle_root
+from src.nomos.tee.batch import BatchVerifier, merkle_proof, merkle_root
 from src.nomos.tee.constant_time import cmov, constant_time_compare, oblivious_access
 from src.nomos.tee.watchdog import DeadlockBreaker, WatchdogState, WatchdogTimer
 
@@ -549,6 +550,20 @@ class TestPropertyDeadlockBreaker:
 EMPTY_MERKLE_ROOT = hashlib.sha256(b"empty").hexdigest()
 
 
+def _internal_nodes(items: list[bytes]) -> list[tuple[str, str]]:
+    """Every internal node of the mid-split tree, as (child_pair, node_digest)."""
+    if len(items) < 2:
+        return []
+    mid = len(items) // 2
+    left = merkle_root(items[:mid])
+    right = merkle_root(items[mid:])
+    return [
+        *_internal_nodes(items[:mid]),
+        *_internal_nodes(items[mid:]),
+        (left + right, merkle_root(items)),
+    ]
+
+
 class TestPropertyMerkleConsistency:
     @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=0, max_size=8))
     def test_deterministic(self, items):
@@ -567,8 +582,34 @@ class TestPropertyMerkleConsistency:
 
     @given(item=st.binary(min_size=1, max_size=50))
     def test_single_item_root(self, item):
-        expected = hashlib.sha256(item).hexdigest()
+        expected = hashlib.sha256(b"\x00" + item).hexdigest()
         assert merkle_root([item]) == expected
+
+    @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=2, max_size=8))
+    def test_no_internal_node_is_reachable_as_a_leaf(self, items):
+        nodes = _internal_nodes(items)
+        assert nodes
+        for children, node in nodes:
+            assert merkle_root([children.encode()]) != node
+
+
+class TestPropertyMerkleProof:
+    @given(indices=st.lists(st.integers(min_value=0, max_value=99), min_size=1, max_size=9))
+    def test_generated_proof_verifies_for_every_leaf(self, indices):
+        verifier = BatchVerifier()
+        items = [str(i).encode() for i in indices]
+        root = merkle_root(items)
+        for position, action_index in enumerate(indices):
+            proof = merkle_proof(items, position)
+            assert verifier.verify_proof(action_index, proof, root)
+
+    @given(
+        items=st.lists(st.binary(min_size=1, max_size=8), min_size=1, max_size=9),
+        offset=st.integers(min_value=0, max_value=20),
+    )
+    def test_out_of_range_index_raises(self, items, offset):
+        with pytest.raises(IndexError):
+            merkle_proof(items, len(items) + offset)
 
 
 class TestPropertyConstantTime:
