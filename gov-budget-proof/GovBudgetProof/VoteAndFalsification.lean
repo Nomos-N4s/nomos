@@ -387,17 +387,19 @@ example : applyGovernance defaultFalsificationParams
     { quorum := 3, cooldownDays := 30 } Tier.immutable = defaultFalsificationParams := by
   decide
 
-/-
-  Falsification parameters are immutable-tier: no governance procedure
-  can change TAG_COMPLIANCE_THRESHOLD or FALSIFICATION_BUDGET_CUTOFF.
--/
+/-- A constant-value check and nothing more: it records which numerals the two
+    falsification parameters are configured with. Both sides of each conjunct
+    are the same literal after unfolding, so this is closed by `rfl` and would
+    hold just as well for a parameter the running system rewrote on every tick.
+    It carries no immutability claim; that claim is
+    `falsification_params_unchanged_at_immutable_tier` above, which quantifies
+    over governance changes.
 
-def falsificationParamsImmutable : Prop :=
-  TAG_COMPLIANCE_THRESHOLD = 4 ∧ FALSIFICATION_BUDGET_CUTOFF = 3
-
-theorem falsification_params_are_immutable : falsificationParamsImmutable := by
-  unfold falsificationParamsImmutable
-  constructor <;> rfl
+    It replaces `falsification_params_are_immutable`, whose name promised the
+    invariance this statement does not have. -/
+theorem falsification_params_have_configured_values :
+    TAG_COMPLIANCE_THRESHOLD = 4 ∧ FALSIFICATION_BUDGET_CUTOFF = 3 :=
+  ⟨rfl, rfl⟩
 
 /-
   Combined invariant: every governance cycle computes its vote outcome with
