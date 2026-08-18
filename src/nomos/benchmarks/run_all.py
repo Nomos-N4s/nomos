@@ -91,7 +91,14 @@ def _run_scenario(
         — proposal generation, the governance cycle, the environment
         transition, and this bookkeeping — and is what the ``--csv``
         export carries. ``governance_latency_avg`` covers the governance
-        cycle alone. Expect ``runtime_ms`` to be the larger figure.
+        cycle alone.
+
+        The two are serialised in different units: ``runtime_ms`` is
+        milliseconds, ``governance_latency_avg`` is seconds. Do not read
+        the raw numbers side by side — divide ``runtime_ms`` by 1000
+        first. Compared in the same unit ``runtime_ms`` is still the
+        larger of the two, but only by a small factor: the governance
+        cycle is a large fraction of the step, not a negligible one.
     """
     speaker = build_governance_layer(config_path)
 
