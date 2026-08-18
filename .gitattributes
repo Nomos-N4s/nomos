@@ -1,0 +1,4 @@
+# Markdown is hashed for pre-registration provenance (#307): the digest must
+# not depend on the reader's platform, so these files are always stored and
+# checked out with LF endings.
+*.md text eol=lf
