@@ -56,7 +56,11 @@ class ExperimentMetrics:
         veto_count: Total number of vetoes applied.
         falsification_count: Number of formal-predicate falsifications.
         identity_drift: Per-step cosine distance from the identity vector.
-        governance_latencies: Per-step governance cycle duration (seconds).
+        governance_latencies: Time spent inside the governance cycles a
+            step ran (seconds), excluding proposal generation, reward,
+            and environment transition. One entry per step that ran at
+            least one cycle, so a run whose decisions all come from an
+            external baseline records none.
     """
 
     total_steps: int = 0
@@ -203,6 +207,12 @@ class ExperimentScenario(ABC):
         Centralized bookkeeping: appends to history, updates metrics.
         Delegates to ``_run_step()`` for scenario-specific logic.
 
+        Governance latency is read off the Speaker's own counters rather
+        than timed around ``_run_step()``, so the figure covers the
+        governance cycles alone and not the surrounding scenario work.
+        A step that runs no cycle (``external_decision`` supplied by a
+        baseline) records no latency.
+
         Args:
             state: The current world state.
             decision_class: Classification for the governance cycle
@@ -213,11 +223,17 @@ class ExperimentScenario(ABC):
         Returns:
             A :class:`StepResult` with the decision, next state, and reward.
         """
+        cycles_before = self.speaker.cycle_count
+        seconds_before = self.speaker.cycle_seconds_total
         result = self._run_step(
             state,
             decision_class=decision_class,
             external_decision=external_decision,
         )
+        if self.speaker.cycle_count > cycles_before:
+            self.metrics.governance_latencies.append(
+                self.speaker.cycle_seconds_total - seconds_before
+            )
 
         self._history.append(result)
         self.metrics.total_steps += 1
