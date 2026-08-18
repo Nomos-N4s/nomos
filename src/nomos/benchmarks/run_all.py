@@ -20,6 +20,7 @@ from ..committee.members import (
     ExampleRewardMember,
     ExampleSafetyMember,
 )
+from ..experiments.base import ExperimentScenario
 from ..experiments.deadlock_maze import DeadlockMaze
 from ..experiments.drift_lab import DriftLab
 from ..experiments.grid_world import GridWorld
@@ -146,15 +147,42 @@ def _run_scenario(
     return report
 
 
-def _get_baseline(strategy: str, seed: int):
-    """Map a strategy name to a baseline instance."""
-    mapping = {
-        "monolithic_rl": MonolithicRL(),
-        "random": RandomBaseline(seed=seed),
-        "static_masking": StaticMasking(),
-        "veto_only": VetoOnly(),
-    }
-    return mapping.get(strategy)
+def _get_baseline(strategy: str, seed: int, scenario_class: type[ExperimentScenario]):
+    """Map a strategy name to a baseline instance for one scenario.
+
+    Args:
+        strategy: Strategy name (e.g. ``"monolithic_rl"``).
+        seed: Random seed, for the baselines that draw randomness.
+        scenario_class: The scenario the baseline will run against.
+            ``static_masking`` takes its blocklist from the scenario's
+            :attr:`~..experiments.base.ExperimentScenario.STATIC_BLOCKLIST`,
+            so it cannot be built without knowing the scenario.
+
+    Returns:
+        A :class:`~.baselines.BaselineGovernance`, or ``None`` when the
+        strategy has no baseline (``"governance"`` or an unknown name).
+
+    Raises:
+        ValueError: If ``static_masking`` is requested for a scenario that
+            declares no static blocklist, which would make the arm a
+            duplicate of ``monolithic_rl``.
+    """
+    if strategy == "monolithic_rl":
+        return MonolithicRL()
+    if strategy == "random":
+        return RandomBaseline(seed=seed)
+    if strategy == "static_masking":
+        blocked = set(scenario_class.STATIC_BLOCKLIST)
+        if not blocked:
+            msg = (
+                f"{scenario_class.__name__} declares no STATIC_BLOCKLIST, so a "
+                "static_masking arm would duplicate monolithic_rl"
+            )
+            raise ValueError(msg)
+        return StaticMasking(blocked_actions=blocked)
+    if strategy == "veto_only":
+        return VetoOnly()
+    return None
 
 
 def _run_experiment_set(
@@ -184,7 +212,11 @@ def _run_experiment_set(
 
     for seed in range(seeds):
         for strategy in strategies:
-            baseline = _get_baseline(strategy, seed) if strategy != "governance" else None
+            baseline = (
+                _get_baseline(strategy, seed, scenario_class)
+                if strategy != "governance"
+                else None
+            )
             report = _run_scenario(
                 scenario_class=scenario_class,
                 scenario_kwargs=scenario_kwargs,
