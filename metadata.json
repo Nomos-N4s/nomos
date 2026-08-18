@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01M09YRC8P4FWFR8MRP17D3Z94",
+  "strategy": "manual-commit",
+  "branch": "issue-288-genesis-multisig-quorum",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/nomos/identity/keys.py",
+    "src/nomos/prove/predictions.py",
+    "tests/test_extension.py",
+    "tests/test_keys.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 155,
+    "cache_creation_tokens": 347901,
+    "cache_read_tokens": 14038712,
+    "output_tokens": 77882,
+    "api_call_count": 84
+  }
+}
