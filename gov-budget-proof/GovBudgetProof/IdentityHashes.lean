@@ -184,7 +184,7 @@ example : verifyRuntime "evil_impl"
 /-- Tampering with a bound action's past implementation changes the root of
     its chain ('benign_impl' → 'tampered_impl'). -/
 example : chainRoot
-      [{ implementation := "tampered_impl", bindingHash := 12, prevHash := 0 }]
+      [{ implementation := "tampered_impl", bindingHash := 13, prevHash := 0 }]
     ≠ chainRoot
       [{ implementation := "benign_impl", bindingHash := 11, prevHash := 0 }] := by
   apply tamper_evidence_single_binding
