@@ -549,6 +549,20 @@ class TestPropertyDeadlockBreaker:
 EMPTY_MERKLE_ROOT = hashlib.sha256(b"empty").hexdigest()
 
 
+def _internal_nodes(items: list[bytes]) -> list[tuple[str, str]]:
+    """Every internal node of the mid-split tree, as (child_pair, node_digest)."""
+    if len(items) < 2:
+        return []
+    mid = len(items) // 2
+    left = merkle_root(items[:mid])
+    right = merkle_root(items[mid:])
+    return [
+        *_internal_nodes(items[:mid]),
+        *_internal_nodes(items[mid:]),
+        (left + right, merkle_root(items)),
+    ]
+
+
 class TestPropertyMerkleConsistency:
     @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=0, max_size=8))
     def test_deterministic(self, items):
@@ -572,9 +586,10 @@ class TestPropertyMerkleConsistency:
 
     @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=2, max_size=8))
     def test_no_internal_node_is_reachable_as_a_leaf(self, items):
-        mid = len(items) // 2
-        children = merkle_root(items[:mid]) + merkle_root(items[mid:])
-        assert merkle_root([children.encode()]) != merkle_root(items)
+        nodes = _internal_nodes(items)
+        assert nodes
+        for children, node in nodes:
+            assert merkle_root([children.encode()]) != node
 
 
 class TestPropertyMerkleProof:

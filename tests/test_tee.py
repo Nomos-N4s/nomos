@@ -94,11 +94,19 @@ class TestMerkleRoot:
         expected = hashlib.sha256(b"\x01" + (left + right).encode()).hexdigest()
         assert result == expected
 
-    def test_internal_node_cannot_be_replayed_as_a_leaf(self):
-        left = merkle_root([b"a"])
-        right = merkle_root([b"b"])
-        node = merkle_root([b"a", b"b"])
-        assert merkle_root([(left + right).encode()]) != node
+    def test_no_internal_node_can_be_replayed_as_a_leaf(self):
+        """Every internal node of the four-leaf tree, not only the root's two
+        children, so a node whose children are themselves nodes is covered."""
+        items = [b"a", b"b", b"c", b"d"]
+        left = merkle_root(items[:2])
+        right = merkle_root(items[2:])
+        nodes = [
+            (merkle_root([b"a"]) + merkle_root([b"b"]), left),
+            (merkle_root([b"c"]) + merkle_root([b"d"]), right),
+            (left + right, merkle_root(items)),
+        ]
+        for children, node in nodes:
+            assert merkle_root([children.encode()]) != node
 
     def test_deterministic(self):
         items = [b"x", b"y", b"z"]
