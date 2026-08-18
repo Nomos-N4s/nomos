@@ -107,6 +107,9 @@ contracts, and an external audit only detects breaches after the fact."""
 COMPONENTS_PER_COMMITMENT = 3
 """Number of identity vector components each commitment contributes."""
 
+DEFAULT_VIOLATION_SEVERITY = 0.05
+"""Fraction of its remaining satisfaction a commitment loses per violation."""
+
 
 @dataclass(frozen=True)
 class CoreCommitment:
@@ -177,6 +180,46 @@ class IdentityCore:
         self._satisfaction.append(1.0)
         self._rebuild_vector()
 
+    def record_violation(
+        self, action_index: int, severity: float = DEFAULT_VIOLATION_SEVERITY
+    ) -> int:
+        """Degrade the commitments an executed action violated.
+
+        Each affected commitment loses ``severity`` of its remaining
+        satisfaction, so repeated violations decay it geometrically
+        towards zero without ever making the identity vector null. A
+        commitment is affected when ``action_index`` appears in its
+        ``affected_action_indices``, or when that list is empty (which
+        means the commitment applies to every action).
+
+        This is the only way the identity vector moves after setup, and
+        it is what makes identity drift observable.
+
+        Args:
+            action_index: Index of the executed action, in the caller's
+                own action space.
+            severity: Fraction of remaining satisfaction lost, in
+                :math:`[0, 1]`.
+
+        Returns:
+            The number of commitments whose satisfaction was degraded.
+
+        Raises:
+            ValueError: If ``severity`` is outside :math:`[0, 1]`.
+        """
+        if not 0.0 <= severity <= 1.0:
+            raise ValueError(f"severity must be in [0, 1], got {severity}")
+        degraded = 0
+        for i, commitment in enumerate(self._commitments):
+            indices = commitment.affected_action_indices
+            if indices and action_index not in indices:
+                continue
+            self._satisfaction[i] *= 1.0 - severity
+            degraded += 1
+        if degraded:
+            self._rebuild_vector()
+        return degraded
+
     def _rebuild_vector(self):
         """Derive the identity vector from all commitments.
 
@@ -217,7 +260,8 @@ class IdentityCore:
         """Per-commitment satisfaction scores (read-only copy).
 
         Index-aligned with :attr:`commitments`. Every score starts at
-        1.0.
+        1.0 and decays towards 0.0 as :meth:`record_violation` reports
+        actions that breach the commitment.
         """
         return list(self._satisfaction)
 
