@@ -235,6 +235,17 @@ class IdentityCore:
             self._rebuild_vector()
         return degraded
 
+    def restore_satisfaction(self) -> None:
+        """Return every commitment to full satisfaction, as at genesis.
+
+        The inverse of :meth:`record_violation`. Degradation is otherwise
+        permanent for the lifetime of the object, so a caller reusing one
+        :class:`IdentityCore` across runs must call this between them or
+        the second run inherits the first run's drift.
+        """
+        self._satisfaction = [1.0] * len(self._commitments)
+        self._rebuild_vector()
+
     def _rebuild_vector(self):
         """Derive the identity vector from all commitments.
 
