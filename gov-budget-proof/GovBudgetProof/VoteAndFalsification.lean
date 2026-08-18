@@ -75,6 +75,15 @@ theorem vote_threshold_consistent (v1 v2 : List Vote) (d : DecisionClass)
     (h : v1 = v2) : votePasses v1 d ↔ votePasses v2 d := by
   subst h; rfl
 
+/-- Determinism: the outcome is a function of the tallies alone. Two ballot
+    lists with the same weighted sum and the same total weight resolve the
+    same way in every decision class, so who cast which ballot, in what order
+    and in how many pieces, cannot change the result. -/
+theorem vote_resolution_determined_by_tallies (v1 v2 : List Vote) (d : DecisionClass)
+    (hw : weightedSum v1 = weightedSum v2) (ht : totalWeight v1 = totalWeight v2) :
+    votePasses v1 d ↔ votePasses v2 d := by
+  simp only [votePasses, hw, ht]
+
 /-- Identity passing (1*tw ≤ ws*1) implies totalWeight ≤ weightedSum. -/
 theorem identity_passes_implies_sum_ge (votes : List Vote)
     (h : votePasses votes DecisionClass.identity) :
