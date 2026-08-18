@@ -71,6 +71,36 @@ def merkle_root(items: list[bytes]) -> str:
     return _hash_node(merkle_root(items[:mid]), merkle_root(items[mid:]))
 
 
+def merkle_proof(items: list[bytes], index: int) -> list[tuple[str, bool]]:
+    """Generate the sibling path proving ``items[index]`` is in the tree.
+
+    Walks the same ``mid = len(items) // 2`` split that :func:`merkle_root`
+    uses, so the path reconstructs that exact tree. The tree is positional,
+    not sorted, so every sibling is recorded with the side it sits on.
+
+    Args:
+        items: The byte strings the tree was built from.
+        index: Position of the leaf to prove, in ``range(len(items))``.
+
+    Returns:
+        The sibling path from leaf to root, as ``(sibling_digest,
+        sibling_is_left)`` pairs. ``sibling_is_left`` is True when the
+        sibling is the left child, so the running digest is the right one.
+        A single-item tree has an empty path.
+
+    Raises:
+        IndexError: If ``index`` is outside ``range(len(items))``.
+    """
+    if not 0 <= index < len(items):
+        raise IndexError(f"leaf index {index} out of range for {len(items)} items")
+    if len(items) == 1:
+        return []
+    mid = len(items) // 2
+    if index < mid:
+        return merkle_proof(items[:mid], index) + [(merkle_root(items[mid:]), False)]
+    return merkle_proof(items[mid:], index - mid) + [(merkle_root(items[:mid]), True)]
+
+
 def compute_diversity(action_indices: list[int]) -> float:
     """Compute the diversity score of a list of action indices.
 
