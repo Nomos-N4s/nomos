@@ -183,15 +183,22 @@ def _discover_conditions() -> dict[str, tuple[str, str]]:
 
 def _load_condition_series(spec: tuple[str, str]) -> pd.DataFrame | None:
     """Normalize any condition into a df with 'step' and 'reward' columns.
-    Aggregate CSVs already have step/reward; per-seed CSVs have total_reward
-    and no step column, so we index by row position."""
+    Aggregate CSVs use 'step' with 'reward' or 'total_reward'; per-seed CSVs
+    have 'total_reward' and no step column, so we index by row position."""
     kind, ref = spec
 
     if kind == "agg":
         df = _load_metrics(ref)
-        if df is None or "step" not in df.columns or "reward" not in df.columns:
+        if df is None or "step" not in df.columns:
             return None
-        return df[["step", "reward"]].copy()
+
+        reward_col = "reward" if "reward" in df.columns else "total_reward"
+        if reward_col not in df.columns:
+            return None
+
+        return df[["step", reward_col]].rename(
+            columns={reward_col: "reward"}
+        ).copy()
 
     df = pd.read_csv(ref)
     if "total_reward" not in df.columns:

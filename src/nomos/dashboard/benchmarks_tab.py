@@ -140,6 +140,13 @@ def _log_benchmark_to_backend(backend: OntologyBackend | None, benchmarks: dict)
     except Exception:
         pass
 
+
+def _format_optional_metric(value: Any) -> str:
+    if pd.isna(value):
+        return "N/A"
+    return str(value)
+
+
 def _render_benchmark_comparison(rows: list[dict]):
     row_a, row_b = rows
     label_a = f"{row_a['strategy']} ({row_a['scenario']})"
@@ -148,23 +155,57 @@ def _render_benchmark_comparison(rows: list[dict]):
     st.subheader(f"Comparison: {label_a} vs {label_b}")
 
     col1, col2 = st.columns(2)
+
     with col1:
         st.metric(label_a, f"Reward: {row_a['reward']}")
-        st.caption(f"Violations: {row_a['violations']} · Deadlocks: {row_a['deadlocks']}")
+        st.caption(
+            f"Violations: {_format_optional_metric(row_a['violations'])} · "
+            f"Deadlocks: {_format_optional_metric(row_a['deadlocks'])}"
+        )
+
     with col2:
         st.metric(label_b, f"Reward: {row_b['reward']}")
-        st.caption(f"Violations: {row_b['violations']} · Deadlocks: {row_b['deadlocks']}")
+        st.caption(
+            f"Violations: {_format_optional_metric(row_b['violations'])} · "
+            f"Deadlocks: {_format_optional_metric(row_b['deadlocks'])}"
+        )
 
     st.divider()
     st.subheader("Δ Difference")
+
     diff_df = pd.DataFrame(
         {
             "Metric": ["Reward", "Violations", "Deadlocks"],
-            label_a: [row_a["reward"], row_a["violations"], row_a["deadlocks"]],
-            label_b: [row_b["reward"], row_b["violations"], row_b["deadlocks"]],
+            label_a: [
+                row_a["reward"],
+                row_a["violations"],
+                row_a["deadlocks"],
+            ],
+            label_b: [
+                row_b["reward"],
+                row_b["violations"],
+                row_b["deadlocks"],
+            ],
         }
     )
-    diff_df["Δ"] = diff_df[label_a] - diff_df[label_b]
+
+    diff_df[label_a] = pd.to_numeric(
+        diff_df[label_a],
+        errors="coerce",
+    )
+    diff_df[label_b] = pd.to_numeric(
+        diff_df[label_b],
+        errors="coerce",
+    )
+
+    diff_df["Δ"] = diff_df.apply(
+        lambda row: (
+            row[label_a] - row[label_b]
+            if pd.notna(row[label_a]) and pd.notna(row[label_b])
+            else None
+        ),
+        axis=1,
+    )
 
     bar = (
         alt.Chart(diff_df)
@@ -172,13 +213,22 @@ def _render_benchmark_comparison(rows: list[dict]):
         .encode(
             x=alt.X("Metric:N"),
             y=alt.Y("Δ:Q", title=f"Δ ({label_a} − {label_b})"),
-            color=alt.condition(alt.datum.Δ > 0, alt.value("#2ca02c"), alt.value("#d62728")),
+            color=alt.condition(
+                alt.datum.Δ > 0,
+                alt.value("#2ca02c"),
+                alt.value("#d62728"),
+            ),
             tooltip=["Metric", "Δ"],
         )
         .properties(height=250)
     )
+
     st.altair_chart(bar, use_container_width=True)
-    st.dataframe(diff_df, use_container_width=True, hide_index=True)
+    st.dataframe(
+        diff_df,
+        use_container_width=True,
+        hide_index=True,
+    )
 
 def render_benchmarks_tab(backend: OntologyBackend | None = None):
     st.header("📊 Benchmark Results")
@@ -311,8 +361,8 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
                         "scenario": scenario,
                         "strategy": row["Strategy"],
                         "reward": row["Reward"],
-                        "violations": row.get("Violations"),
-                        "deadlocks": row.get("Deadlocks"),
+                        "violations": row.get("Violations", pd.NA),
+                        "deadlocks": row.get("Deadlocks", pd.NA),
                     }
                 )
 
