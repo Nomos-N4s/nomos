@@ -7,7 +7,11 @@
   - Threshold comparison is consistent across decision classes
   - Falsification counts are non-negative and correct
   - Budget halving preserves b ≥ 1 when starting from b ≥ 1
-  - Falsification parameters are immutable-tier
+  - The falsification parameters are *declared* to sit at the immutable tier
+    of `GovBudgetProof.IdentityTiers`, and a governance step gated on that
+    tier leaves them unchanged. The declaration is an input, not a result:
+    nothing here proves that the running system files these parameters under
+    that tier, or that every parameter write goes through the gate.
 -/
 
 import GovBudgetProof.IdentityTiers
