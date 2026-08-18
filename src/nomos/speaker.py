@@ -362,6 +362,30 @@ class SpeakerStateMachine:
             A :class:`GovernanceDecision` containing the winning action,
             scores, vetoes, and metadata (including falsification counts).
         """
+        return self._execute_cycle(state, raw_proposals, decision_class, extra_context)
+
+    def _execute_cycle(
+        self,
+        state: Any,
+        raw_proposals: list[Proposal],
+        decision_class: str,
+        extra_context: dict[str, Any] | None,
+    ) -> GovernanceDecision:
+        """Run the cycle pipeline itself.
+
+        The scoring, veto, and voting stages of
+        :meth:`run_governance_cycle`, separated from it so the public
+        entry point can wrap the pipeline without re-indenting it.
+
+        Args:
+            state: Current environment state.
+            raw_proposals: All proposals submitted by members.
+            decision_class: Determines the voting threshold.
+            extra_context: Optional structured logging context.
+
+        Returns:
+            A :class:`GovernanceDecision`.
+        """
         clean_context = {
             k: v for k, v in (extra_context or {}).items() if k not in RESERVED_EXTRA_KEYS
         }
