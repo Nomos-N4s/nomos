@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [0.15.2](https://github.com/Nomos-N4s/nomos/compare/v0.15.1...v0.15.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* **experiments:** bind the certifying commit to the document and resolve paths at the repo root ([270c0e7](https://github.com/Nomos-N4s/nomos/commit/270c0e7335f0d253101bb42b61365fc144513ef9)), closes [#307](https://github.com/Nomos-N4s/nomos/issues/307)
+* **experiments:** make pre-registration provenance verifiable on any platform ([6db6116](https://github.com/Nomos-N4s/nomos/commit/6db61161677bb6547653c77a28b0a6b416b15f81))
+* **experiments:** make pre-registration provenance verifiable on any platform ([de137d0](https://github.com/Nomos-N4s/nomos/commit/de137d0ebc7a065ce193fc431883f193eb2cfea7))
+* **identity:** reject duplicate genesis holders and enforce total_holders ([38f0567](https://github.com/Nomos-N4s/nomos/commit/38f05678e6a537266f5229f3c3145525ab0eb936))
+* **identity:** reject duplicate genesis holders and enforce total_holders ([66d0b84](https://github.com/Nomos-N4s/nomos/commit/66d0b84e9601e6a9f8d6f390401744f25dfcf392))
+
 ## [0.15.1](https://github.com/Nomos-N4s/nomos/compare/v0.15.0...v0.15.1) (2026-08-13)
 
 
