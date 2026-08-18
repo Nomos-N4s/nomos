@@ -136,23 +136,33 @@ def enforce_timelock(contract: UlyssesContract, current_block: int) -> Enforceme
         immediately votes to repeal, the law stays in effect until
         the waiting period elapses.
 
+    The lock is resolved against the contract's absolute
+    :attr:`~.UlyssesContract.unlock_at_cycle`, so this check agrees with
+    :meth:`~.UlyssesContract.tick` at every cycle: the contract is ACTIVE
+    exactly when the timelock reports expired.
+
     Args:
-        contract: Any object with a ``timelock_blocks`` attribute.
+        contract: Any object with ``timelock_blocks`` and
+            ``unlock_at_cycle`` attributes.
         current_block: The current governance cycle number.
 
     Returns:
-        ``compliant=True`` while the timelock is still active (blocks
-        remaining). ``compliant=False`` if the timelock has expired,
-        which triggers the stacked enforcement to allow revocation.
+        ``compliant=True`` with reason ``"No timelock"`` for a contract
+        that never carried one, and ``compliant=True`` while the lock
+        still holds (blocks remaining). ``compliant=False`` once the
+        timelock has fully elapsed, which triggers the stacked
+        enforcement to allow revocation. A never-locked contract and a
+        fully elapsed lock are deliberately distinguishable.
     """
     if contract.timelock_blocks <= 0:
         return EnforcementResult(compliant=True, reason="No timelock")
-    if current_block >= contract.timelock_blocks:
+    unlock_at = contract.unlock_at_cycle
+    if current_block >= unlock_at:
         return EnforcementResult(
             compliant=False,
-            reason=f"Timelock expired ({current_block} >= {contract.timelock_blocks})",
+            reason=f"Timelock expired ({current_block} >= {unlock_at})",
         )
-    remaining = contract.timelock_blocks - current_block
+    remaining = unlock_at - current_block
     return EnforcementResult(
         compliant=True,
         reason=f"Timelock active ({remaining} blocks remaining)",
@@ -188,7 +198,9 @@ def stacked_enforcement(
 
     Returns:
         The first non-compliant result, or ``compliant=True`` if all
-        three modes pass.
+        three modes pass. A fully elapsed timelock surfaces here as a
+        non-compliant result — that is how revocation becomes
+        permissible once the waiting period is over.
     """
     proc = enforce_procedural_inertia(contract, parliament_vote)
     if not proc.compliant:
