@@ -159,10 +159,14 @@ class DriftLab(ExperimentScenario):
         """Cosine distance between two vectors (1.0 - cosine similarity).
 
         Returns a value in [0, 2] where 0 = identical direction and
-        2 = opposite direction.
+        2 = opposite direction. Identical vectors short-circuit to exactly
+        0.0: evaluating the quotient leaves rounding noise of order 1e-16,
+        which would be reported as drift a run did not actually have.
         """
         if not a or not b:
             return 1.0
+        if a == b:
+            return 0.0
         dot = sum(x * y for x, y in zip(a, b))
         na = math.sqrt(sum(x * x for x in a))
         nb = math.sqrt(sum(y * y for y in b))
