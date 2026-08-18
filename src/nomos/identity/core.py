@@ -159,9 +159,17 @@ class CoreCommitment:
 class IdentityCore:
     """Manages the set of core commitments and derives the identity vector.
 
-    The identity vector is a deterministic embedding of all commitments
-    that the Integrity member uses to compute action coherence scores.
-    When commitments are added or modified, the vector is rebuilt.
+    The identity vector is a deterministic embedding of all commitments.
+    It is rebuilt whenever a commitment is added or a recorded violation
+    degrades one, and the drift experiments measure the cosine distance
+    between an earlier snapshot of it and its current value.
+
+    Note:
+        Nothing in the governance cycle reads this vector.
+        :class:`~..committee.members.ExampleIntegrityMember` scores a
+        proposal from the ``identity_coherence`` metadata key the
+        scenario supplies, not from this embedding. Its only consumer is
+        the identity drift metric.
 
     Real-world analogy:
         The constitutional registry — a list of fundamental principles
@@ -255,10 +263,10 @@ class IdentityCore:
     def identity_vector(self) -> list[float]:
         """The canonical identity embedding.
 
-        The Integrity member uses this vector to evaluate proposal
-        coherence. Changes to commitments automatically update this
-        vector. Its length is
-        ``len(commitments) * COMPONENTS_PER_COMMITMENT``.
+        Rebuilt automatically by :meth:`add_commitment` and
+        :meth:`record_violation`. Its length is
+        ``len(commitments) * COMPONENTS_PER_COMMITMENT``. See the class
+        note on who does — and does not — read it.
         """
         return list(self._identity_vector)
 
