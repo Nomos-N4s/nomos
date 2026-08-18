@@ -125,6 +125,36 @@ class TestContractRegistry:
         assert not enforce_timelock(c, reg._cycle).compliant
         assert c.timelock_blocks == 3
 
+    def test_add_stamps_the_registry_cycle_as_proposal_cycle(self):
+        reg = ContractRegistry()
+        for _ in range(20):
+            reg.tick_cycle()
+        c = UlyssesContract(
+            contract_id="c1", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=5,
+        )
+        c.enact()
+        reg.add(c)
+        assert c.created_at_cycle == 20
+        assert c.unlock_at_cycle == 25
+        for _ in range(4):
+            reg.tick_cycle()
+            assert c.state == ContractState.ENACTED
+        reg.tick_cycle()
+        assert c.state == ContractState.ACTIVE
+
+    def test_add_honours_an_explicit_proposal_cycle(self):
+        reg = ContractRegistry()
+        for _ in range(20):
+            reg.tick_cycle()
+        c = UlyssesContract(
+            contract_id="c1", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=5,
+        )
+        reg.add(c, at_cycle=18)
+        assert c.created_at_cycle == 18
+        assert c.unlock_at_cycle == 23
+
     def test_revoked_not_active(self):
         reg = ContractRegistry()
         c = UlyssesContract(contract_id="c1", restricted_indices={0})
