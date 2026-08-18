@@ -48,6 +48,21 @@ def votePasses (votes : List Vote) (d : DecisionClass) : Prop :=
   let tw := totalWeight votes
   tw ≠ 0 ∧ t.num * tw ≤ ws * t.denom
 
+/-- Vote resolution is decidable *constructively*: `votePasses` unfolds to a
+    `Nat` disequality and a `Nat` comparison, so the outcome is computed by
+    `Nat.decEq` and `Nat.decLe` and never postulated. `#print axioms` on this
+    instance reports no axioms at all — in particular no `Classical.choice`. -/
+instance decidableVotePasses (votes : List Vote) (d : DecisionClass) :
+    Decidable (votePasses votes d) :=
+  inferInstanceAs (Decidable (totalWeight votes ≠ 0 ∧
+    (thresholdOf d).num * totalWeight votes ≤ weightedSum votes * (thresholdOf d).denom))
+
+/-- The boolean decision procedure agrees with the specification: `decide`
+    returns `true` exactly on the ballots that pass. -/
+theorem vote_outcome_computes (votes : List Vote) (d : DecisionClass) :
+    decide (votePasses votes d) = true ↔ votePasses votes d :=
+  decide_eq_true_iff
+
 /-- Vote resolution is deterministic (law of excluded middle). -/
 theorem vote_resolution_deterministic (votes : List Vote) (d : DecisionClass) :
     votePasses votes d ∨ ¬ votePasses votes d := by
