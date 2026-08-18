@@ -540,9 +540,7 @@ def aggregate_reports(reports: list[ExperimentReport]) -> list[StrategyAggregate
                 mean_violations=statistics.mean([r.constraint_violations for r in reps]),
                 ci_lower=ci_l,
                 ci_upper=ci_u,
-                mean_governance_latency=statistics.mean(
-                    [r.governance_latency_avg for r in reps]
-                ),
+                mean_governance_latency=statistics.mean([r.governance_latency_avg for r in reps]),
             )
         )
     return results
