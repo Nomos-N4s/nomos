@@ -67,6 +67,7 @@ Real-world analogy:
 """
 
 import logging
+import time
 from collections import defaultdict
 from typing import Any
 
@@ -99,6 +100,12 @@ class SpeakerStateMachine:
         immutable_procedures: List of procedure names that the Identity
             Layer treats as immutable-tier (cannot be modified by
             extension proposals).
+        cycle_count: Number of governance cycles run so far.
+        cycle_seconds_total: Cumulative wall-clock time spent inside
+            those cycles (seconds). Observability only — never read by
+            the decision path. Callers that need a per-cycle or
+            per-step latency take the delta of both counters across the
+            region they care about.
 
     Class constants:
         TAG_COMPLIANCE_THRESHOLD: Minimum Integrity score below which
@@ -124,6 +131,8 @@ class SpeakerStateMachine:
         self.supermajority_threshold = supermajority_threshold
         self.max_rounds = max_rounds
         self._falsification_counts: dict[str, int] = {}
+        self.cycle_count: int = 0
+        self.cycle_seconds_total: float = 0.0
         self.immutable_procedures = [
             "agenda_budget_enforcement",
             "agenda_priority_sorting",
@@ -358,11 +367,20 @@ class SpeakerStateMachine:
                 record emitted for this cycle. Never influences the
                 decision — observability only.
 
+        Every call updates ``cycle_count`` and ``cycle_seconds_total``,
+        which is the only source of governance-cycle latency in the
+        codebase.
+
         Returns:
             A :class:`GovernanceDecision` containing the winning action,
             scores, vetoes, and metadata (including falsification counts).
         """
-        return self._execute_cycle(state, raw_proposals, decision_class, extra_context)
+        start = time.perf_counter()
+        try:
+            return self._execute_cycle(state, raw_proposals, decision_class, extra_context)
+        finally:
+            self.cycle_seconds_total += time.perf_counter() - start
+            self.cycle_count += 1
 
     def _execute_cycle(
         self,
@@ -504,8 +522,6 @@ class SpeakerStateMachine:
 
 
 def _run_speaker_quick_test():
-    import time
-
     from .committee.members import (
         ExampleIntegrityMember,
         ExampleRewardMember,
