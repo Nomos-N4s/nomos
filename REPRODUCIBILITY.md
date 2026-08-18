@@ -67,6 +67,12 @@ results. The seed list covers a diverse range to detect sensitivity.
 Compare your `results/benchmark_summary.csv` against the published
 table below. Mean rewards should match within ±0.1.
 
+The identity-drift figure in the DriftLab column is the one exception:
+`export_summary_csv` writes no drift column, and neither does
+`benchmark_results.json`. `final_identity_drift` is a per-run field, so
+verify it from the `Identity drift:` line the runner prints for each run
+(see [DriftLab Identity Drift](#driftlab-identity-drift) below).
+
 | Strategy | GridWorld | TemptationBank | DriftLab | DeadlockMaze |
 |---|---|---|---|---|
 | Governance | 3.0 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 999 deadlocks |
