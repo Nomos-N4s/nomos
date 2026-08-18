@@ -128,8 +128,9 @@ def enforce_timelock(contract: UlyssesContract, current_block: int) -> Enforceme
     """:math:`\\kappa_{\\text{time}}` — a contract is locked until a block height.
 
     Before the timelock expires, the contract's restrictions are
-    immutable regardless of any vote. This prevents impulsive
-    revocation immediately after enactment.
+    immutable regardless of any vote. The cooling-off window opens when
+    the contract is *proposed*, not when it is enacted, so a contract
+    whose enactment vote ran long serves only the remainder of it.
 
     Real-world example:
         A 30-day waiting period on a law. Even if the legislature
