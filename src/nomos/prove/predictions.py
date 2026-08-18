@@ -419,14 +419,47 @@ def pred_11_genesis_multisig() -> PredictionResult:
     not_yet = ms.is_authorized
     ms.sign("charlie")
     authorized = ms.is_authorized
-    passed = not not_yet and authorized
+
+    # Three distinct signatures is the happy path, but it is the only path the
+    # model and the implementation ever agreed on. The quorum is only really
+    # 3-of-5 if the negative cases hold too: n is capped, and one principal
+    # cannot register (and therefore sign) more than once.
+    try:
+        ms.add_holder("frank")
+        cap_enforced = False
+    except ValueError:
+        cap_enforced = True
+
+    solo = GenesisMultisig(threshold=3, total_holders=5)
+    dup_rejected = True
+    for i in range(3):
+        try:
+            solo.add_holder("mallory")
+        except ValueError:
+            if i == 0:  # the first registration must succeed
+                dup_rejected = False
+        else:
+            if i > 0:  # every repeat must be refused
+                dup_rejected = False
+    for _ in range(3):
+        solo.sign("mallory")
+    solo_blocked = not solo.is_authorized
+
+    passed = not not_yet and authorized and cap_enforced and dup_rejected and solo_blocked
     return PredictionResult(
         id=11,
         chapter="Ch4",
         section="3.1",
-        description="Genesis 3-of-5 multisig: 2 sigs insufficient, 3 sigs authorizes",
+        description=(
+            "Genesis 3-of-5 multisig: 2 sigs insufficient, 3 sigs authorizes, "
+            "n capped, and one principal cannot reach quorum alone"
+        ),
         passed=passed,
-        evidence=f"Sigs=2 authorized={not_yet}, Sigs=3 authorized={authorized}",
+        evidence=(
+            f"Sigs=2 authorized={not_yet}, Sigs=3 authorized={authorized}, "
+            f"6th holder refused={cap_enforced}, duplicate refused={dup_rejected}, "
+            f"one principal signing 3x authorized={not solo_blocked}"
+        ),
     )
 
 

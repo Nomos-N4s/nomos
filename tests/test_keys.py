@@ -1,3 +1,5 @@
+import pytest
+
 from src.nomos.identity.keys import GenesisManifest, GenesisMultisig, KeyHolder
 
 
@@ -80,6 +82,69 @@ class TestGenesisMultisig:
         ms.reset()
         assert ms.signatures_count == 0
         assert ms.holders[0].has_signed is False
+
+
+class TestGenesisQuorumIntegrity:
+    """One principal must not be able to reach the quorum alone (issue #288),
+    and the *n* in *t-of-n* must be enforced (issue #289).
+
+    These mirror the Lean model in ``gov-budget-proof/GovBudgetProof/
+    IdentityGenesis.lean``, where ``quorumCount`` filters a fixed key set so
+    ``double_signing_cannot_reach_quorum_alone`` holds by construction.
+    """
+
+    def test_duplicate_name_is_rejected(self):
+        ms = GenesisMultisig(threshold=3, total_holders=5)
+        ms.add_holder("alice")
+        with pytest.raises(ValueError, match="already registered"):
+            ms.add_holder("alice")
+        assert len(ms.holders) == 1
+
+    def test_one_principal_cannot_reach_quorum_alone(self):
+        ms = GenesisMultisig(threshold=3, total_holders=5)
+        ms.add_holder("mallory")
+        for _ in range(2):
+            with pytest.raises(ValueError):
+                ms.add_holder("mallory")
+        for _ in range(3):
+            ms.sign("mallory")
+        assert ms.signatures_count == 1
+        assert ms.is_authorized is False
+
+    def test_signatures_count_is_distinct_by_name(self):
+        ms = GenesisMultisig(threshold=3, total_holders=5)
+        ms.add_holder("alice")
+        # Defence in depth: even if a duplicate record is introduced by another
+        # path, the quorum counts distinct names, as the Lean model does.
+        ms.holders.append(KeyHolder(name="alice", public_key="deadbeef"))
+        for h in ms.holders:
+            h.has_signed = True
+        assert ms.signatures_count == 1
+        assert ms.is_authorized is False
+
+    def test_cannot_register_more_than_total_holders(self):
+        ms = GenesisMultisig(threshold=3, total_holders=5)
+        for n in ["alice", "bob", "charlie", "diana", "eve"]:
+            ms.add_holder(n)
+        with pytest.raises(ValueError, match="total_holders=5"):
+            ms.add_holder("frank")
+        assert len(ms.holders) == 5
+
+    def test_total_holders_is_stored(self):
+        ms = GenesisMultisig(threshold=2, total_holders=3)
+        assert ms.total_holders == 3
+
+    def test_threshold_above_total_holders_is_rejected(self):
+        with pytest.raises(ValueError, match="exceeds total_holders"):
+            GenesisMultisig(threshold=9, total_holders=2)
+
+    @pytest.mark.parametrize(
+        "threshold,total_holders",
+        [(0, 5), (3, 0), (-1, 5)],
+    )
+    def test_degenerate_configurations_are_rejected(self, threshold, total_holders):
+        with pytest.raises(ValueError):
+            GenesisMultisig(threshold=threshold, total_holders=total_holders)
 
 
 class TestGenesisManifest:
