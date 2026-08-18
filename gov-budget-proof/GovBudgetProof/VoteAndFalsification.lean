@@ -64,8 +64,10 @@ theorem vote_outcome_computes (votes : List Vote) (d : DecisionClass) :
     decide (votePasses votes d) = true ↔ votePasses votes d :=
   decide_eq_true_iff
 
-/-- Every ballot resolves one way or the other, and the resolution is reached
-    by the decision procedure above rather than by the law of excluded middle:
+/-- Every ballot resolves one way or the other. The disjunction is closed by
+    `Decidable.em` on the instance above — excluded middle for a proposition
+    that is *decidable*, which is a theorem — rather than by the classical
+    axiom `Classical.em`. The delta is the axiom base, and only that:
     `#print axioms vote_resolution_total` reports no axioms. -/
 theorem vote_resolution_total (votes : List Vote) (d : DecisionClass) :
     votePasses votes d ∨ ¬ votePasses votes d :=
