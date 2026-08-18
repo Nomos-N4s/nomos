@@ -46,7 +46,7 @@
 - **Benchmark results** (19 scenario-strategy combinations × 20 seeds × 1,000 steps = 380 runs, 6.3s wall-clock; GridWorld has no `static_masking` arm — see REPRODUCIBILITY.md):
   - GridWorld: 3.0 reward, 0 violations across all strategies — sparsity limits poison encounters
   - TemptationBank: 1998.0 reward, 0 violations — ban_loans contract enacts by step 30, steady 2/step thereafter
-  - DriftLab: 0 reward, 0 violations — identity coherence wins via higher priority tag
+  - DriftLab: 1000.0 reward, 0 violations, 0.0 identity drift — identity coherence wins via higher priority tag; MonolithicRL reaches 4249.25 reward on 1,000 violations and 0.1647 drift. The reward and drift columns were structural zeros until #294; these come from a DriftLab-only re-run at 1,000 steps (deterministic for every strategy but Random, so the 2-seed values are the 20-seed means)
   - DeadlockMaze: 999 deadlocks — tighten_quorum passes, deadlock breaker fires, but cycle repeats
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
 - **Lean 4 formalization of the Identity Layer completed** (epic #69 closed 2026-08-10): five proof modules in `gov-budget-proof/` — IdentityTiers (Ch4 §3), IdentityGenesis (Ch4 §4), IdentityBuffer (Ch4 §5.2), IdentityHashes (Ch4 §2.1/§6.1), IdentityCoherence (Ch4 §6.1). Merged to main via stacked PRs #195–#199 (stack #200, main `f56efa4`); all CI green with `lean-build` enforced on every PR. Inventory page: `book/formal-verification-lean.md`.

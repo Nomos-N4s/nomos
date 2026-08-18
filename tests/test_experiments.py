@@ -1,14 +1,46 @@
+import time
+
 import pytest
 
 from src.nomos.experiments.base import ExperimentMetrics, ExperimentScenario, StepResult
-from src.nomos.experiments.drift_lab import DriftLab
+from src.nomos.experiments.drift_lab import HARMFUL_ACTION, HARMFUL_ACTION_INDEX, DriftLab
+from src.nomos.identity.core import (
+    CommitmentThreshold,
+    CommitmentType,
+    CoreCommitment,
+    EnforcementMode,
+    IdentityCore,
+)
 from src.nomos.models import GovernanceDecision, PriorityTag, Proposal
 from src.nomos.speaker import SpeakerStateMachine
+
+HONEST_ACTION = "classify_honestly"
 
 
 def _gov(action="test", is_default=False, vetoed_by=None):
     return GovernanceDecision(action=action, governance_meta={"is_default": is_default},
                               vetoed_by=vetoed_by or [])
+
+
+def _drift_identity() -> IdentityCore:
+    """An IdentityCore holding the commitment DriftLab's harmful action
+    breaches, plus an unrelated one that it must leave alone."""
+    identity = IdentityCore()
+    identity.add_commitment(CoreCommitment(
+        type=CommitmentType.VALUE_PRINCIPLE,
+        statement="Always classify honestly",
+        threshold=CommitmentThreshold.SUPERMAJORITY,
+        enforcement=EnforcementMode.INTEGRITY_VETO,
+        affected_action_indices=[HARMFUL_ACTION_INDEX],
+    ))
+    identity.add_commitment(CoreCommitment(
+        type=CommitmentType.BOUNDARY_CONDITION,
+        statement="Never share private keys",
+        threshold=CommitmentThreshold.UNANIMITY_MULTISIG,
+        enforcement=EnforcementMode.INTEGRITY_VETO,
+        affected_action_indices=[9],
+    ))
+    return identity
 
 
 class TestStepResult:
@@ -366,6 +398,83 @@ class TestDriftLab:
         assert honest.metadata["identity_coherence"] > dishonest.metadata["identity_coherence"]
 
 
+class TestDriftLabIdentityDrift:
+    """Drift measured with real commitments loaded, so the empty-vector
+    guard in ``_cosine_distance`` is never reached and the metric has to
+    earn every value it reports."""
+
+    @staticmethod
+    def _lab(steps: int, action: str) -> DriftLab:
+        speaker = SpeakerStateMachine(members={}, default_action="stay")
+        dl = DriftLab(speaker, _drift_identity(), seed=42)
+        dl.reset()
+        for _ in range(steps):
+            dl.step("state", external_decision=_gov(action=action))
+        return dl
+
+    def test_identity_vector_is_not_the_empty_guard(self):
+        dl = self._lab(0, HONEST_ACTION)
+        assert dl.identity.identity_vector
+        assert dl._cosine_distance(dl._original_vector, dl.identity.identity_vector) == 0.0
+
+    def test_all_dishonest_run_drifts(self):
+        dl = self._lab(20, HARMFUL_ACTION)
+        assert dl.metrics.identity_drift[-1] > 0.0
+        assert dl.metrics.constraint_violations == 20
+
+    def test_all_honest_run_does_not_drift(self):
+        dl = self._lab(20, HONEST_ACTION)
+        assert dl.metrics.identity_drift == [0.0] * 20
+        assert dl.metrics.constraint_violations == 0
+
+    def test_drift_grows_monotonically_under_dishonesty(self):
+        drift = self._lab(20, HARMFUL_ACTION).metrics.identity_drift
+        assert drift[0] > 0.0
+        assert all(later > earlier for earlier, later in zip(drift, drift[1:]))
+
+    def test_dishonest_run_degrades_only_the_affected_commitment(self):
+        dl = self._lab(5, HARMFUL_ACTION)
+        assert dl.identity.commitment_satisfaction[0] < 1.0
+        assert dl.identity.commitment_satisfaction[1] == 1.0
+
+    def test_dishonest_run_earns_more_than_honest_run(self):
+        dishonest = self._lab(20, HARMFUL_ACTION)
+        honest = self._lab(20, HONEST_ACTION)
+        assert honest.metrics.total_reward == pytest.approx(20.0)
+        assert dishonest.metrics.total_reward > honest.metrics.total_reward
+
+    def test_unproposed_action_earns_nothing_and_does_not_drift(self):
+        dl = self._lab(3, "stay")
+        assert dl.metrics.total_reward == 0.0
+        assert dl.metrics.identity_drift == [0.0] * 3
+
+    def test_reset_returns_a_reused_scenario_to_genesis(self):
+        """``record_violation`` mutates the IdentityCore permanently, so a
+        scenario reused for a second run must not inherit the first run's
+        degradation or it measures drift from an already-drifted baseline."""
+        dl = self._lab(20, HARMFUL_ACTION)
+        assert dl.identity.commitment_satisfaction[0] < 1.0
+
+        dl.reset()
+        assert dl.identity.commitment_satisfaction == [1.0, 1.0]
+        assert dl._original_vector == list(dl.identity.identity_vector)
+
+        for _ in range(20):
+            dl.step("state", external_decision=_gov(action=HONEST_ACTION))
+        assert dl.metrics.identity_drift == [0.0] * 20
+
+    def test_reused_scenario_reproduces_the_same_drift(self):
+        """Two identical runs on one scenario object must report identical
+        drift; before reset restored the identity they diverged."""
+        dl = self._lab(10, HARMFUL_ACTION)
+        first = list(dl.metrics.identity_drift)
+
+        dl.reset()
+        for _ in range(10):
+            dl.step("state", external_decision=_gov(action=HARMFUL_ACTION))
+        assert dl.metrics.identity_drift == first
+
+
 # ─── DeadlockMaze ────────────────────────────────────────────────────────────
 
 
@@ -465,3 +574,106 @@ class TestExperimentConvention:
             assert cls._run_step is not ExperimentScenario._run_step, (
                 f"{cls.__name__} must override _run_step()"
             )
+
+
+# ─── Governance latency ──────────────────────────────────────────────────────
+
+
+def _governed_speaker() -> SpeakerStateMachine:
+    from src.nomos.committee.members import (
+        ExampleIntegrityMember,
+        ExamplePlanningMember,
+        ExampleRewardMember,
+        ExampleSafetyMember,
+    )
+
+    return SpeakerStateMachine(
+        members={
+            "reward": ExampleRewardMember(),
+            "safety": ExampleSafetyMember(),
+            "integrity": ExampleIntegrityMember(),
+            "planning": ExamplePlanningMember(),
+        },
+        default_action="emergency_shutdown",
+    )
+
+
+class TestGovernanceLatency:
+    """End-to-end coverage for the governance_latencies write path (#293)."""
+
+    def test_gridworld_records_one_latency_per_step(self):
+        from src.nomos.experiments.grid_world import GridWorld
+
+        gw = GridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        for _ in range(20):
+            gw.step("normal")
+
+        assert gw.metrics.total_steps == 20
+        assert len(gw.metrics.governance_latencies) == gw.metrics.total_steps
+        assert all(latency > 0 for latency in gw.metrics.governance_latencies)
+
+    def test_report_carries_a_nonzero_latency(self):
+        from src.nomos.experiments.grid_world import GridWorld
+        from src.nomos.experiments.metrics import generate_report
+
+        gw = GridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        for _ in range(10):
+            gw.step("normal")
+
+        report = generate_report("governance_GridWorld", gw.metrics, gw.history)
+        assert report.governance_latency_avg > 0
+
+    def test_every_scenario_records_one_latency_per_step(self):
+        from src.nomos.experiments.deadlock_maze import DeadlockMaze
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.experiments.grid_world import GridWorld
+        from src.nomos.experiments.temptation_bank import TemptationBank
+        from src.nomos.identity.core import IdentityCore
+        from src.nomos.tee.watchdog import DeadlockBreaker
+
+        builders = [
+            lambda s: GridWorld(s, size=6, seed=42),
+            lambda s: TemptationBank(s),
+            lambda s: DriftLab(s, IdentityCore(), seed=42),
+            lambda s: DeadlockMaze(s, DeadlockBreaker(threshold_cycles=5)),
+        ]
+        for build in builders:
+            scenario = build(_governed_speaker())
+            scenario.reset()
+            for _ in range(5):
+                scenario.step("normal")
+
+            latencies = scenario.metrics.governance_latencies
+            assert len(latencies) == scenario.metrics.total_steps, type(scenario).__name__
+            assert all(latency > 0 for latency in latencies), type(scenario).__name__
+
+    def test_external_decision_records_no_latency(self):
+        from src.nomos.experiments.grid_world import GridWorld
+
+        gw = GridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        for _ in range(5):
+            gw.step("normal", external_decision=_gov(action="up"))
+
+        assert gw.metrics.total_steps == 5
+        assert gw.metrics.governance_latencies == []
+
+    def test_latency_excludes_scenario_work(self):
+        from src.nomos.experiments.grid_world import GridWorld
+
+        class SlowGridWorld(GridWorld):
+            def _run_step(self, state, *, decision_class="routine", external_decision=None):
+                time.sleep(0.05)
+                result = super()._run_step(
+                    state, decision_class=decision_class, external_decision=external_decision
+                )
+                time.sleep(0.05)
+                return result
+
+        gw = SlowGridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        gw.step("normal")
+
+        assert gw.metrics.governance_latencies[0] < 0.05

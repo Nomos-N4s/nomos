@@ -312,3 +312,46 @@ class TestSpeakerEdgeCases:
             "veto_phase", "voting_phase", "default_fallback",
         ]
         assert speaker.immutable_procedures == expected
+
+
+class TestSpeakerCycleTiming:
+    def _speaker(self) -> SpeakerStateMachine:
+        return SpeakerStateMachine(
+            members={"reward": ExampleRewardMember(), "safety": ExampleSafetyMember()},
+            default_action="shutdown",
+        )
+
+    def test_counters_start_at_zero(self):
+        speaker = self._speaker()
+        assert speaker.cycle_count == 0
+        assert speaker.cycle_seconds_total == 0.0
+
+    def test_cycle_records_a_positive_duration(self):
+        speaker = self._speaker()
+        speaker.run_governance_cycle("normal", [_make_proposal("reward", reward=1.0)])
+        assert speaker.cycle_count == 1
+        assert speaker.cycle_seconds_total > 0.0
+
+    def test_counters_accumulate_monotonically(self):
+        speaker = self._speaker()
+        seen = []
+        for _ in range(3):
+            speaker.run_governance_cycle("normal", [_make_proposal("reward", reward=1.0)])
+            seen.append(speaker.cycle_seconds_total)
+        assert speaker.cycle_count == 3
+        assert seen == sorted(seen)
+        assert seen[0] > 0.0
+
+    def test_default_fallback_cycle_is_timed(self):
+        speaker = self._speaker()
+        decision = speaker.run_governance_cycle("normal", [])
+        assert decision.is_default is True
+        assert speaker.cycle_count == 1
+        assert speaker.cycle_seconds_total > 0.0
+
+    def test_deltas_are_per_cycle(self):
+        speaker = self._speaker()
+        speaker.run_governance_cycle("normal", [_make_proposal("reward", reward=1.0)])
+        first = speaker.cycle_seconds_total
+        speaker.run_governance_cycle("normal", [_make_proposal("reward", reward=1.0)])
+        assert speaker.cycle_seconds_total - first > 0.0

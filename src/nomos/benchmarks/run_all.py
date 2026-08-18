@@ -84,6 +84,23 @@ def _run_scenario(
 
     Returns:
         An :class:`~..experiments.metrics.ExperimentReport`.
+
+    Note:
+        ``step_records[i]["runtime_ms"]`` is kept alongside the report's
+        ``governance_latency_avg``; the two measure different things and
+        neither replaces the other. ``runtime_ms`` is the cumulative
+        wall-clock average of the whole benchmark loop up to step ``i``
+        — proposal generation, the governance cycle, the environment
+        transition, and this bookkeeping — and is what the ``--csv``
+        export carries. ``governance_latency_avg`` covers the governance
+        cycle alone.
+
+        The two are serialised in different units: ``runtime_ms`` is
+        milliseconds, ``governance_latency_avg`` is seconds. Do not read
+        the raw numbers side by side — divide ``runtime_ms`` by 1000
+        first. Compared in the same unit ``runtime_ms`` is still the
+        larger of the two, but only by a small factor: the governance
+        cycle is a large fraction of the step, not a negligible one.
     """
     speaker = build_governance_layer(config_path)
 

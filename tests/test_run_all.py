@@ -138,6 +138,17 @@ class TestRunScenario:
         report = _run_scenario(DriftLab, {}, "governance", steps=5, seed=0)
         assert report.total_steps == 5
 
+    def test_drift_lab_published_metrics_separate_governance_from_adversary(self):
+        governed = _run_scenario(DriftLab, {}, "governance", steps=50, seed=0)
+        adversary = _run_scenario(
+            DriftLab, {}, "monolithic_rl", steps=50, seed=0, baseline=MonolithicRL()
+        )
+        assert governed.constraint_violations == 0
+        assert governed.final_identity_drift == 0.0
+        assert adversary.constraint_violations == 50
+        assert adversary.final_identity_drift > 0.0
+        assert adversary.total_reward > governed.total_reward > 0.0
+
     def test_deadlock_maze(self):
         report = _run_scenario(DeadlockMaze, {}, "governance", steps=5, seed=0)
         assert report.total_steps == 5
@@ -198,3 +209,34 @@ class TestRunAll:
         for key, reps in results.items():
             assert len(reps) == 1
             assert reps[0].total_steps == 1000
+
+
+class TestGovernanceLatencyReporting:
+    """The published governance_latency_avg must reflect a real measurement (#293)."""
+
+    def test_governed_run_reports_a_real_latency(self):
+        report = _run_scenario(GridWorld, {"size": 4, "seed": 42}, "governance", steps=5, seed=0)
+        assert report.governance_latency_avg > 0
+        assert report.to_dict()["governance_latency_avg"] > 0
+
+    def test_baseline_run_reports_zero_because_no_cycle_runs(self):
+        bl = MonolithicRL()
+        report = _run_scenario(
+            GridWorld, {"size": 4, "seed": 42}, "monolithic_rl", steps=5, seed=0, baseline=bl
+        )
+        assert report.governance_latency_avg == 0.0
+
+    def test_runtime_ms_exceeds_governance_latency(self):
+        report = _run_scenario(GridWorld, {"size": 4, "seed": 42}, "governance", steps=5, seed=0)
+        runtime_seconds = report.metadata["step_records"][-1]["runtime_ms"] / 1000
+        assert runtime_seconds > report.governance_latency_avg
+
+    def test_every_scenario_reports_a_real_latency(self):
+        for scenario_class, kwargs in [
+            (GridWorld, {"size": 4, "seed": 42}),
+            (TemptationBank, {}),
+            (DriftLab, {}),
+            (DeadlockMaze, {}),
+        ]:
+            report = _run_scenario(scenario_class, kwargs, "governance", steps=5, seed=0)
+            assert report.governance_latency_avg > 0, scenario_class.__name__

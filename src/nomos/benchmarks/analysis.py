@@ -494,6 +494,9 @@ class StrategyAggregate:
         mean_violations: Mean constraint violation count.
         ci_lower: Bootstrap 95% CI lower bound.
         ci_upper: Bootstrap 95% CI upper bound.
+        mean_governance_latency: Mean governance cycle duration in
+            seconds, averaged across seeds. ``0.0`` for the baseline
+            strategies, which run no cycle to time.
     """
 
     strategy: str
@@ -505,6 +508,7 @@ class StrategyAggregate:
     mean_violations: float
     ci_lower: float
     ci_upper: float
+    mean_governance_latency: float = 0.0
 
 
 def aggregate_reports(reports: list[ExperimentReport]) -> list[StrategyAggregate]:
@@ -536,6 +540,7 @@ def aggregate_reports(reports: list[ExperimentReport]) -> list[StrategyAggregate
                 mean_violations=statistics.mean([r.constraint_violations for r in reps]),
                 ci_lower=ci_l,
                 ci_upper=ci_u,
+                mean_governance_latency=statistics.mean([r.governance_latency_avg for r in reps]),
             )
         )
     return results
@@ -684,6 +689,7 @@ def export_summary_csv(aggregates: list[StrategyAggregate], path: str):
                 "mean_violations",
                 "ci_lower",
                 "ci_upper",
+                "mean_governance_latency_seconds",
             ]
         )
         for a in aggregates:
@@ -698,6 +704,7 @@ def export_summary_csv(aggregates: list[StrategyAggregate], path: str):
                     round(a.mean_violations, 2),
                     round(a.ci_lower, 2),
                     round(a.ci_upper, 2),
+                    round(a.mean_governance_latency, 9),
                 ]
             )
 
@@ -731,6 +738,7 @@ def export_results_json(
                 "mean_violations": a.mean_violations,
                 "ci_lower": a.ci_lower,
                 "ci_upper": a.ci_upper,
+                "mean_governance_latency_seconds": a.mean_governance_latency,
             }
             for a in aggregates
         ],
