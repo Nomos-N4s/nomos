@@ -168,7 +168,10 @@ class ArmResult:
         arm: ``"governed"`` or ``"ungoverned"``.
         log: Per-step :class:`StepLogEntry` records.
         metrics: The scenario's aggregated
-            :class:`~..experiments.base.ExperimentMetrics`.
+            :class:`~..experiments.base.ExperimentMetrics`. On the
+            governed arm ``governance_latencies`` carries one entry per
+            step; on the ungoverned arm it is empty, because that arm
+            bypasses the Speaker and runs no cycle to time.
     """
 
     arm: str
