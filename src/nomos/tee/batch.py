@@ -177,8 +177,13 @@ class BatchVerifier:
 
         :func:`merkle_root` builds internal nodes positionally, so each
         sibling is recombined on the side it was generated from. Sorting the
-        pair instead would reconstruct a different tree and reject honest
-        paths.
+        pair instead discards that side, and reproduces the positional tree
+        only at a node whose left child's digest already sorts below its
+        right's — a coin flip per level, so a sorted verifier still accepts
+        roughly ``2 ** -depth`` of all honest paths: about half of a two-leaf
+        tree, a vanishing fraction as the batch grows. It is that coincidence,
+        not correctness, that let a hand-built golden pass against a verifier
+        which could not verify.
 
         Args:
             action_index: The action to verify. Its leaf is derived the same
