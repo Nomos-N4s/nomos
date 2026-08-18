@@ -83,12 +83,22 @@ from typing import Any
 from nomos.tee.batch import merkle_root
 
 __all__ = [
+    "ANCHOR_ALGORITHM",
     "AuditLog",
     "AuditRecord",
     "AuditVerification",
     "ENTITY_TYPES",
     "ZERO_HASH",
 ]
+
+ANCHOR_ALGORITHM = 2
+"""Merkle algorithm generation stamped into the sidecar anchor payload.
+
+Generation 1 hashed leaves and internal nodes in a single space. Generation 2
+domain-separates them (see :mod:`nomos.tee.batch`), so the same chain folds to
+a different root. An anchor carrying no ``alg`` field predates the stamp and is
+read as generation 1.
+"""
 
 ZERO_HASH = "0" * 64
 """The ``prev_hash`` of the first record (no predecessor)."""
@@ -346,9 +356,15 @@ class AuditLog:
         """Persist the trusted Merkle root of the whole chain to the sidecar.
 
         Atomic (temp file + rename), so a reader never sees a partial anchor.
+        The payload records the Merkle algorithm generation
+        (:data:`ANCHOR_ALGORITHM`) that produced the root, so a reader can tell
+        an anchor written under an earlier generation from a forged one.
         """
         payload = _canonical_json(
-            {"root": merkle_root([r.hash.encode("utf-8") for r in self._entries])}
+            {
+                "alg": ANCHOR_ALGORITHM,
+                "root": merkle_root([r.hash.encode("utf-8") for r in self._entries]),
+            }
         )
         tmp = self._anchor_path.with_name(self._anchor_path.name + ".tmp")
         tmp.write_text(payload, encoding="utf-8")
