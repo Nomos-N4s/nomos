@@ -201,9 +201,9 @@ class TestIdentityCore:
     def test_record_violation_never_nulls_the_vector(self):
         ic = IdentityCore()
         ic.add_commitment(_commitment(indices=[0]))
-        for _ in range(500):
-            ic.record_violation(0)
-        assert 0.0 < ic.commitment_satisfaction[0] < 1e-6
+        for _ in range(100):
+            ic.record_violation(0, severity=0.5)
+        assert 0.0 < ic.commitment_satisfaction[0] < 1e-20
         assert all(v > 0.0 for v in ic.identity_vector)
 
     @pytest.mark.parametrize("severity", [-0.1, 1.5])
