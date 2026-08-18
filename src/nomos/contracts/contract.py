@@ -86,11 +86,13 @@ class UlyssesContract:
             :mod:`nomos.contracts.enforcement`).
         state: Current lifecycle state (see :class:`ContractState`).
         timelock_blocks: Duration of the timelock, in governance cycles,
-            that an enacted contract stays locked before it becomes
-            active (for timelock enforcement mode). This is a constant
-            duration — it is never decremented.
+            measured from ``created_at_cycle`` — not from enactment (for
+            timelock enforcement mode). A contract enacted later than it
+            was proposed therefore spends the remainder of the window
+            locked, not a fresh ``timelock_blocks`` cycles. This is a
+            constant duration — it is never decremented.
         created_at_cycle: The governance cycle when this contract was
-            first proposed.
+            first proposed. The timelock is anchored here.
         revoked_at_cycle: The cycle when revoked, if applicable.
         unlock_at_cycle: Read-only property giving the absolute governance
             cycle at which the timelock releases,
