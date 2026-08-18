@@ -45,6 +45,15 @@ structure ActionBinding where
     genesis manifest. -/
 def GENESIS_HASH : Nat := 0
 
+/-- Position multiplier of the chain fold. Any value greater than one makes
+    the fold positional instead of commutative, which is what stops equal
+    contributions in different positions from cancelling out. -/
+def MIX : Nat := 31
+
+/-- The multiplier is non-zero, so multiplying by it is injective — the only
+    arithmetic fact about `MIX` the fold lemmas need. -/
+theorem MIX_pos : 0 < MIX := by decide
+
 section RuntimeHash
 
 /- Runtime hash of an executable implementation (`H(implementation_i)` in
@@ -83,6 +92,14 @@ theorem head_binding_self_consistent (a b : ActionBinding)
     BindingValid hashImpl a := by
   unfold IsValidChain at h
   exact h.1
+
+/-- The leaf digest of a single binding: a positional encoding of the whole
+    record — the runtime hash of the implementation, the hash the record
+    commits to, and the link to its predecessor. All three fields reach the
+    chain root through this digest, so the root is sensitive to a swapped
+    implementation, to a forged commitment and to a re-pointed link alike. -/
+def bindingDigest (b : ActionBinding) : Nat :=
+  MIX * MIX * hashImpl b.implementation + MIX * b.bindingHash + b.prevHash
 
 /-- The chain root: deterministic fold of the runtime hashes of all bound
     implementations, seeded by the genesis commitment. -/
