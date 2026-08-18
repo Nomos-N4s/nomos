@@ -385,8 +385,9 @@ class AuditLog:
 
         Returns:
             ``(root, algorithm)``, or ``None`` if the sidecar is missing or
-            malformed. An anchor carrying no ``alg`` field predates the stamp
-            and is reported as generation 1.
+            malformed. Only the *absence* of the ``alg`` field predates the
+            stamp and is read as generation 1; a field that is present but is
+            not a positive integer is malformed, not legacy.
         """
         try:
             raw = json.loads(self._anchor_path.read_text(encoding="utf-8"))
@@ -397,8 +398,10 @@ class AuditLog:
         root = raw.get("root")
         if not isinstance(root, str) or len(root) != 64:
             return None
-        algorithm = raw.get("alg")
-        return root, algorithm if isinstance(algorithm, int) else 1
+        algorithm = raw.get("alg", 1)
+        if isinstance(algorithm, bool) or not isinstance(algorithm, int) or algorithm < 1:
+            return None
+        return root, algorithm
 
     def records(self) -> tuple[AuditRecord, ...]:
         """The full chain: records loaded from disk plus this instance's appends."""
