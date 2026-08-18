@@ -1,11 +1,14 @@
 import hashlib
 import time
 
+import pytest
+
 from src.nomos.identity.keys import GenesisManifest
 from src.nomos.tee.batch import (
     BatchProposal,
     BatchVerifier,
     compute_diversity,
+    merkle_proof,
     merkle_root,
 )
 from src.nomos.tee.constant_time import (
@@ -107,6 +110,40 @@ class TestMerkleRoot:
         assert len(result) == 64
 
 
+class TestMerkleProof:
+    def test_single_item_has_empty_path(self):
+        assert merkle_proof([b"only"], 0) == []
+
+    def test_sibling_side_follows_the_positional_split(self):
+        items = [b"1", b"2"]
+        assert merkle_proof(items, 0) == [(merkle_root([b"2"]), False)]
+        assert merkle_proof(items, 1) == [(merkle_root([b"1"]), True)]
+
+    def test_odd_length_splits_left_short(self):
+        items = [b"1", b"2", b"3"]
+        assert merkle_proof(items, 0) == [(merkle_root([b"2", b"3"]), False)]
+        assert merkle_proof(items, 1) == [
+            (merkle_root([b"3"]), False),
+            (merkle_root([b"1"]), True),
+        ]
+
+    def test_path_length_grows_with_depth(self):
+        items = [str(i).encode() for i in range(8)]
+        assert all(len(merkle_proof(items, i)) == 3 for i in range(8))
+
+    def test_index_out_of_range(self):
+        with pytest.raises(IndexError):
+            merkle_proof([b"a", b"b"], 2)
+
+    def test_negative_index_rejected(self):
+        with pytest.raises(IndexError):
+            merkle_proof([b"a", b"b"], -1)
+
+    def test_empty_tree_has_no_leaf_to_prove(self):
+        with pytest.raises(IndexError):
+            merkle_proof([], 0)
+
+
 class TestComputeDiversity:
     def test_all_unique(self):
         assert compute_diversity([1, 2, 3, 4]) == 1.0
@@ -158,21 +195,46 @@ class TestBatchVerifier:
         assert valid is False
         assert "diversity" in message.lower()
 
-    def test_verify_valid_proof(self):
+    def test_generated_proof_verifies_at_every_index(self):
         verifier = BatchVerifier()
+        batches = [
+            [7],
+            [1, 2],
+            [1, 2, 3],
+            [1, 2, 3, 4],
+            [3, 1, 4, 1, 5],
+            [10, 20, 30, 40, 50, 60, 70],
+        ]
+        for indices in batches:
+            items = [str(i).encode() for i in indices]
+            root = merkle_root(items)
+            for position, action_index in enumerate(indices):
+                proof = merkle_proof(items, position)
+                assert verifier.verify_proof(action_index, proof, root) is True, (
+                    f"position {position} of {indices}"
+                )
 
-        leaf = hashlib.sha256(b"1").hexdigest()
-        sibling1 = hashlib.sha256(b"2").hexdigest()
-        left = hashlib.sha256((leaf + sibling1).encode()).hexdigest()
-        sibling2 = hashlib.sha256(b"3").hexdigest()
-        expected_root = hashlib.sha256((left + sibling2).encode()).hexdigest()
+    def test_proof_for_wrong_action_is_rejected(self):
+        verifier = BatchVerifier()
+        indices = [1, 2, 3, 4]
+        items = [str(i).encode() for i in indices]
+        root = merkle_root(items)
+        proof = merkle_proof(items, 0)
+        assert verifier.verify_proof(2, proof, root) is False
 
-        proof = [sibling1, sibling2]
-        assert verifier.verify_proof(1, proof, expected_root) is True
+    def test_flipped_sibling_side_is_rejected(self):
+        verifier = BatchVerifier()
+        indices = [1, 2, 3, 4]
+        items = [str(i).encode() for i in indices]
+        root = merkle_root(items)
+        proof = merkle_proof(items, 3)
+        flipped = [(sibling, not is_left) for sibling, is_left in proof]
+        assert verifier.verify_proof(4, proof, root) is True
+        assert verifier.verify_proof(4, flipped, root) is False
 
     def test_verify_invalid_proof(self):
         verifier = BatchVerifier()
-        result = verifier.verify_proof(1, ["wrong"], "badroot")
+        result = verifier.verify_proof(1, [("wrong", False)], "badroot")
         assert result is False
 
 
