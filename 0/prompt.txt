@@ -1,0 +1,150 @@
+<ci-monitor-event>Nomos-N4s/nomos PR #330 has 5 new review comments:
+- qodo-code-review[bot]: <h3>PR Summary by Qodo</h3>
+
+Make pre-registration provenance verifiable across platforms
+
+<code>🐞 Bug fix</code> <code>🧪 Tests</code> <code>📝 Documentation</code> <code>⚙️ Configuration changes</code> <code>🕐 20-40 Minutes</code>
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+
+<details>
+<summary>AI Description</summary>
+
+<dl>
+<dd>
+<br/>
+
+><pre>
+>• Normalize pre-registration hashing so LF and CRLF checkouts produce identical digests.
+>• Validate recorded digests and commit reachability instead of checking metadata presence.
+>• Correct and document published provenance while preserving superseded evidence for auditability.
+></pre>
+
+</dd>
+</dl>
+
+</details>
+
+<details>
+<summary>Diagram</summary>
+
+<dl>
+<dd>
+
+<br/>
+
+```mermaid
+graph TD
+  A["Sweep Runner"] -->|captures| B["Provenance Utility"] -->|normalizes| C["Markdown Preregistration"]
+  B -->|records| D["Frontier JSON"] -->|loads| E["Sweep Validator"] -->|reports| F{"Evidence Valid"}
+  E -->|reuses checks| B
+  B -->|checks ancestry| G["Git History"]
+```
+
+</dd>
+</dl>
+
+</details>
+
+
+
+
+<details>
+<summary>High-Level Assessment</summary>
+
+<dl>
+<dd>
+
+<br/>
+
+>The following a… [truncated — full text: `gh api repos/Nomos-N4s/nomos/issues/comments/5325672727`]
+- qodo-code-review[bot]: <h3>Code Review by Qodo</h3>
+
+<code>🐞 Bugs (2)</code>  <code>📘 Rule violations (0)</code>  <code>📜 Skill insights (0)</code>
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+
+<br/>
+
+<img src="https://img.shields.io/badge/Medium-634FD1?style=flat-square" height="20px" alt="Remediation recommended">
+
+<details>
+<summary>  1.  Relative paths break verification <code>🐞 Bug</code> <code>☼ Reliability</code></summary>
+
+<br/>
+
+> <details open>
+><summary>Description</summary>
+><br/>
+>
+><pre>
+>The published provenance path is repository-relative, but file access and Git calls resolve it
+>against the process working directory, while <b><i>verify_preregistration()</i></b> silently accepts missing or
+>unreadable files and indeterminate ancestry checks. As a result, running validation outside the
+>repository root—or encountering missing Git objects or a shallow clone—can allow a frontier with a
+>nonempty hash and commit to pass without either claim being verified, contrary to the requirement
+>that unverifiable pre-registration evidence be treated as unfalsifiable.
+></pre>
+></details>
+
+> <details open>
+><summary>Code</summary>
+><b… [truncated — full text: `gh api repos/Nomos-N4s/nomos/issues/comments/5325690561`]
+- github-actions[bot]: ## Coverage report
+
+
+<img title="Coverage for the whole project is 91.68%. Previous coverage rate is not available, cannot report on evolution." src="https://img.shields.io/badge/Coverage-91%25-orange.svg"> <img title="100% of the statement lines added by this PR are covered" src="https://img.shields.io/badge/PR%20Coverage-100%25-brightgreen.svg">
+
+_This PR does not seem to contain any modification to coverable code._
+
+<!-- This comment was produced by python-coverage-comment-action -->
+- qodo-code-review[bot] on src/nomos/experiments/provenance.py:147 [comment_id=3802406158]: <img src="https://img.shields.io/badge/Medium-634FD1?style=flat-square" height="20px" alt="Remediation recommended">
+
+1\. Commit is not bound to file <code>🐞 Bug</code> <code>≡ Correctness</code>
+
+<pre>
+The generator records the last commit that touched the pre-registration path, but verification
+checks only that the supplied commit is an ancestor of <b><i>HEAD</i></b>. A reachable unrelated commit can
+therefore be substituted into the provenance block and pass the commit check, falsely supplying the
+certification date for this document.
+</pre>
+
+
+<details>
+<summary><strong>Agent Prompt</strong></summary>
+
+```
+### Issue description
+Commit validation currently checks graph reachability only, not whether the recorded commit contains or modified the recorded pre-registration path.
+
+### Issue Context
+`preregistration_provenance()` records a path-specific `git log -1 -- <path>` commit, so verification must preserve that binding; otherwise any ancestor can be used to make the date claim appear valid.
+
+### Fix Focus Areas
+- src/nomos/experiments/provenance.py[108-110]
+- src/nomos/experiments/provenance.py[141-147]
+- tests/test_provenance.py[92-96]
+
+Add a path-constrained Git check (for ex… [truncated — full text: `gh api repos/Nomos-N4s/nomos/pulls/comments/3802406158`]
+- qodo-code-review[bot] on src/nomos/experiments/provenance.py:40 [comment_id=3802406168]: <img src="https://img.shields.io/badge/Medium-634FD1?style=flat-square" height="20px" alt="Remediation recommended">
+
+2\. Relative paths break verification <code>🐞 Bug</code> <code>☼ Reliability</code>
+
+<pre>
+The published provenance path is repository-relative, but file access and Git calls resolve it
+against the process working directory, while <b><i>verify_preregistration()</i></b> silently accepts missing or
+unreadable files and indeterminate ancestry checks. As a result, running validation outside the
+repository root—or encountering missing Git objects or a shallow clone—can allow a frontier with a
+nonempty hash and commit to pass without either claim being verified, contrary to the requirement
+that unverifiable pre-registration evidence be treated as unfalsifiable.
+</pre>
+
+
+<details>
+<summary><strong>Agent Prompt</strong></summary>
+
+```
+## Issue description
+Resolve repository-relative provenance paths and Git working directories consistently, and ensure that missing or unreadable files and indeterminate ancestry checks cannot be silently accepted. Unknown evidence should produce an explicit validation failure, or a distinct unverifiable status that `validate_sweep` rejects, … [truncated — full text: `gh api repos/Nomos-N4s/nomos/pulls/comments/3802406168`]
+
+Please address the feedback and push a fix. Then, for each inline comment you addressed (those with a comment_id), post a one-line reply on the thread via `gh api` saying what you changed (or why you didn't). End each reply with the line "_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_" so reviewers can see it was automated. Then resolve the thread. Skip replies for comments you didn't act on.</ci-monitor-event>
