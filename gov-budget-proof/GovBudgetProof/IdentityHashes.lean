@@ -268,11 +268,13 @@ theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
     a valid chain cannot pass itself off as that chain.
 
     Note the scope, which is narrower than "no invalid chain shares a root
-    with a valid one": this covers invalidity caused by a broken *link*. A
-    chain can also fail `IsValidChain` through a bad `bindingHash`, which
-    likewise moves the root (`bindingDigest_ne_of_bindingHash_ne`), but the
-    general statement is not proved here and is not true for an arbitrary
-    `hashImpl`. -/
+    with a valid one": this covers invalidity caused by a broken *link*
+    between two otherwise identical chains. A chain can also fail
+    `IsValidChain` through a bad `bindingHash`, which likewise moves the
+    root (`bindingDigest_ne_of_bindingHash_ne`). The general statement is
+    not proved here and must not be read into this one: it is false, and
+    `invalid_chain_can_share_a_root_under_a_degenerate_hash` below is the
+    counterexample. -/
 theorem relink_breaks_validity_and_changes_root
     (a b : ActionBinding) (rest : List ActionBinding) (forgedPrev : Nat)
     (hValid : IsValidChain hashImpl (a :: b :: rest))
@@ -378,3 +380,23 @@ theorem chain_root_commutes_under_a_degenerate_hash :
   intro h
   injection h with hImpl _ _
   exact absurd hImpl (by decide)
+
+/-- The scope limit on `relink_breaks_validity_and_changes_root`, made
+    explicit. "A chain failing `IsValidChain` cannot share a root with a
+    valid one" is false for an arbitrary `hashImpl`: under the constant hash
+    a valid one-element chain and a chain whose link is broken can carry the
+    same root. Chain validity constrains the reachable roots only as far as
+    the hash separates the digests, which is why no theorem here states the
+    general form. -/
+theorem invalid_chain_can_share_a_root_under_a_degenerate_hash :
+    ∃ (hashImpl : String → Nat) (valid invalid : List ActionBinding),
+      IsValidChain hashImpl valid ∧ ¬ IsValidChain hashImpl invalid ∧
+        chainRoot hashImpl valid = chainRoot hashImpl invalid := by
+  refine ⟨fun _ => 0,
+    [{ implementation := "x", bindingHash := 5, prevHash := 3 }],
+    [{ implementation := "x", bindingHash := 0, prevHash := 5 },
+     { implementation := "y", bindingHash := 0, prevHash := 3 }],
+    trivial, ?_, by decide⟩
+  intro h
+  unfold IsValidChain at h
+  exact absurd h.2.1 (by decide)
