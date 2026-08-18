@@ -194,12 +194,24 @@ class ContractRegistry:
         self._contracts: list[UlyssesContract] = []
         self._cycle: int = 0
 
-    def add(self, contract: UlyssesContract):
-        """Register a new contract.
+    def add(self, contract: UlyssesContract, at_cycle: int | None = None):
+        """Register a new contract, anchoring its clock to the registry.
+
+        The registry's cycle is the one authority on time, so registration
+        stamps the contract's :attr:`~UlyssesContract.created_at_cycle` and
+        :attr:`~UlyssesContract.current_cycle`. A contract built mid-run
+        would otherwise keep the default origin of cycle 0 and reach its
+        unlock cycle before the first :meth:`tick_cycle`.
 
         Args:
             contract: The contract to add (usually in PROPOSED state).
+            at_cycle: Cycle to record as the contract's proposal cycle.
+                Defaults to the registry's current cycle; pass it only to
+                replay a contract proposed at a known earlier cycle.
         """
+        origin = self._cycle if at_cycle is None else at_cycle
+        contract.created_at_cycle = origin
+        contract.current_cycle = origin
         self._contracts.append(contract)
 
     def get_active(self) -> list[UlyssesContract]:
@@ -237,11 +249,9 @@ class ContractRegistry:
 
         Called once per governance cycle. Each contract's clock is moved
         to the registry's cycle, so an ENACTED contract whose timelock
-        has elapsed becomes ACTIVE. Because the registry's cycle is the
-        one authority on time, a contract's
-        :attr:`~UlyssesContract.created_at_cycle` must be the cycle at
-        which it was proposed for its timelock to run for the intended
-        number of cycles.
+        has elapsed becomes ACTIVE. :meth:`add` stamps each contract's
+        proposal cycle from this same clock, so a contract registered
+        mid-run still serves its full timelock.
         """
         self._cycle += 1
         for contract in self._contracts:
