@@ -18,20 +18,33 @@
   We prove the three claims of issue #193:
   1. Chain invariant: each binding carries the hash of the previous
      binding's implementation (valid chains are the only structure the
-     ontology may hold; consecutive entries always satisfy the link).
-  2. Tamper evidence: modifying any past binding (while keeping the hash
-     of its implementation changed) changes the chain root — conditional
-     on the cryptographic collision-resistance assumption, stated
-     explicitly as the theorem hypothesis hImpl.
+     ontology may hold; consecutive entries always satisfy the link), and
+     re-pointing a link is visible in the chain root.
+  2. Tamper evidence: replacing a binding changes the chain root —
+     conditional on the replacement changing that binding's digest, which
+     is the cryptographic collision-resistance assumption and is carried
+     as an explicit hypothesis named in every theorem that needs it.
   3. Determinism: chain roots are a function of the binding sequence —
      equal sequences always yield equal roots.
 
-  NOTE: `hashImpl` is UNINTERPRETED (issue #299). It is a section variable
+  THE HASH IS UNINTERPRETED (issue #299). `hashImpl` is a section variable
   of type `String -> Nat`, not a definition, so every declaration below is
-  universally quantified over the hash and no proof, example or `decide`
-  can appeal to a particular hash function. Tamper evidence therefore has
-  to carry the hash change as an explicit hypothesis, mirroring the
-  collision-resistance assumption of the real system.
+  universally quantified over the hash. Nothing here can unfold it,
+  evaluate it, or discharge a goal with `decide`/`native_decide` on a
+  concrete digest; in particular no proof may appeal to `String.length`.
+  Two consequences a reader must keep in mind:
+
+  * Every tamper- and order-sensitivity result is CONDITIONAL. An
+    uninterpreted hash may be constant, so "the bindings differ, therefore
+    the roots differ" is not merely unproven but refutable — see
+    `chain_root_commutes_under_a_degenerate_hash`, which exhibits the
+    counterexample. Each theorem names the hypothesis it needs.
+  * The concrete examples at the foot of the file introduce their
+    commitments (`bindingHash := 11`, `bindingHash := 13`) through
+    `BindingValid` hypotheses, and the proofs consume those hypotheses.
+    The literals are the values the documented stand-in `String.length`
+    would produce for those strings; with the hash uninterpreted they are
+    assumed, not computed.
 -/
 
 /-- An action binding `bind(i) = < Operation_i, hash_i >` (§2.1), carrying
