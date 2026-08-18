@@ -83,16 +83,22 @@ class TestMerkleRoot:
     def test_single_item(self):
         item = b"hello"
         result = merkle_root([item])
-        expected = hashlib.sha256(item).hexdigest()
+        expected = hashlib.sha256(b"\x00" + item).hexdigest()
         assert result == expected
 
     def test_two_items(self):
         items = [b"a", b"b"]
         result = merkle_root(items)
-        left = hashlib.sha256(b"a").hexdigest()
-        right = hashlib.sha256(b"b").hexdigest()
-        expected = hashlib.sha256((left + right).encode()).hexdigest()
+        left = hashlib.sha256(b"\x00a").hexdigest()
+        right = hashlib.sha256(b"\x00b").hexdigest()
+        expected = hashlib.sha256(b"\x01" + (left + right).encode()).hexdigest()
         assert result == expected
+
+    def test_internal_node_cannot_be_replayed_as_a_leaf(self):
+        left = merkle_root([b"a"])
+        right = merkle_root([b"b"])
+        node = merkle_root([b"a", b"b"])
+        assert merkle_root([(left + right).encode()]) != node
 
     def test_deterministic(self):
         items = [b"x", b"y", b"z"]

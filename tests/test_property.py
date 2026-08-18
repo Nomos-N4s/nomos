@@ -567,8 +567,14 @@ class TestPropertyMerkleConsistency:
 
     @given(item=st.binary(min_size=1, max_size=50))
     def test_single_item_root(self, item):
-        expected = hashlib.sha256(item).hexdigest()
+        expected = hashlib.sha256(b"\x00" + item).hexdigest()
         assert merkle_root([item]) == expected
+
+    @given(items=st.lists(st.binary(min_size=1, max_size=20), min_size=2, max_size=8))
+    def test_no_internal_node_is_reachable_as_a_leaf(self, items):
+        mid = len(items) // 2
+        children = merkle_root(items[:mid]) + merkle_root(items[mid:])
+        assert merkle_root([children.encode()]) != merkle_root(items)
 
 
 class TestPropertyMerkleProof:
