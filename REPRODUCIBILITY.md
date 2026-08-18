@@ -83,8 +83,16 @@ DriftLab's `final_identity_drift` used to be 0.0 for every strategy by
 construction, and its reward 0.0 by construction — the identity vector was
 a constant list that nothing in the run could move, and the step reward was
 hard-coded. Both are now live signals, so the Governance row's 0.0 drift is
-earned rather than structural: the Identity Layer blocks every harmful
-classification, so no commitment is ever degraded.
+earned rather than structural: the honest proposal is tagged `HIGH_IMPACT`
+and the harmful one `ROUTINE`, so agenda ordering puts the honest action to
+the vote first and it passes — the harmful proposal is never reached, and
+`veto_count` is 0 across all 1,000 steps. Nothing degrades a commitment
+because nothing violates one.
+
+The Identity Layer is not the mechanism doing the blocking here. Scored
+directly, the harmful action's Integrity value stays above that member's
+0.8 veto threshold until drift passes 0.222; below that it is Safety
+(0.2) and Planning (-0.5) that would veto it.
 
 Measured with the DriftLab scenario alone, at two seeds rather than the 20
 the table above calls for:
