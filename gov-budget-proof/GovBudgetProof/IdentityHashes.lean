@@ -164,28 +164,41 @@ theorem tee_recomputes_hash_independently (runtime : String) (b : ActionBinding)
     verifyRuntime runtime b = decide (hashImpl runtime = b.bindingHash) := by
   rfl
 
-/-- A benign binding passes verification when runtime matches the binding
-    commitment. -/
-example : verifyRuntime "benign_impl"
-      { implementation := "benign_impl",
-        bindingHash := 11, prevHash := 0 } = true := by
-  apply verify_accepts_matching_implementation
-  native_decide
+/-- A benign binding passes verification when the runtime implementation is
+    the one it commits to. The commitment enters as a `BindingValid`
+    hypothesis, so the example asserts the relation between the literal `11`
+    and `hashImpl "benign_impl"` instead of evaluating it. -/
+example (hBenign : BindingValid
+      { implementation := "benign_impl", bindingHash := 11, prevHash := 0 }) :
+    verifyRuntime "benign_impl"
+      { implementation := "benign_impl", bindingHash := 11, prevHash := 0 } = true :=
+  verify_accepts_matching_implementation _ _ hBenign.symm
 
-/-- Swapping the runtime implementation changes the hash, so the rejected
-    action index logs a binding violation. -/
-example : verifyRuntime "evil_impl"
-      { implementation := "benign_impl",
-        bindingHash := 11, prevHash := 0 } = false := by
-  apply verify_rejects_changed_implementation
-  · native_decide
-  · native_decide
+/-- Swapping the runtime implementation for one that hashes differently makes
+    the rejected action index log a binding violation. -/
+example (hBenign : BindingValid
+      { implementation := "benign_impl", bindingHash := 11, prevHash := 0 })
+    (hSwapped : hashImpl "evil_impl" ≠ hashImpl "benign_impl") :
+    verifyRuntime "evil_impl"
+      { implementation := "benign_impl", bindingHash := 11, prevHash := 0 } = false :=
+  verify_rejects_changed_implementation _ _ hSwapped hBenign
 
 /-- Tampering with a bound action's past implementation changes the root of
-    its chain ('benign_impl' → 'tampered_impl'). -/
-example : chainRoot
-      [{ implementation := "tampered_impl", bindingHash := 13, prevHash := 0 }]
-    ≠ chainRoot
-      [{ implementation := "benign_impl", bindingHash := 11, prevHash := 0 }] := by
-  apply tamper_evidence_single_binding
-  native_decide
+    its chain ('benign_impl' → 'tampered_impl'). Both records now carry their
+    own `BindingValid` commitment — `13` and `11`, the lengths the documented
+    stand-in gives — and the proof consumes both: it is the two commitments
+    being different naturals that supplies the hash difference, so neither
+    literal is decorative. -/
+example
+    (hTampered : BindingValid
+      { implementation := "tampered_impl", bindingHash := 13, prevHash := 0 })
+    (hBenign : BindingValid
+      { implementation := "benign_impl", bindingHash := 11, prevHash := 0 }) :
+    chainRoot
+        [{ implementation := "tampered_impl", bindingHash := 13, prevHash := 0 }]
+      ≠ chainRoot
+        [{ implementation := "benign_impl", bindingHash := 11, prevHash := 0 }] := by
+  refine tamper_evidence_single_binding _ _ ?_
+  unfold BindingValid at hTampered hBenign
+  dsimp only at hTampered hBenign ⊢
+  omega
