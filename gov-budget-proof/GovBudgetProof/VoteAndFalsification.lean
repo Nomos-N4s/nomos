@@ -275,6 +275,34 @@ def defaultFalsificationParams : FalsificationParams :=
     once granted, is proved below. -/
 def falsificationParamsTier : Tier := Tier.immutable
 
+/-- The falsification test, read off a parameter block rather than off the
+    module constant. -/
+def isFalsificationWith (p : FalsificationParams) (integrityScore : Nat) : Bool :=
+  integrityScore < p.tagComplianceThreshold
+
+/-- The budget update, read off a parameter block rather than off the module
+    constant. -/
+def budgetAfterFalsificationWith (p : FalsificationParams) (oldBudget : Nat) (fc : Nat) : Nat :=
+  if fc ≥ p.budgetCutoff then
+    max 1 (oldBudget / 2)
+  else
+    oldBudget
+
+/-- The parameterised falsification test is the operative one: at the default
+    block it *is* `isFalsification`, by `rfl`. Without this the block below
+    would be a shadow model, and invariance of it would say nothing about the
+    behaviour this module defines. -/
+theorem isFalsification_eq_at_default (integrityScore : Nat) :
+    isFalsification integrityScore
+      = isFalsificationWith defaultFalsificationParams integrityScore :=
+  rfl
+
+/-- The parameterised budget update is likewise the operative one. -/
+theorem budgetAfterFalsification_eq_at_default (oldBudget : Nat) (fc : Nat) :
+    budgetAfterFalsification oldBudget fc
+      = budgetAfterFalsificationWith defaultFalsificationParams oldBudget fc :=
+  rfl
+
 /-
   Falsification parameters are immutable-tier: no governance procedure
   can change TAG_COMPLIANCE_THRESHOLD or FALSIFICATION_BUDGET_CUTOFF.
