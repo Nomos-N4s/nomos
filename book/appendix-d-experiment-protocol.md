@@ -106,8 +106,30 @@ Full list in `pyproject.toml` and `uv.lock`.
 | `governance` | Full Neural Parliament Speaker | `SpeakerStateMachine` |
 | `monolithic_rl` | Always pick max expected reward | `MonolithicRL` |
 | `random` | Random choice from proposals | `RandomBaseline` |
-| `static_masking` | Block predefined actions, then max reward | `StaticMasking` |
+| `static_masking` | Block the scenario's declared actions, then max reward | `StaticMasking` |
 | `veto_only` | Accept first proposal below risk threshold | `VetoOnly` |
+
+The `static_masking` blocklist is not a global constant. Each scenario
+declares its own in `ExperimentScenario.STATIC_BLOCKLIST`, listing only
+actions whose harm is a property of the action rather than of the world
+state:
+
+| Scenario | Blocked actions |
+|----------|-----------------|
+| `TemptationBank` | `take_loan` |
+| `DriftLab` | `classify_harmful_as_safe` |
+| `DeadlockMaze` | `tighten_quorum` |
+| `GridWorld` | none — arm not run |
+
+GridWorld is the exception on purpose. Its actions are bare directions and
+the poison is in the target tile, so the same `move_down` is safe on one step
+and harmful on the next; no fixed set of action names expresses the
+constraint. With an empty blocklist `StaticMasking` filters nothing and
+reduces to `MonolithicRL`, so the runner omits the arm (raising a
+`RuntimeWarning`) instead of publishing a duplicate under a second name. The
+risk-threshold filter that *can* express GridWorld's constraint is the
+`veto_only` baseline; the ground-truth env-level mask is
+`GovernanceGridWorld(static_mask=True)`.
 
 ---
 
