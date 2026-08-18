@@ -125,6 +125,28 @@ theorem empty_vote_never_passes (d : DecisionClass) :
   rcases h with ⟨htw, _⟩
   simp [totalWeight] at htw
 
+/-- A routine ballot that clears its threshold is resolved by computation:
+    `decide` closes the goal, so no classical step is involved. -/
+example : votePasses [⟨2, 1⟩] DecisionClass.routine := by decide
+
+/-- Boundary above: routine passes exactly at the halfway mark (4 ≤ 4). -/
+example : votePasses [⟨2, 1⟩, ⟨2, 0⟩] DecisionClass.routine := by decide
+
+/-- Boundary below: one weight more and the same computation rejects it. -/
+example : ¬ votePasses [⟨2, 1⟩, ⟨3, 0⟩] DecisionClass.routine := by decide
+
+/-- An identity vote that misses the unanimity bar is rejected by computation. -/
+example : ¬ votePasses [⟨2, 0⟩, ⟨1, 1⟩] DecisionClass.identity := by decide
+
+/-- The empty roll is rejected by the decision procedure too, independently of
+    `empty_vote_never_passes`. -/
+example : ¬ votePasses [] DecisionClass.highImpact := by decide
+
+/-- Two different ballot lists with the same tallies resolve alike. -/
+example : votePasses [⟨2, 1⟩] DecisionClass.routine ↔
+    votePasses [⟨1, 2⟩, ⟨1, 0⟩] DecisionClass.routine :=
+  vote_resolution_determined_by_tallies _ _ _ rfl rfl
+
 /-
   Falsification Counter
   =====================
