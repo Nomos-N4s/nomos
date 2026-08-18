@@ -204,6 +204,43 @@ theorem tamper_evidence_single_binding_of_distinct_digests (b₁ b₂ : ActionBi
     chainRoot hashImpl [b₁] ≠ chainRoot hashImpl [b₂] :=
   tamper_changes_chain_root_of_distinct_digests hashImpl [] [] b₁ b₂ hDigest
 
+/-- Order sensitivity, exactly: swapping two bindings leaves the root
+    unchanged **iff** their digests coincide. Unconditional, and the precise
+    replacement for the commutativity of the old `+`-fold, under which every
+    reordering was invisible. -/
+theorem chain_root_swap_eq_iff_digest_eq (a b : ActionBinding) :
+    chainRoot hashImpl [a, b] = chainRoot hashImpl [b, a] ↔
+      bindingDigest hashImpl a = bindingDigest hashImpl b := by
+  unfold chainRoot
+  simp only [List.foldl_cons, List.foldl_nil, GENESIS_HASH, MIX]
+  constructor
+  · intro h
+    omega
+  · intro h
+    omega
+
+/-- Reordering two bindings with distinct digests is visible in the root. -/
+theorem chain_root_not_commutative_of_distinct_digests (a b : ActionBinding)
+    (hDigest : bindingDigest hashImpl a ≠ bindingDigest hashImpl b) :
+    chainRoot hashImpl [a, b] ≠ chainRoot hashImpl [b, a] := by
+  intro hEq
+  exact hDigest ((chain_root_swap_eq_iff_digest_eq hashImpl a b).mp hEq)
+
+/-- `chainRoot [a, b] = chainRoot [b, a]` for **distinct** `a` and `b` — the
+    property the old commutative root had — now fails, but only under the
+    hypothesis this theorem is named for: that the digest is collision-free,
+    i.e. that distinct records get distinct digests. With `hashImpl`
+    uninterpreted the hypothesis cannot be discharged inside the file, and
+    `chain_root_commutes_under_a_degenerate_hash` below shows it cannot
+    simply be dropped either. -/
+theorem chain_root_not_commutative_of_collision_free_digest
+    (hCollisionFree : ∀ x y : ActionBinding,
+      bindingDigest hashImpl x = bindingDigest hashImpl y → x = y)
+    (a b : ActionBinding) (hne : a ≠ b) :
+    chainRoot hashImpl [a, b] ≠ chainRoot hashImpl [b, a] :=
+  chain_root_not_commutative_of_distinct_digests hashImpl a b
+    (fun hEq => hne (hCollisionFree a b hEq))
+
 /-- Claim 3 (determinism): the chain root is a function of the binding
     sequence — equal sequences give equal roots. -/
 theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
@@ -281,3 +318,19 @@ example
   omega
 
 end RuntimeHash
+
+/-- Why every tamper- and order-sensitivity theorem above carries a
+    hypothesis. An uninterpreted `hashImpl` may be constant, and then two
+    bindings that differ only in their implementation have the same digest
+    and the swap is invisible in the root. So the unconditional reading —
+    "distinct bindings, therefore distinct roots" — is refutable, not merely
+    unproven, and no honest theorem in this file may state it. -/
+theorem chain_root_commutes_under_a_degenerate_hash :
+    ∃ (hashImpl : String → Nat) (a b : ActionBinding),
+      a ≠ b ∧ chainRoot hashImpl [a, b] = chainRoot hashImpl [b, a] := by
+  refine ⟨fun _ => 0,
+    { implementation := "benign_impl", bindingHash := 0, prevHash := 0 },
+    { implementation := "rm_rf_slash", bindingHash := 0, prevHash := 0 }, ?_, rfl⟩
+  intro h
+  injection h with hImpl _ _
+  exact absurd hImpl (by decide)
