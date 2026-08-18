@@ -16,7 +16,7 @@ Real-world analogy:
 """
 
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from ..contracts.contract import ContractRegistry, UlyssesContract
 from ..models import PriorityTag, Proposal
@@ -35,6 +35,13 @@ class TemptationBank(ExperimentScenario):
         speaker: The governance Speaker instance.
         initial_balance: Starting resource balance (default 10.0).
     """
+
+    #: ``take_loan`` is the temptation this scenario exists to study: +10 now
+    #: against -15 ten steps later, in every state. The harm is a property of
+    #: the action itself, so a fixed rule can express it — which is exactly
+    #: the comparison the static-masking arm is for, since the Parliament
+    #: reaches the same ban through a Ulysses Contract it votes for itself.
+    STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset({"take_loan"})
 
     def __init__(self, speaker: SpeakerStateMachine, initial_balance: float = 10.0):
         super().__init__(speaker)

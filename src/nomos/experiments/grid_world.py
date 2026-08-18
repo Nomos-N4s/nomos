@@ -16,7 +16,7 @@ Real-world analogy:
 
 import random
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
@@ -38,6 +38,16 @@ class GridWorld(ExperimentScenario):
         poison_ratio: Proportion of poison-eligible tiles that become poison
             (default 0.3).
     """
+
+    #: Empty, and deliberately so. Every action here is ``move_<direction>``,
+    #: and whether a direction is harmful depends on the tile it leads to, not
+    #: on its name — the same ``move_down`` is safe on one step and poison on
+    #: the next. A name-level blocklist cannot express the poison constraint,
+    #: so the static-masking arm is not run for GridWorld. The risk-threshold
+    #: filter that *can* express it is already the ``veto_only`` baseline, and
+    #: the env-level ground-truth mask is
+    #: :class:`~.gym_env.GovernanceGridWorld` with ``static_mask=True``.
+    STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
 
     def __init__(
         self, speaker: SpeakerStateMachine, size: int = 6, seed: int = 42, poison_ratio: float = 0.3

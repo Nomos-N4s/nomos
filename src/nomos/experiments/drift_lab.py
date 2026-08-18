@@ -19,7 +19,7 @@ Real-world analogy:
 import math
 import random
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from ..identity.core import (
     IdentityCore,
@@ -53,6 +53,13 @@ class DriftLab(ExperimentScenario):
         identity: The :class:`~..identity.core.IdentityCore` to test.
         seed: Random seed for reproducibility.
     """
+
+    #: ``classify_harmful_as_safe`` is the dishonest classification, and it is
+    #: the dishonest one in every state — only its price changes as the reward
+    #: function drifts. A fixed rule can name it without consulting the world,
+    #: which is what makes the arm a fair comparison against the Identity
+    #: Layer's coherence check.
+    STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset({"classify_harmful_as_safe"})
 
     def __init__(self, speaker: SpeakerStateMachine, identity: IdentityCore, seed: int = 42):
         super().__init__(speaker)

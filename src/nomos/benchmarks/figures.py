@@ -147,6 +147,11 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
     Each strategy is a different coloured bar within each scenario group.
     Error bars are 95% bootstrap CIs (asymmetric).
 
+    A scenario-strategy pair with no reports gets no bar at all, rather than
+    a bar of height zero: an arm that was never run has no violation rate,
+    and drawing it at zero would publish the most favourable possible number
+    for a measurement that does not exist.
+
     Args:
         reports: List of experiment reports.
         output_dir: Directory for output files.
@@ -169,29 +174,29 @@ def plot_violation_rates(reports: list[ExperimentReport], output_dir: str = "res
     fig.suptitle("Constraint Violation Rates by Scenario", fontsize=14, fontweight="bold")
 
     for sidx, strategy in enumerate(strategies):
+        positions = []
         means = []
         lower_err = []
         upper_err = []
-        for scenario in scenarios:
+        for xpos, scenario in zip(x, scenarios):
             relevant = [
                 r
                 for r in reports
                 if r.metadata.get("scenario") == scenario and r.metadata.get("strategy") == strategy
             ]
-            if relevant:
-                vals = [r.constraint_violations / max(r.total_steps, 1) for r in relevant]
-                means.append(statistics.mean(vals))
-                lo, hi = _bootstrap_ci(vals)
-                lower_err.append(statistics.mean(vals) - lo)
-                upper_err.append(hi - statistics.mean(vals))
-            else:
-                means.append(0)
-                lower_err.append(0)
-                upper_err.append(0)
+            if not relevant:
+                continue
+            vals = [r.constraint_violations / max(r.total_steps, 1) for r in relevant]
+            mean = statistics.mean(vals)
+            lo, hi = _bootstrap_ci(vals)
+            positions.append(xpos)
+            means.append(mean)
+            lower_err.append(mean - lo)
+            upper_err.append(hi - mean)
 
         offset = (sidx - len(strategies) / 2 + 0.5) * width
         ax.bar(
-            x + offset,
+            np.array(positions, dtype=float) + offset,
             means,
             width,
             label=strategy,
@@ -218,6 +223,9 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
 
     Error bars are 95% bootstrap CIs (asymmetric).
 
+    As in :func:`plot_violation_rates`, a scenario-strategy pair with no
+    reports gets no bar rather than a bar of height zero.
+
     Args:
         reports: List of experiment reports.
         output_dir: Directory for output files.
@@ -240,29 +248,29 @@ def plot_deadlock_frequency(reports: list[ExperimentReport], output_dir: str = "
     fig.suptitle("Deadlock Frequency by Scenario", fontsize=14, fontweight="bold")
 
     for sidx, strategy in enumerate(strategies):
+        positions = []
         means = []
         lower_err = []
         upper_err = []
-        for scenario in scenarios:
+        for xpos, scenario in zip(x, scenarios):
             relevant = [
                 r
                 for r in reports
                 if r.metadata.get("scenario") == scenario and r.metadata.get("strategy") == strategy
             ]
-            if relevant:
-                vals = [r.deadlock_rate for r in relevant]
-                means.append(statistics.mean(vals))
-                lo, hi = _bootstrap_ci(vals)
-                lower_err.append(statistics.mean(vals) - lo)
-                upper_err.append(hi - statistics.mean(vals))
-            else:
-                means.append(0)
-                lower_err.append(0)
-                upper_err.append(0)
+            if not relevant:
+                continue
+            vals = [r.deadlock_rate for r in relevant]
+            mean = statistics.mean(vals)
+            lo, hi = _bootstrap_ci(vals)
+            positions.append(xpos)
+            means.append(mean)
+            lower_err.append(mean - lo)
+            upper_err.append(hi - mean)
 
         offset = (sidx - len(strategies) / 2 + 0.5) * width
         ax.bar(
-            x + offset,
+            np.array(positions, dtype=float) + offset,
             means,
             width,
             label=strategy,

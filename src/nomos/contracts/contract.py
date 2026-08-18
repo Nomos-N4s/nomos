@@ -85,11 +85,21 @@ class UlyssesContract:
             ``"distributed_monitors"``, or ``"timelock"`` (see
             :mod:`nomos.contracts.enforcement`).
         state: Current lifecycle state (see :class:`ContractState`).
-        timelock_blocks: Number of governance cycles before an enacted
-            contract becomes active (for timelock enforcement mode).
+        timelock_blocks: Duration of the timelock, in governance cycles,
+            measured from ``created_at_cycle`` — not from enactment (for
+            timelock enforcement mode). A contract enacted later than it
+            was proposed therefore spends the remainder of the window
+            locked, not a fresh ``timelock_blocks`` cycles. This is a
+            constant duration — it is never decremented.
         created_at_cycle: The governance cycle when this contract was
-            first proposed.
+            first proposed. The timelock is anchored here.
         revoked_at_cycle: The cycle when revoked, if applicable.
+        unlock_at_cycle: Read-only property giving the absolute governance
+            cycle at which the timelock releases,
+            ``created_at_cycle + timelock_blocks``. Derived on every access
+            so it can never disagree with the two fields behind it.
+        current_cycle: Governance cycle this contract's clock has reached.
+            Starts at ``created_at_cycle`` and is advanced by :meth:`tick`.
     """
 
     contract_id: str
@@ -101,6 +111,17 @@ class UlyssesContract:
     timelock_blocks: int = 0
     created_at_cycle: int = 0
     revoked_at_cycle: int | None = None
+    current_cycle: int | None = None
+
+    def __post_init__(self):
+        """Start the contract's clock at its creation cycle if unset."""
+        if self.current_cycle is None:
+            self.current_cycle = self.created_at_cycle
+
+    @property
+    def unlock_at_cycle(self) -> int:
+        """Absolute governance cycle at which the timelock releases."""
+        return self.created_at_cycle + self.timelock_blocks
 
     def enact(self):
         """Move contract to ENACTED state (passed vote, waiting for activation)."""
@@ -114,15 +135,21 @@ class UlyssesContract:
         """Move contract to REVOKED state (restrictions lifted)."""
         self.state = ContractState.REVOKED
 
-    def tick(self):
-        """Advance this contract's lifecycle by one governance cycle.
+    def tick(self, current_cycle: int | None = None):
+        """Advance this contract's clock by one governance cycle.
 
-        Decrements the timelock counter. When timelock reaches zero,
-        transitions from ENACTED to ACTIVE so restrictions take effect.
+        The lock duration is a constant: ``timelock_blocks`` is never
+        mutated. Once the clock reaches :attr:`unlock_at_cycle`, an
+        ENACTED contract transitions to ACTIVE so restrictions take
+        effect.
+
+        Args:
+            current_cycle: Absolute governance cycle to move the clock
+                to. Defaults to one cycle past the contract's current
+                position, for callers driving a contract on its own.
         """
-        if self.timelock_blocks > 0:
-            self.timelock_blocks -= 1
-        if self.state == ContractState.ENACTED and self.timelock_blocks <= 0:
+        self.current_cycle = self.current_cycle + 1 if current_cycle is None else current_cycle
+        if self.state == ContractState.ENACTED and self.current_cycle >= self.unlock_at_cycle:
             self.state = ContractState.ACTIVE
 
     def applies_to(self, action_index: int) -> bool:
@@ -167,12 +194,24 @@ class ContractRegistry:
         self._contracts: list[UlyssesContract] = []
         self._cycle: int = 0
 
-    def add(self, contract: UlyssesContract):
-        """Register a new contract.
+    def add(self, contract: UlyssesContract, at_cycle: int | None = None):
+        """Register a new contract, anchoring its clock to the registry.
+
+        The registry's cycle is the one authority on time, so registration
+        stamps the contract's :attr:`~UlyssesContract.created_at_cycle` and
+        :attr:`~UlyssesContract.current_cycle`. A contract built mid-run
+        would otherwise keep the default origin of cycle 0 and reach its
+        unlock cycle before the first :meth:`tick_cycle`.
 
         Args:
             contract: The contract to add (usually in PROPOSED state).
+            at_cycle: Cycle to record as the contract's proposal cycle.
+                Defaults to the registry's current cycle; pass it only to
+                replay a contract proposed at a known earlier cycle.
         """
+        origin = self._cycle if at_cycle is None else at_cycle
+        contract.created_at_cycle = origin
+        contract.current_cycle = origin
         self._contracts.append(contract)
 
     def get_active(self) -> list[UlyssesContract]:
@@ -206,12 +245,17 @@ class ContractRegistry:
         return list(self._contracts)
 
     def tick_cycle(self):
-        """Advance the governance cycle counter.
+        """Advance the governance cycle and every registered contract.
 
-        Called once per governance cycle to update timelock counters
-        and handle contract activation/expiry.
+        Called once per governance cycle. Each contract's clock is moved
+        to the registry's cycle, so an ENACTED contract whose timelock
+        has elapsed becomes ACTIVE. :meth:`add` stamps each contract's
+        proposal cycle from this same clock, so a contract registered
+        mid-run still serves its full timelock.
         """
         self._cycle += 1
+        for contract in self._contracts:
+            contract.tick(self._cycle)
 
     def active_restrictions(self) -> set[int]:
         """Compute the union of all active contract restrictions.

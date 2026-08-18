@@ -1,5 +1,5 @@
 """
-Flat-branch and fixed-iteration helpers for constant-time execution (Appendix A §7).
+Flat-branch and fixed-iteration helpers for constant-time execution (Appendix A §10).
 
 These operations execute in the same number of cycles regardless of input data,
 preventing cache-timing side-channel attacks on the governance path.

@@ -86,12 +86,28 @@ class StaticMasking(BaselineGovernance):
     Applies a fixed set of blocked action names before picking
     the highest-reward remaining proposal. Tests whether a simple
     rule-based filter can match the Parliament's adaptive vetoing.
+
+    Args:
+        blocked_actions: Action names to forbid, matched against
+            :attr:`~..models.Proposal.action`. Must be non-empty.
+
+    Raises:
+        ValueError: If ``blocked_actions`` is ``None`` or empty. With nothing
+            blocked the filter removes nothing and ``decide`` reduces to
+            :meth:`MonolithicRL.decide`, so a degenerate arm would reach a
+            published ablation table under a second name.
     """
 
     name = "static_masking"
 
-    def __init__(self, blocked_actions: set[int] | None = None):
-        self.blocked = set(blocked_actions) if blocked_actions is not None else set()
+    def __init__(self, blocked_actions: set[str] | None = None):
+        if not blocked_actions:
+            msg = (
+                "StaticMasking needs a non-empty blocklist: with nothing blocked "
+                "it is identical to MonolithicRL"
+            )
+            raise ValueError(msg)
+        self.blocked: set[str] = set(blocked_actions)
 
     def decide(self, state, proposals):
         filtered = [p for p in proposals if p.action not in self.blocked]
