@@ -210,7 +210,7 @@ class TestEnforcement:
         assert "expired" in elapsed_result.reason
         assert elapsed.timelock_blocks == 10
 
-    def test_stacked_enforcement_permits_revocation_once_timelock_elapses(self):
+    def test_stacked_enforcement_surfaces_elapsed_timelock(self):
         contract = UlyssesContract(
             contract_id="t", restricted_indices={0},
             enforcement_mode="timelock", timelock_blocks=10,
@@ -221,9 +221,21 @@ class TestEnforcement:
             contract.tick()
         held = stacked_enforcement(contract, 0.5, [monitor], 0, None, 9)
         assert held.compliant is True
-        released = stacked_enforcement(contract, 0.5, [monitor], 0, None, 10)
-        assert released.compliant is False
-        assert "expired" in released.reason
+        elapsed = stacked_enforcement(contract, 0.5, [monitor], 0, None, 10)
+        assert elapsed.compliant is False
+        assert "expired" in elapsed.reason
+
+    def test_procedural_inertia_short_circuits_ahead_of_timelock(self):
+        contract = UlyssesContract(
+            contract_id="t", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=10,
+        )
+        contract.enact()
+        monitor = DistributedMonitor("m1", lambda i, ctx: True)
+        result = stacked_enforcement(contract, 1.0, [monitor], 0, None, 5)
+        assert result.compliant is False
+        assert result.reason == "Revocation threshold met"
+        assert enforce_timelock(contract, 5).compliant is True
 
     def test_stacked_enforcement_all_pass(self):
         contract = UlyssesContract(contract_id="t", restricted_indices={0})
