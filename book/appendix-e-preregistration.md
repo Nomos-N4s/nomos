@@ -274,14 +274,37 @@ since the run; the commit date shows it predates the run. Both are checkable by
 anyone with the repository:
 
 ```bash
-sha256sum book/appendix-e-preregistration.md
-git log -1 --format='%H %cI' -- book/appendix-e-preregistration.md
+git show HEAD:book/appendix-e-preregistration.md | sha256sum
+git log --format='%H %cI' -- book/appendix-e-preregistration.md
 ```
 
-Compare against `preregistration.sha256` and `preregistration.commit` in
-`book/appendix-f-data/verifier_frontier.json`. `rl_validate` fails a frontier
-whose hash is missing: a result with no verifiable pre-registration is not a
-weaker result, it is an unfalsifiable one.
+The digest is taken over **newline-normalised (LF) content**, which is what git
+stores — so it is the same value on every platform. `git show` is quoted above
+because it reads the stored blob directly and therefore cannot be affected by a
+checkout's line endings; since `.gitattributes` pins `*.md` to LF, a plain
+`sha256sum book/appendix-e-preregistration.md` on a fresh clone gives the same
+result. A digest over raw working-tree bytes would not: a CRLF checkout and an
+LF checkout of identical text disagree, which is a property of the reader's
+machine and not of the evidence.
+
+The digest must equal `preregistration.sha256` in
+`book/appendix-f-data/verifier_frontier.json`, and `preregistration.commit` — the
+commit that **certified the hypotheses** — must appear in that log, dated before
+the run. The log may also contain later commits: those are provenance-only
+corrections, and each is itemised under `preregistration.correction`, so "the
+hypotheses have not moved" stays checkable with `git diff` between the certifying
+commit and any later one. `rl_validate` **recomputes** the digest and compares it,
+and checks the certifying commit is an ancestor of `HEAD` — a hash that is merely
+present proves nothing, and a commit that a rebase orphaned cannot date anything.
+A result with no verifiable pre-registration is not a weaker result, it is an
+unfalsifiable one.
+
+The provenance recorded for the first frontier run was corrected in
+[#307](https://github.com/Nomos-N4s/nomos/issues/307): the original digest was
+taken over CRLF bytes and the original commit was rebased away, so both commands
+above failed for a reader on an LF clone. **The pre-registered text itself never
+changed** — the blob is identical at both commits — and the superseded values are
+retained under `preregistration.correction` rather than being overwritten.
 
 ## Reproduce
 

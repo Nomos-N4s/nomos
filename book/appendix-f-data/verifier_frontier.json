@@ -1,10 +1,24 @@
 {
   "preregistration": {
     "path": "book/appendix-e-preregistration.md",
-    "sha256": "c6ea78a0ef82240b8a0391b6734d61e8db46a6e343c1f6588dcdbe00064ef071",
-    "commit": "6fde9c978e5699177f28c94a22320165ca4a9d4b",
-    "committed_at": "2026-08-13T12:14:29+02:00",
-    "head": "4537a6c4eec16352e70b541a17c0fba1a8b1c715"
+    "sha256": "82189294404b5a2687c5f86f95a08b7ef60269d6440406f742d8918daea7ecb5",
+    "sha256_encoding": "newline-normalised (LF); equals the git blob digest",
+    "commit": "5c66bc7d23d73ba214f71221d60dfcd74d32599a",
+    "committed_at": "2026-08-13T18:25:41+02:00",
+    "head": "4537a6c4eec16352e70b541a17c0fba1a8b1c715",
+    "correction": {
+      "issue": "https://github.com/Nomos-N4s/nomos/issues/307",
+      "reason": "Two provenance defects, no change to any hypothesis. (1) The originally recorded digest was taken over raw working-tree bytes on a CRLF checkout, so `sha256sum` disagreed for every reader on an LF clone. (2) The recorded commit was rewritten by a rebase and is not reachable from main, so the `git log` check could not resolve it. Fixing (1) required editing this document's own Provenance section, which necessarily changes its digest — hence the chain below. The pre-registered HYPOTHESES AND THRESHOLDS were never touched: `git diff 6fde9c9 v0.15.1 -- book/appendix-e-preregistration.md` is empty, and the correction commit changes only the \"Provenance of this document\" section.",
+      "superseded": {
+        "sha256_as_recorded": "c6ea78a0ef82240b8a0391b6734d61e8db46a6e343c1f6588dcdbe00064ef071",
+        "sha256_as_recorded_encoding": "raw CRLF working-tree bytes (platform-dependent)",
+        "sha256_certified_content": "f0ce46a1ecbe37d14c4eb48fc1d7d98bc9303a2e6e0900392aa994f5d1dd83fd",
+        "sha256_certified_content_note": "LF digest of the text the run was bound to; unchanged from commit 6fde9c9 through tag v0.15.1. Verify with: git show v0.15.1:book/appendix-e-preregistration.md | sha256sum",
+        "commit": "6fde9c978e5699177f28c94a22320165ca4a9d4b",
+        "committed_at": "2026-08-13T12:14:29+02:00",
+        "commit_note": "rebased into 5c66bc7 (identical blob e7270a54); not reachable from main"
+      }
+    }
   },
   "sweep": {
     "epsilons": [

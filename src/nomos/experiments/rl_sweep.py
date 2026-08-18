@@ -29,12 +29,12 @@ than self-attested.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
-import subprocess
 from typing import Any
 
+from .provenance import PREREGISTRATION_PATH as _PREREGISTRATION_PATH
+from .provenance import preregistration_provenance
 from .rl_protocol import DEFAULT_SEEDS, EPSILON, run_protocol
 
 # ── Pre-registered sweep constants ─────────────────────────────────────────
@@ -73,56 +73,9 @@ H6_MIN_BYPASS = 0.05
 MONOTONICITY_TOLERANCE = 0.02
 
 #: The pre-registration this sweep is bound to.
-PREREGISTRATION_PATH = "book/appendix-e-preregistration.md"
-
-
-def preregistration_provenance(path: str = PREREGISTRATION_PATH) -> dict[str, Any]:
-    """Capture checkable evidence of *which* pre-registration a run was bound to.
-
-    "Pre-registered" is a claim about time, and a document living in the same
-    repository as its results cannot establish it by assertion. Recording the
-    file's SHA-256 alongside the commit that last modified it makes the claim
-    verifiable two independent ways: the hash proves the text has not moved since
-    the run, and the commit date proves the text predates it.
-
-    Everything degrades to ``None`` rather than raising. A missing git binary is
-    a reason to report weaker provenance, not to lose a training run — but the
-    absence is recorded, so a result can never look better evidenced than it is.
-
-    Args:
-        path: Path to the pre-registration, relative to the repository root.
-
-    Returns:
-        Mapping with ``path``, ``sha256``, ``commit``, ``committed_at`` and
-        ``head``; any field that could not be determined is ``None``.
-    """
-    provenance: dict[str, Any] = {
-        "path": path,
-        "sha256": None,
-        "commit": None,
-        "committed_at": None,
-        "head": None,
-    }
-    try:
-        with open(path, "rb") as fh:
-            provenance["sha256"] = hashlib.sha256(fh.read()).hexdigest()
-    except OSError:
-        return provenance
-
-    def _git(*args: str) -> str | None:
-        try:
-            out = subprocess.run(
-                ["git", *args], capture_output=True, text=True, timeout=30, check=False
-            )
-        except (OSError, subprocess.SubprocessError):  # pragma: no cover - no git
-            return None
-        value = out.stdout.strip()
-        return value or None
-
-    provenance["commit"] = _git("log", "-1", "--format=%H", "--", path)
-    provenance["committed_at"] = _git("log", "-1", "--format=%cI", "--", path)
-    provenance["head"] = _git("rev-parse", "HEAD")
-    return provenance
+# Provenance lives in .provenance so the validator can import it without the RL
+# extras, and so the generator and the checker cannot drift apart.
+PREREGISTRATION_PATH = _PREREGISTRATION_PATH
 
 
 def _point_metrics(aggregate: dict[str, Any], mode: str = "governance") -> dict[str, Any]:

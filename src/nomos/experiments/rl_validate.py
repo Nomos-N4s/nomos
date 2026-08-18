@@ -21,6 +21,8 @@ import sys
 from collections.abc import Mapping
 from typing import Any
 
+from .provenance import verify_preregistration
+
 
 def _finite(value: Any) -> bool:
     return isinstance(value, int | float) and math.isfinite(value)
@@ -116,11 +118,7 @@ def validate_sweep(frontier: Mapping[str, Any]) -> list[str]:
     """
     problems: list[str] = []
 
-    provenance = frontier.get("preregistration")
-    if not isinstance(provenance, Mapping):
-        problems.append("missing 'preregistration' provenance block")
-    elif not provenance.get("sha256"):
-        problems.append("preregistration.sha256 is missing — the pre-registration is unverifiable")
+    problems.extend(verify_preregistration(frontier.get("preregistration")))
 
     sweep = frontier.get("sweep")
     if not isinstance(sweep, Mapping):
