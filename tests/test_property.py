@@ -387,7 +387,7 @@ class TestPropertyEnforcementMonotonicity:
             assert stacked.reason == inertia.reason
 
 
-class TestPropertyTimelockDecrement:
+class TestPropertyTimelockSemantics:
     @given(start_blocks=st.integers(min_value=0, max_value=100), ticks=st.integers(min_value=0, max_value=100))
     def test_timelock_expires_exactly_at_target_block(self, start_blocks, ticks):
         assume(start_blocks > 0)
@@ -399,24 +399,25 @@ class TestPropertyTimelockDecrement:
         assert result.compliant == (ticks < start_blocks)
 
     @given(blocks=st.integers(min_value=1, max_value=50))
-    def test_timelock_remaining_decreases_with_ticks(self, blocks):
+    def test_tick_and_enforce_timelock_agree_at_every_cycle(self, blocks):
         contract = UlyssesContract(
             contract_id="time_test", restricted_indices={1},
-            timelock_blocks=blocks, state=ContractState.ACTIVE,
+            timelock_blocks=blocks,
         )
-        from src.nomos.contracts.contract import ContractRegistry
-        reg = ContractRegistry()
-        reg.add(contract)
-        for cycle in range(blocks + 2):
-            remaining = blocks - cycle
+        contract.enact()
+        for cycle in range(blocks + 3):
             result = enforce_timelock(contract, cycle)
-            if remaining > 0:
-                assert result.compliant
-                assert "remaining" in result.reason
+            locked = cycle < blocks
+            assert contract.current_cycle == cycle
+            assert contract.timelock_blocks == blocks
+            assert result.compliant is locked
+            if locked:
+                assert f"{blocks - cycle} blocks remaining" in result.reason
+                assert contract.state == ContractState.ENACTED
             else:
-                assert not result.compliant
                 assert "expired" in result.reason
-            reg.tick_cycle()
+                assert contract.state == ContractState.ACTIVE
+            contract.tick()
 
 
 class TestPropertyTierRules:

@@ -74,7 +74,7 @@ class TestTraceWriter:
         assert contract_step["contract_state"] == [
             {
                 "contract_id": "ban_loans",
-                "state": "ENACTED",
+                "state": "ACTIVE",
                 "restricted_indices": [0],
                 "timelock_blocks": 0,
             }
