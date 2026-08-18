@@ -10,6 +10,8 @@
   - Falsification parameters are immutable-tier
 -/
 
+import GovBudgetProof.IdentityTiers
+
 /-- Three decision classes for vote threshold. -/
 inductive DecisionClass : Type
   | routine
@@ -224,6 +226,34 @@ theorem budget_halving_formula (oldBudget : Nat) (fc : Nat)
     budgetAfterFalsification oldBudget fc = max 1 (oldBudget / 2) := by
   unfold budgetAfterFalsification
   simp [h]
+
+/-
+  Falsification Parameter Mutability
+  ==================================
+  Chapter 4 §3.1. The falsification parameters are *declared* to sit at the
+  immutable tier of `GovBudgetProof.IdentityTiers`, and this section works out
+  what that declaration buys: a governance step gated on `isPermitted` cannot
+  move them.
+-/
+
+/-- `isPermitted` is decidable, so a governance step can branch on it by
+    computation. Every branch is a `Nat` comparison or the empty condition of
+    the immutable tier, so the instance is constructive: `#print axioms`
+    reports none, in particular no `Classical.choice`.
+
+    The instance lives here rather than in `IdentityTiers.lean` because it is
+    this module that needs to *run* the gate; the tier model itself states the
+    bars propositionally and is left untouched. -/
+instance decidableIsPermitted (t : Tier) (c : Change) : Decidable (isPermitted t c) :=
+  match t with
+  | Tier.immutable      => inferInstanceAs (Decidable False)
+  | Tier.constitutional =>
+      inferInstanceAs (Decidable (CONSTITUTIONAL_QUORUM ≤ c.quorum ∧
+        CONSTITUTIONAL_COOLDOWN ≤ c.cooldownDays))
+  | Tier.operational    =>
+      inferInstanceAs (Decidable (OPERATIONAL_QUORUM ≤ c.quorum ∧
+        OPERATIONAL_COOLDOWN ≤ c.cooldownDays))
+  | Tier.dynamic        => inferInstanceAs (Decidable (DYNAMIC_QUORUM ≤ c.quorum))
 
 /-
   Falsification parameters are immutable-tier: no governance procedure
