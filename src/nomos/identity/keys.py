@@ -44,21 +44,50 @@ class GenesisMultisig:
     Args:
         threshold: Number of signatures required (default 3).
         total_holders: Total key holders (default 5).
+
+    Raises:
+        ValueError: If the threshold or holder count is not a valid t-of-n
+            (``1 <= threshold <= total_holders``).
     """
 
     def __init__(self, threshold: int = 3, total_holders: int = 5):
+        if total_holders < 1:
+            raise ValueError(f"total_holders must be at least 1, got {total_holders}")
+        if threshold < 1:
+            raise ValueError(f"threshold must be at least 1, got {threshold}")
+        if threshold > total_holders:
+            raise ValueError(
+                f"threshold {threshold} exceeds total_holders {total_holders} — "
+                "a quorum that can never be reached is not a valid t-of-n"
+            )
         self.threshold = threshold
+        self.total_holders = total_holders
         self.holders: list[KeyHolder] = []
 
     def add_holder(self, name: str) -> str:
         """Register a new key holder and generate their public key.
+
+        The name is the holder's identity: ``sign`` matches on it and nothing
+        else. Duplicate names are therefore refused, otherwise one principal
+        could register several times and sign a quorum alone. The registry is
+        also capped at ``total_holders`` so the *n* in *t-of-n* is enforced.
 
         Args:
             name: A unique name for this holder.
 
         Returns:
             The generated public key (hex string, first 16 chars of SHA-256).
+
+        Raises:
+            ValueError: If ``name`` is already registered, or the registry is
+                already at ``total_holders``.
         """
+        if any(h.name == name for h in self.holders):
+            raise ValueError(f"holder {name!r} is already registered")
+        if len(self.holders) >= self.total_holders:
+            raise ValueError(
+                f"cannot register {name!r}: already at total_holders={self.total_holders}"
+            )
         pk = hashlib.sha256(secrets.token_bytes(32)).hexdigest()[:16]
         self.holders.append(KeyHolder(name=name, public_key=pk))
         return pk
@@ -83,8 +112,14 @@ class GenesisMultisig:
 
     @property
     def signatures_count(self) -> int:
-        """Number of holders who have signed so far."""
-        return sum(1 for h in self.holders if h.has_signed)
+        """Number of *distinct* holders who have signed so far.
+
+        Counting distinct names rather than signed records mirrors the Lean
+        model's ``quorumCount`` (``IdentityGenesis.lean``), which filters a
+        fixed key set. The invariant then holds even if a duplicate record is
+        introduced by some other path.
+        """
+        return len({h.name for h in self.holders if h.has_signed})
 
     @property
     def is_authorized(self) -> bool:
