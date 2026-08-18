@@ -26,16 +26,13 @@
   3. Determinism: chain roots are a function of the binding sequence —
      equal sequences always yield equal roots.
 
-  NOTE: `hashImpl` is a deterministic stand-in for a cryptographic H.
-  No concrete injectivity of hashImpl is asserted; where tamper evidence
-  needs a hash change it is carried as an explicit hypothesis, mirroring
-  the collision-resistance assumption of the real system.
+  NOTE: `hashImpl` is UNINTERPRETED (issue #299). It is a section variable
+  of type `String -> Nat`, not a definition, so every declaration below is
+  universally quantified over the hash and no proof, example or `decide`
+  can appeal to a particular hash function. Tamper evidence therefore has
+  to carry the hash change as an explicit hypothesis, mirroring the
+  collision-resistance assumption of the real system.
 -/
-
-/-- Runtime hash of an executable implementation (`H(implementation_i)`
-    in §2.1). Deterministic stand-in; the proofs never unfold it. -/
-def hashImpl (implementation : String) : Nat :=
-  implementation.length
 
 /-- An action binding `bind(i) = < Operation_i, hash_i >` (§2.1), carrying
     additionally the link to the previous binding in the chain. -/
@@ -47,6 +44,13 @@ structure ActionBinding where
 /-- §4: genesis seed of the chain — the root commitment of the signed
     genesis manifest. -/
 def GENESIS_HASH : Nat := 0
+
+section RuntimeHash
+
+/- Runtime hash of an executable implementation (`H(implementation_i)` in
+   §2.1), left completely uninterpreted: a section variable rather than a
+   definition, so every declaration in this section is quantified over it. -/
+variable (hashImpl : String → Nat)
 
 /-- Per-binding hash commitment: the stored hash is the runtime hash of the
     stored implementation. -/
@@ -61,12 +65,13 @@ def IsValidChain : List ActionBinding → Prop
   | [] => True
   | [_] => True
   | a :: b :: rest =>
-      BindingValid a ∧ b.prevHash = hashImpl a.implementation ∧ IsValidChain (b :: rest)
+      BindingValid hashImpl a ∧ b.prevHash = hashImpl a.implementation ∧
+        IsValidChain (b :: rest)
 
 /-- Claim 1: in a valid chain, every binding after the first carries exactly
     the runtime hash of the previous binding's implementation. -/
 theorem link_matches_previous_implementation (a b : ActionBinding)
-    (rest : List ActionBinding) (h : IsValidChain (a :: b :: rest)) :
+    (rest : List ActionBinding) (h : IsValidChain hashImpl (a :: b :: rest)) :
     b.prevHash = hashImpl a.implementation := by
   unfold IsValidChain at h
   exact h.2.1
@@ -74,8 +79,8 @@ theorem link_matches_previous_implementation (a b : ActionBinding)
 /-- Claim 1 (first element): the chain head is a self-consistent binding
     (committed hash equals its implementation hash). -/
 theorem head_binding_self_consistent (a b : ActionBinding)
-    (rest : List ActionBinding) (h : IsValidChain (a :: b :: rest)) :
-    BindingValid a := by
+    (rest : List ActionBinding) (h : IsValidChain hashImpl (a :: b :: rest)) :
+    BindingValid hashImpl a := by
   unfold IsValidChain at h
   exact h.1
 
@@ -109,14 +114,14 @@ theorem foldl_combine_acc_determines_result (suffix : List ActionBinding) :
 theorem tamper_changes_chain_root (pre suf : List ActionBinding)
     (orig new : ActionBinding)
     (hImpl : hashImpl orig.implementation ≠ hashImpl new.implementation) :
-    chainRoot (pre ++ orig :: suf) ≠ chainRoot (pre ++ new :: suf) := by
+    chainRoot hashImpl (pre ++ orig :: suf) ≠ chainRoot hashImpl (pre ++ new :: suf) := by
   intro hEq
   unfold chainRoot at hEq
   simp [List.foldl_append] at hEq
   have hAcc :
       hashImpl orig.implementation + pre.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH
         = hashImpl new.implementation + pre.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH := by
-    exact foldl_combine_acc_determines_result suf _ _ (by simpa [List.foldl_cons] using hEq)
+    exact foldl_combine_acc_determines_result hashImpl suf _ _ (by simpa [List.foldl_cons] using hEq)
   have hSame : hashImpl orig.implementation = hashImpl new.implementation := by
     omega
   exact hImpl hSame
@@ -125,13 +130,13 @@ theorem tamper_changes_chain_root (pre suf : List ActionBinding)
     for one with a different implementation hash, the root changes. -/
 theorem tamper_evidence_single_binding (b₁ b₂ : ActionBinding)
     (hImpl : hashImpl b₁.implementation ≠ hashImpl b₂.implementation) :
-    chainRoot [b₁] ≠ chainRoot [b₂] := by
-  simpa [List.foldl] using tamper_changes_chain_root [] [] b₁ b₂ hImpl
+    chainRoot hashImpl [b₁] ≠ chainRoot hashImpl [b₂] := by
+  simpa [List.foldl] using tamper_changes_chain_root hashImpl [] [] b₁ b₂ hImpl
 
 /-- Claim 3 (determinism): the chain root is a function of the binding
     sequence — equal sequences give equal roots. -/
 theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
-    chainRoot bs = chainRoot bs' := by
+    chainRoot hashImpl bs = chainRoot hashImpl bs' := by
   rw [h]
 
 /-- §6.1: TEE.verify_binding — the runtime implementation hash is compared
@@ -142,7 +147,7 @@ def verifyRuntime (runtime : String) (b : ActionBinding) : Bool :=
 /-- §6.1 ACCEPT path: an implementation matching the committed hash passes
     binding verification. -/
 theorem verify_accepts_matching_implementation (runtime : String) (b : ActionBinding)
-    (h : hashImpl runtime = b.bindingHash) : verifyRuntime runtime b = true := by
+    (h : hashImpl runtime = b.bindingHash) : verifyRuntime hashImpl runtime b = true := by
   unfold verifyRuntime
   simp [h]
 
@@ -152,7 +157,7 @@ theorem verify_accepts_matching_implementation (runtime : String) (b : ActionBin
 theorem verify_rejects_changed_implementation (runtime : String) (b : ActionBinding)
     (hChanged : hashImpl runtime ≠ hashImpl b.implementation)
     (hCommitted : b.bindingHash = hashImpl b.implementation) :
-    verifyRuntime runtime b = false := by
+    verifyRuntime hashImpl runtime b = false := by
   unfold verifyRuntime
   by_cases hEq : hashImpl runtime = b.bindingHash
   · exact False.elim (hChanged (by rw [hCommitted] at hEq; exact hEq))
@@ -161,27 +166,27 @@ theorem verify_rejects_changed_implementation (runtime : String) (b : ActionBind
 /-- Channel for §2.1: TEE independently recomputes the hash at batch time
     rather than trusting the proposed binding's own claim. -/
 theorem tee_recomputes_hash_independently (runtime : String) (b : ActionBinding) :
-    verifyRuntime runtime b = decide (hashImpl runtime = b.bindingHash) := by
+    verifyRuntime hashImpl runtime b = decide (hashImpl runtime = b.bindingHash) := by
   rfl
 
 /-- A benign binding passes verification when the runtime implementation is
     the one it commits to. The commitment enters as a `BindingValid`
     hypothesis, so the example asserts the relation between the literal `11`
     and `hashImpl "benign_impl"` instead of evaluating it. -/
-example (hBenign : BindingValid
+example (hBenign : BindingValid hashImpl
       { implementation := "benign_impl", bindingHash := 11, prevHash := 0 }) :
-    verifyRuntime "benign_impl"
+    verifyRuntime hashImpl "benign_impl"
       { implementation := "benign_impl", bindingHash := 11, prevHash := 0 } = true :=
-  verify_accepts_matching_implementation _ _ hBenign.symm
+  verify_accepts_matching_implementation hashImpl _ _ hBenign.symm
 
 /-- Swapping the runtime implementation for one that hashes differently makes
     the rejected action index log a binding violation. -/
-example (hBenign : BindingValid
+example (hBenign : BindingValid hashImpl
       { implementation := "benign_impl", bindingHash := 11, prevHash := 0 })
     (hSwapped : hashImpl "evil_impl" ≠ hashImpl "benign_impl") :
-    verifyRuntime "evil_impl"
+    verifyRuntime hashImpl "evil_impl"
       { implementation := "benign_impl", bindingHash := 11, prevHash := 0 } = false :=
-  verify_rejects_changed_implementation _ _ hSwapped hBenign
+  verify_rejects_changed_implementation hashImpl _ _ hSwapped hBenign
 
 /-- Tampering with a bound action's past implementation changes the root of
     its chain ('benign_impl' → 'tampered_impl'). Both records now carry their
@@ -190,15 +195,17 @@ example (hBenign : BindingValid
     being different naturals that supplies the hash difference, so neither
     literal is decorative. -/
 example
-    (hTampered : BindingValid
+    (hTampered : BindingValid hashImpl
       { implementation := "tampered_impl", bindingHash := 13, prevHash := 0 })
-    (hBenign : BindingValid
+    (hBenign : BindingValid hashImpl
       { implementation := "benign_impl", bindingHash := 11, prevHash := 0 }) :
-    chainRoot
+    chainRoot hashImpl
         [{ implementation := "tampered_impl", bindingHash := 13, prevHash := 0 }]
-      ≠ chainRoot
+      ≠ chainRoot hashImpl
         [{ implementation := "benign_impl", bindingHash := 11, prevHash := 0 }] := by
-  refine tamper_evidence_single_binding _ _ ?_
+  refine tamper_evidence_single_binding hashImpl _ _ ?_
   unfold BindingValid at hTampered hBenign
   dsimp only at hTampered hBenign ⊢
   omega
+
+end RuntimeHash
