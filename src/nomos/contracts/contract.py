@@ -234,12 +234,19 @@ class ContractRegistry:
         return list(self._contracts)
 
     def tick_cycle(self):
-        """Advance the governance cycle counter.
+        """Advance the governance cycle and every registered contract.
 
-        Called once per governance cycle to update timelock counters
-        and handle contract activation/expiry.
+        Called once per governance cycle. Each contract's clock is moved
+        to the registry's cycle, so an ENACTED contract whose timelock
+        has elapsed becomes ACTIVE. Because the registry's cycle is the
+        one authority on time, a contract's
+        :attr:`~UlyssesContract.created_at_cycle` must be the cycle at
+        which it was proposed for its timelock to run for the intended
+        number of cycles.
         """
         self._cycle += 1
+        for contract in self._contracts:
+            contract.tick(self._cycle)
 
     def active_restrictions(self) -> set[int]:
         """Compute the union of all active contract restrictions.
