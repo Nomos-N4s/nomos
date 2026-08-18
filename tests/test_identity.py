@@ -1,4 +1,9 @@
+import pytest
+
 from src.nomos.identity.core import (
+    COMPONENTS_PER_COMMITMENT,
+    ENFORCEMENT_STRENGTH,
+    THRESHOLD_STRENGTH,
     CommitmentThreshold,
     CommitmentType,
     CoreCommitment,
@@ -10,6 +15,16 @@ from src.nomos.identity.tiers import (
     MutabilityTier,
     TieredMutability,
 )
+
+
+def _commitment(indices: list[int]) -> CoreCommitment:
+    return CoreCommitment(
+        type=CommitmentType.VALUE_PRINCIPLE,
+        statement="Always classify honestly",
+        threshold=CommitmentThreshold.SUPERMAJORITY,
+        enforcement=EnforcementMode.INTEGRITY_VETO,
+        affected_action_indices=indices,
+    )
 
 
 class TestMutabilityTiers:
@@ -122,8 +137,81 @@ class TestIdentityCore:
             threshold=CommitmentThreshold.SUPERMAJORITY,
             enforcement=EnforcementMode.EXTERNAL_AUDIT,
         ))
-        assert len(ic.identity_vector) == 2
-        assert all(v == 1.0 for v in ic.identity_vector)
+        assert len(ic.identity_vector) == 2 * COMPONENTS_PER_COMMITMENT
+        assert ic.identity_vector == [
+            THRESHOLD_STRENGTH[CommitmentThreshold.UNANIMITY_MULTISIG],
+            ENFORCEMENT_STRENGTH[EnforcementMode.INTEGRITY_VETO],
+            1.0,
+            THRESHOLD_STRENGTH[CommitmentThreshold.SUPERMAJORITY],
+            ENFORCEMENT_STRENGTH[EnforcementMode.EXTERNAL_AUDIT],
+            1.0,
+        ]
+
+    def test_identity_vector_distinguishes_commitment_strength(self):
+        weak = IdentityCore()
+        weak.add_commitment(CoreCommitment(
+            type=CommitmentType.VALUE_PRINCIPLE,
+            statement="Do no harm",
+            threshold=CommitmentThreshold.MAJORITY,
+            enforcement=EnforcementMode.EXTERNAL_AUDIT,
+        ))
+        strong = IdentityCore()
+        strong.add_commitment(CoreCommitment(
+            type=CommitmentType.VALUE_PRINCIPLE,
+            statement="Do no harm",
+            threshold=CommitmentThreshold.UNANIMITY_MULTISIG,
+            enforcement=EnforcementMode.INTEGRITY_VETO,
+        ))
+        assert weak.identity_vector != strong.identity_vector
+
+    def test_satisfaction_starts_at_one(self):
+        ic = IdentityCore()
+        ic.add_commitment(_commitment(indices=[0]))
+        assert ic.commitment_satisfaction == [1.0]
+
+    def test_record_violation_degrades_matching_commitment(self):
+        ic = IdentityCore()
+        ic.add_commitment(_commitment(indices=[0]))
+        before = ic.identity_vector
+        assert ic.record_violation(0, severity=0.5) == 1
+        assert ic.commitment_satisfaction == [0.5]
+        assert ic.identity_vector != before
+
+    def test_record_violation_ignores_unaffected_commitment(self):
+        ic = IdentityCore()
+        ic.add_commitment(_commitment(indices=[0]))
+        before = ic.identity_vector
+        assert ic.record_violation(1) == 0
+        assert ic.commitment_satisfaction == [1.0]
+        assert ic.identity_vector == before
+
+    def test_record_violation_hits_every_action_when_indices_empty(self):
+        ic = IdentityCore()
+        ic.add_commitment(_commitment(indices=[]))
+        assert ic.record_violation(7, severity=0.25) == 1
+        assert ic.commitment_satisfaction == [0.75]
+
+    def test_record_violation_decays_geometrically(self):
+        ic = IdentityCore()
+        ic.add_commitment(_commitment(indices=[0]))
+        for _ in range(3):
+            ic.record_violation(0, severity=0.5)
+        assert ic.commitment_satisfaction == [0.125]
+
+    def test_record_violation_never_nulls_the_vector(self):
+        ic = IdentityCore()
+        ic.add_commitment(_commitment(indices=[0]))
+        for _ in range(500):
+            ic.record_violation(0)
+        assert 0.0 < ic.commitment_satisfaction[0] < 1e-6
+        assert all(v > 0.0 for v in ic.identity_vector)
+
+    @pytest.mark.parametrize("severity", [-0.1, 1.5])
+    def test_record_violation_rejects_out_of_range_severity(self, severity):
+        ic = IdentityCore()
+        ic.add_commitment(_commitment(indices=[0]))
+        with pytest.raises(ValueError):
+            ic.record_violation(0, severity=severity)
 
     def test_evaluate_coherence_no_commitments(self):
         ic = IdentityCore()
