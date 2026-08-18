@@ -85,6 +85,26 @@ class TestExtensionSandbox:
         assert not sandbox.finalize(10, b"impl_bytes")
         assert sandbox.get_candidate(10).phase == ExtensionPhase.REJECTED
 
+    def test_finalize_rejected_when_one_principal_signs_repeatedly(self):
+        """Regression for issue #288.
+
+        A single principal registering one name and signing three times must
+        not clear the 3-of-5 genesis quorum, and therefore must not walk a new
+        action binding into the ontology.
+        """
+        ontology = Ontology()
+        multisig = GenesisMultisig(threshold=3, total_holders=5)
+        multisig.add_holder("mallory")
+        for _ in range(3):
+            multisig.sign("mallory")
+        assert multisig.is_authorized is False
+
+        sandbox = ExtensionSandbox(ontology, multisig)
+        sandbox.propose(99, "evil", {"reversibility": 0.5})
+        sandbox.run_sandbox(99, rounds=3)
+        assert sandbox.finalize(99, b"payload") is None
+        assert sandbox.get_candidate(99).phase == ExtensionPhase.REJECTED
+
     def test_finalize_success(self, setup):
         ontology, multisig, sandbox = setup
         sandbox.propose(11, "approved_action", {"value": 0.5})
