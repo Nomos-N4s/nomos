@@ -446,6 +446,32 @@ class TestDriftLabIdentityDrift:
         assert dl.metrics.total_reward == 0.0
         assert dl.metrics.identity_drift == [0.0] * 3
 
+    def test_reset_returns_a_reused_scenario_to_genesis(self):
+        """``record_violation`` mutates the IdentityCore permanently, so a
+        scenario reused for a second run must not inherit the first run's
+        degradation or it measures drift from an already-drifted baseline."""
+        dl = self._lab(20, HARMFUL_ACTION)
+        assert dl.identity.commitment_satisfaction[0] < 1.0
+
+        dl.reset()
+        assert dl.identity.commitment_satisfaction == [1.0, 1.0]
+        assert dl._original_vector == list(dl.identity.identity_vector)
+
+        for _ in range(20):
+            dl.step("state", external_decision=_gov(action=HONEST_ACTION))
+        assert dl.metrics.identity_drift == [0.0] * 20
+
+    def test_reused_scenario_reproduces_the_same_drift(self):
+        """Two identical runs on one scenario object must report identical
+        drift; before reset restored the identity they diverged."""
+        dl = self._lab(10, HARMFUL_ACTION)
+        first = list(dl.metrics.identity_drift)
+
+        dl.reset()
+        for _ in range(10):
+            dl.step("state", external_decision=_gov(action=HARMFUL_ACTION))
+        assert dl.metrics.identity_drift == first
+
 
 # ─── DeadlockMaze ────────────────────────────────────────────────────────────
 
