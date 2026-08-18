@@ -85,11 +85,18 @@ class UlyssesContract:
             ``"distributed_monitors"``, or ``"timelock"`` (see
             :mod:`nomos.contracts.enforcement`).
         state: Current lifecycle state (see :class:`ContractState`).
-        timelock_blocks: Number of governance cycles before an enacted
-            contract becomes active (for timelock enforcement mode).
+        timelock_blocks: Duration of the timelock, in governance cycles,
+            that an enacted contract stays locked before it becomes
+            active (for timelock enforcement mode). This is a constant
+            duration — it is never decremented.
         created_at_cycle: The governance cycle when this contract was
             first proposed.
         revoked_at_cycle: The cycle when revoked, if applicable.
+        unlock_at_cycle: Absolute governance cycle at which the timelock
+            releases, ``created_at_cycle + timelock_blocks``. Resolved at
+            construction and re-derived by :meth:`enact`.
+        current_cycle: Governance cycle this contract's clock has reached.
+            Starts at ``created_at_cycle`` and is advanced by :meth:`tick`.
     """
 
     contract_id: str
@@ -101,10 +108,25 @@ class UlyssesContract:
     timelock_blocks: int = 0
     created_at_cycle: int = 0
     revoked_at_cycle: int | None = None
+    unlock_at_cycle: int | None = None
+    current_cycle: int | None = None
+
+    def __post_init__(self):
+        """Resolve the absolute cycle anchors left unset by the caller."""
+        if self.unlock_at_cycle is None:
+            self.unlock_at_cycle = self.created_at_cycle + self.timelock_blocks
+        if self.current_cycle is None:
+            self.current_cycle = self.created_at_cycle
 
     def enact(self):
-        """Move contract to ENACTED state (passed vote, waiting for activation)."""
+        """Move contract to ENACTED state (passed vote, waiting for activation).
+
+        Anchors the timelock to an absolute governance cycle by
+        re-deriving :attr:`unlock_at_cycle` from the duration the
+        contract carries at enactment time.
+        """
         self.state = ContractState.ENACTED
+        self.unlock_at_cycle = self.created_at_cycle + self.timelock_blocks
 
     def activate(self):
         """Move contract to ACTIVE state (restrictions take effect)."""
