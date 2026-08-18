@@ -524,3 +524,58 @@ class TestRunAnalysis:
             result = run_analysis([], output_dir=tmp)
             assert result["aggregates"] == []
             assert result["effect_sizes"] == []
+
+
+class TestGovernanceLatencyExport:
+    """The measured latency must survive the exporters (#293)."""
+
+    def _reports(self, *latencies):
+        reports = []
+        for i, latency in enumerate(latencies):
+            r = _make_report(f"r{i}", 50.0)
+            r.governance_latency_avg = latency
+            reports.append(r)
+        return reports
+
+    def test_aggregate_means_the_per_seed_latencies(self):
+        aggregates = aggregate_reports(self._reports(0.004, 0.006))
+        assert aggregates[0].mean_governance_latency == 0.005
+
+    def test_baseline_reports_aggregate_to_zero(self):
+        aggregates = aggregate_reports(self._reports(0.0, 0.0))
+        assert aggregates[0].mean_governance_latency == 0.0
+
+    def test_summary_csv_carries_the_latency_column(self):
+        import csv
+
+        aggregates = aggregate_reports(self._reports(0.000025))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "summary.csv")
+            export_summary_csv(aggregates, path)
+            with open(path, newline="") as f:
+                header, row = list(csv.reader(f))
+
+        assert header[-1] == "mean_governance_latency_seconds"
+        assert float(row[-1]) == 0.000025
+
+    def test_results_json_carries_the_latency_field(self):
+        import json
+
+        aggregates = aggregate_reports(self._reports(0.000025))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "results.json")
+            export_results_json([], aggregates, [], [], path)
+            with open(path) as f:
+                data = json.load(f)
+
+        assert data["aggregates"][0]["mean_governance_latency_seconds"] == 0.000025
+
+    def test_run_analysis_publishes_a_nonzero_latency(self):
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_analysis(self._reports(0.004, 0.006), output_dir=tmp)
+            with open(result["results_json"]) as f:
+                data = json.load(f)
+
+        assert data["aggregates"][0]["mean_governance_latency_seconds"] == 0.005

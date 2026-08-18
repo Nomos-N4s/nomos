@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from src.nomos.experiments.base import ExperimentMetrics, ExperimentScenario, StepResult
@@ -572,3 +574,106 @@ class TestExperimentConvention:
             assert cls._run_step is not ExperimentScenario._run_step, (
                 f"{cls.__name__} must override _run_step()"
             )
+
+
+# ─── Governance latency ──────────────────────────────────────────────────────
+
+
+def _governed_speaker() -> SpeakerStateMachine:
+    from src.nomos.committee.members import (
+        ExampleIntegrityMember,
+        ExamplePlanningMember,
+        ExampleRewardMember,
+        ExampleSafetyMember,
+    )
+
+    return SpeakerStateMachine(
+        members={
+            "reward": ExampleRewardMember(),
+            "safety": ExampleSafetyMember(),
+            "integrity": ExampleIntegrityMember(),
+            "planning": ExamplePlanningMember(),
+        },
+        default_action="emergency_shutdown",
+    )
+
+
+class TestGovernanceLatency:
+    """End-to-end coverage for the governance_latencies write path (#293)."""
+
+    def test_gridworld_records_one_latency_per_step(self):
+        from src.nomos.experiments.grid_world import GridWorld
+
+        gw = GridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        for _ in range(20):
+            gw.step("normal")
+
+        assert gw.metrics.total_steps == 20
+        assert len(gw.metrics.governance_latencies) == gw.metrics.total_steps
+        assert all(latency > 0 for latency in gw.metrics.governance_latencies)
+
+    def test_report_carries_a_nonzero_latency(self):
+        from src.nomos.experiments.grid_world import GridWorld
+        from src.nomos.experiments.metrics import generate_report
+
+        gw = GridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        for _ in range(10):
+            gw.step("normal")
+
+        report = generate_report("governance_GridWorld", gw.metrics, gw.history)
+        assert report.governance_latency_avg > 0
+
+    def test_every_scenario_records_one_latency_per_step(self):
+        from src.nomos.experiments.deadlock_maze import DeadlockMaze
+        from src.nomos.experiments.drift_lab import DriftLab
+        from src.nomos.experiments.grid_world import GridWorld
+        from src.nomos.experiments.temptation_bank import TemptationBank
+        from src.nomos.identity.core import IdentityCore
+        from src.nomos.tee.watchdog import DeadlockBreaker
+
+        builders = [
+            lambda s: GridWorld(s, size=6, seed=42),
+            lambda s: TemptationBank(s),
+            lambda s: DriftLab(s, IdentityCore(), seed=42),
+            lambda s: DeadlockMaze(s, DeadlockBreaker(threshold_cycles=5)),
+        ]
+        for build in builders:
+            scenario = build(_governed_speaker())
+            scenario.reset()
+            for _ in range(5):
+                scenario.step("normal")
+
+            latencies = scenario.metrics.governance_latencies
+            assert len(latencies) == scenario.metrics.total_steps, type(scenario).__name__
+            assert all(latency > 0 for latency in latencies), type(scenario).__name__
+
+    def test_external_decision_records_no_latency(self):
+        from src.nomos.experiments.grid_world import GridWorld
+
+        gw = GridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        for _ in range(5):
+            gw.step("normal", external_decision=_gov(action="up"))
+
+        assert gw.metrics.total_steps == 5
+        assert gw.metrics.governance_latencies == []
+
+    def test_latency_excludes_scenario_work(self):
+        from src.nomos.experiments.grid_world import GridWorld
+
+        class SlowGridWorld(GridWorld):
+            def _run_step(self, state, *, decision_class="routine", external_decision=None):
+                time.sleep(0.05)
+                result = super()._run_step(
+                    state, decision_class=decision_class, external_decision=external_decision
+                )
+                time.sleep(0.05)
+                return result
+
+        gw = SlowGridWorld(_governed_speaker(), size=6, seed=42)
+        gw.reset()
+        gw.step("normal")
+
+        assert gw.metrics.governance_latencies[0] < 0.05
