@@ -370,14 +370,25 @@ class AuditLog:
         tmp.write_text(payload, encoding="utf-8")
         os.replace(tmp, self._anchor_path)
 
-    def _read_anchor(self) -> str | None:
-        """The trusted root from the sidecar, or ``None`` if missing/malformed."""
+    def _read_anchor(self) -> tuple[str, int] | None:
+        """The trusted root and the Merkle generation that produced it.
+
+        Returns:
+            ``(root, algorithm)``, or ``None`` if the sidecar is missing or
+            malformed. An anchor carrying no ``alg`` field predates the stamp
+            and is reported as generation 1.
+        """
         try:
             raw = json.loads(self._anchor_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError):
             return None
-        root = raw.get("root") if isinstance(raw, dict) else None
-        return root if isinstance(root, str) and len(root) == 64 else None
+        if not isinstance(raw, dict):
+            return None
+        root = raw.get("root")
+        if not isinstance(root, str) or len(root) != 64:
+            return None
+        algorithm = raw.get("alg")
+        return root, algorithm if isinstance(algorithm, int) else 1
 
     def records(self) -> tuple[AuditRecord, ...]:
         """The full chain: records loaded from disk plus this instance's appends."""
@@ -406,7 +417,13 @@ class AuditLog:
         6. The Merkle root of the on-disk chain must equal the trusted root
            in the sidecar anchor (``<path>.root``), which lives *outside* the
            JSONL file. A writer that rewrites every record and rehashes the
-           whole chain passes rules 1–5, but fails here — CWE-345.
+           whole chain passes rules 1–5, but fails here — CWE-345. A mismatch
+           does not name a culprit: an out-of-band rewrite, a crash between
+           the JSONL write and the anchor update, and an anchor written under
+           an earlier Merkle generation all land here. An anchor whose ``alg``
+           is not :data:`ANCHOR_ALGORITHM` is reported as stale rather than as
+           a rewrite, and is repaired by re-anchoring (see the module
+           docstring), not by inspecting the chain.
 
         Returns:
             :class:`AuditVerification` with the exact broken index.
@@ -459,17 +476,27 @@ class AuditLog:
                 len(lines),
                 f"audit log truncated: {len(lines)} records on disk, {len(self._entries)} expected",
             )
-        trusted_root = self._read_anchor()
-        if trusted_root is None:
+        anchor = self._read_anchor()
+        if anchor is None:
             return AuditVerification(
                 False, 0, "anchor file missing or malformed (deleted out of band)"
             )
+        trusted_root, anchor_algorithm = anchor
         disk_root = merkle_root([h.encode("utf-8") for h in disk_hashes])
         if disk_root != trusted_root:
+            if anchor_algorithm != ANCHOR_ALGORITHM:
+                return AuditVerification(
+                    False,
+                    None,
+                    f"Merkle root mismatch with a stale anchor: written under Merkle "
+                    f"generation {anchor_algorithm}, current is {ANCHOR_ALGORITHM}; "
+                    f"re-anchor the log before verifying",
+                )
             return AuditVerification(
                 False,
                 None,
-                f"Merkle root mismatch with anchor (chain rewritten and rehashed): {disk_root[:16]}... != {trusted_root[:16]}...",
+                f"Merkle root mismatch with anchor (chain rewritten and rehashed, or the "
+                f"anchor was never advanced): {disk_root[:16]}... != {trusted_root[:16]}...",
             )
         return AuditVerification(True, None, f"chain intact: {len(lines)} records verified")
 
