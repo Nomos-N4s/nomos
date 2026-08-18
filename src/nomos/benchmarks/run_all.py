@@ -12,6 +12,7 @@ Real-world analogy:
 """
 
 import time
+import warnings
 from typing import Any
 
 from ..committee.members import (
@@ -204,7 +205,12 @@ def _run_experiment_set(
         config_path: Optional path to a .parliament config file.
 
     Returns:
-        A list of :class:`~..experiments.metrics.ExperimentReport`.
+        A list of :class:`~..experiments.metrics.ExperimentReport`. The
+        ``static_masking`` arm is omitted, with a :class:`RuntimeWarning`,
+        for a scenario whose
+        :attr:`~..experiments.base.ExperimentScenario.STATIC_BLOCKLIST` is
+        empty: no fixed rule is expressible there, and running the arm anyway
+        would publish ``monolithic_rl``'s numbers under a second name.
     """
     reports = []
     if strategies is None:
@@ -212,6 +218,15 @@ def _run_experiment_set(
 
     for seed in range(seeds):
         for strategy in strategies:
+            if strategy == "static_masking" and not scenario_class.STATIC_BLOCKLIST:
+                warnings.warn(
+                    f"skipping the static_masking arm on {scenario_class.__name__}: "
+                    "the scenario declares no STATIC_BLOCKLIST, so the arm would "
+                    "duplicate monolithic_rl",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                continue
             baseline = (
                 _get_baseline(strategy, seed, scenario_class)
                 if strategy != "governance"
