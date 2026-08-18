@@ -228,9 +228,7 @@ def _run_experiment_set(
                 )
                 continue
             baseline = (
-                _get_baseline(strategy, seed, scenario_class)
-                if strategy != "governance"
-                else None
+                _get_baseline(strategy, seed, scenario_class) if strategy != "governance" else None
             )
             report = _run_scenario(
                 scenario_class=scenario_class,
