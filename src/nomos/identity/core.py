@@ -87,6 +87,27 @@ class EnforcementMode(Enum):
     CONSTITUTIONAL_CONTRACT = "constitutional_contract"
 
 
+THRESHOLD_STRENGTH: dict[CommitmentThreshold, float] = {
+    CommitmentThreshold.UNANIMITY_MULTISIG: 1.0,
+    CommitmentThreshold.SUPERMAJORITY: 2.0 / 3.0,
+    CommitmentThreshold.MAJORITY: 0.5,
+}
+"""Procedural strength of each modification threshold, as the vote fraction
+it demands (unanimity 1, supermajority 2/3, simple majority 1/2)."""
+
+ENFORCEMENT_STRENGTH: dict[EnforcementMode, float] = {
+    EnforcementMode.INTEGRITY_VETO: 1.0,
+    EnforcementMode.CONSTITUTIONAL_CONTRACT: 0.8,
+    EnforcementMode.EXTERNAL_AUDIT: 0.5,
+}
+"""Runtime strength of each enforcement mode: a veto applied in every
+governance cycle is strongest, a constitutional contract binds ordinary
+contracts, and an external audit only detects breaches after the fact."""
+
+COMPONENTS_PER_COMMITMENT = 3
+"""Number of identity vector components each commitment contributes."""
+
+
 @dataclass(frozen=True)
 class CoreCommitment:
     """A single atomic commitment in the agent's Identity Core.
@@ -140,29 +161,44 @@ class IdentityCore:
 
     def __init__(self):
         self._commitments: list[CoreCommitment] = []
+        self._satisfaction: list[float] = []
         self._identity_vector: list[float] = []
 
     def add_commitment(self, commitment: CoreCommitment):
         """Register a new core commitment and rebuild the identity vector.
+
+        The commitment starts fully satisfied (satisfaction 1.0).
 
         Args:
             commitment: The commitment to add. Must be a frozen
                 :class:`CoreCommitment` instance.
         """
         self._commitments.append(commitment)
+        self._satisfaction.append(1.0)
         self._rebuild_vector()
 
     def _rebuild_vector(self):
         """Derive the identity vector from all commitments.
 
-        Currently assigns 1.0 to each commitment dimension. Future
-        implementations may derive values from commitment strength
-        or fuzzy satisfaction metrics.
+        Each commitment contributes :data:`COMPONENTS_PER_COMMITMENT`
+        components, in order:
+
+        1. :data:`THRESHOLD_STRENGTH` of its modification threshold —
+           how hard the commitment is to amend.
+        2. :data:`ENFORCEMENT_STRENGTH` of its enforcement mode — how
+           hard it is to breach at runtime.
+        3. Its current satisfaction score in :math:`[0, 1]`.
+
+        The first two components are fixed by the commitment; the third
+        moves as violations are recorded, which is what allows the
+        vector's *direction* — and therefore the cosine distance from an
+        earlier snapshot — to change.
         """
-        vec = []
-        for c in self._commitments:
-            val = 1.0
-            vec.append(val)
+        vec: list[float] = []
+        for commitment, satisfaction in zip(self._commitments, self._satisfaction):
+            vec.append(THRESHOLD_STRENGTH[commitment.threshold])
+            vec.append(ENFORCEMENT_STRENGTH[commitment.enforcement])
+            vec.append(satisfaction)
         self._identity_vector = vec
 
     @property
@@ -171,9 +207,19 @@ class IdentityCore:
 
         The Integrity member uses this vector to evaluate proposal
         coherence. Changes to commitments automatically update this
-        vector.
+        vector. Its length is
+        ``len(commitments) * COMPONENTS_PER_COMMITMENT``.
         """
         return list(self._identity_vector)
+
+    @property
+    def commitment_satisfaction(self) -> list[float]:
+        """Per-commitment satisfaction scores (read-only copy).
+
+        Index-aligned with :attr:`commitments`. Every score starts at
+        1.0.
+        """
+        return list(self._satisfaction)
 
     @property
     def commitments(self) -> list[CoreCommitment]:
