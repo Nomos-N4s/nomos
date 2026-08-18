@@ -255,6 +255,26 @@ instance decidableIsPermitted (t : Tier) (c : Change) : Decidable (isPermitted t
         OPERATIONAL_COOLDOWN ≤ c.cooldownDays))
   | Tier.dynamic        => inferInstanceAs (Decidable (DYNAMIC_QUORUM ≤ c.quorum))
 
+/-- The falsification parameters as a block a governance step could rewrite.
+    A bare `def` cannot be immutable — every `def` equals its own body by
+    `rfl`, whatever the running system does — so the parameters are carried in
+    a value that a transition function is free to change. -/
+structure FalsificationParams where
+  tagComplianceThreshold : Nat
+  budgetCutoff : Nat
+  deriving DecidableEq
+
+/-- The block this module actually computes with: the two constants above. -/
+def defaultFalsificationParams : FalsificationParams :=
+  { tagComplianceThreshold := TAG_COMPLIANCE_THRESHOLD,
+    budgetCutoff := FALSIFICATION_BUDGET_CUTOFF }
+
+/-- The tier the falsification parameters are declared at (Chapter 4 §3.1).
+    This is a *declaration*, not a theorem: nothing here proves that the
+    running system files these parameters under this tier. What the tier buys,
+    once granted, is proved below. -/
+def falsificationParamsTier : Tier := Tier.immutable
+
 /-
   Falsification parameters are immutable-tier: no governance procedure
   can change TAG_COMPLIANCE_THRESHOLD or FALSIFICATION_BUDGET_CUTOFF.
