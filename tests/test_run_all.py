@@ -1,3 +1,5 @@
+import pytest
+
 from src.nomos.benchmarks.baselines import (
     MonolithicRL,
     RandomBaseline,
@@ -19,6 +21,8 @@ from src.nomos.experiments.deadlock_maze import DeadlockMaze
 from src.nomos.experiments.drift_lab import DriftLab
 from src.nomos.experiments.grid_world import GridWorld
 from src.nomos.experiments.temptation_bank import TemptationBank
+from src.nomos.identity.core import IdentityCore
+from src.nomos.tee.watchdog import DeadlockBreaker
 
 
 class TestBuildGovernanceLayer:
@@ -34,26 +38,59 @@ class TestBuildGovernanceLayer:
 
 class TestGetBaseline:
     def test_governance_returns_none(self):
-        assert _get_baseline("governance", 0) is None
+        assert _get_baseline("governance", 0, GridWorld) is None
 
     def test_monolithic_rl(self):
-        bl = _get_baseline("monolithic_rl", 0)
+        bl = _get_baseline("monolithic_rl", 0, GridWorld)
         assert isinstance(bl, MonolithicRL)
 
     def test_random(self):
-        bl = _get_baseline("random", 0)
+        bl = _get_baseline("random", 0, GridWorld)
         assert isinstance(bl, RandomBaseline)
 
     def test_static_masking(self):
-        bl = _get_baseline("static_masking", 0)
+        bl = _get_baseline("static_masking", 0, TemptationBank)
         assert isinstance(bl, StaticMasking)
 
     def test_veto_only(self):
-        bl = _get_baseline("veto_only", 0)
+        bl = _get_baseline("veto_only", 0, GridWorld)
         assert isinstance(bl, VetoOnly)
 
     def test_unknown_returns_none(self):
-        assert _get_baseline("unknown", 0) is None
+        assert _get_baseline("unknown", 0, GridWorld) is None
+
+
+class TestStaticMaskingBlocklist:
+    def test_blocklist_comes_from_the_scenario(self):
+        for scenario_class in (TemptationBank, DriftLab, DeadlockMaze):
+            bl = _get_baseline("static_masking", 0, scenario_class)
+            assert bl.blocked == set(scenario_class.STATIC_BLOCKLIST)
+            assert bl.blocked
+
+    def test_blocklist_matches_actions_the_scenario_emits(self):
+        speaker = build_governance_layer()
+        scenarios = [
+            TemptationBank(speaker),
+            DriftLab(speaker, IdentityCore()),
+            DeadlockMaze(speaker, DeadlockBreaker(threshold_cycles=5)),
+        ]
+        for scenario in scenarios:
+            scenario.reset()
+            emitted = {p.action for p in scenario.get_proposals("normal")}
+            assert emitted >= type(scenario).STATIC_BLOCKLIST
+
+    def test_scenario_without_a_blocklist_is_refused(self):
+        with pytest.raises(ValueError, match="STATIC_BLOCKLIST"):
+            _get_baseline("static_masking", 0, GridWorld)
+
+    def test_arm_skipped_when_scenario_declares_no_blocklist(self):
+        with pytest.warns(RuntimeWarning, match="static_masking"):
+            reports = _run_experiment_set(
+                GridWorld, {"size": 4, "seed": 42}, steps=3, seeds=1,
+                strategies=["monolithic_rl", "static_masking"],
+            )
+        strategies = [r.metadata["strategy"] for r in reports]
+        assert strategies == ["monolithic_rl"]
 
 
 class TestRunScenario:
