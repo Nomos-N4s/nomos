@@ -23,6 +23,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the pre-registration provenance tests verify that the
+          # recorded commit is reachable and actually modified the document. A
+          # shallow checkout cannot see it, and "could not verify" is reported
+          # as a problem rather than passed over (#307).
+          fetch-depth: 0
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:

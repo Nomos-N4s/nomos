@@ -9,9 +9,12 @@ import pytest
 
 from src.nomos.experiments.provenance import (
     commit_is_ancestor,
+    commit_touched_path,
     content_digest,
     normalise,
     preregistration_provenance,
+    repo_root,
+    resolve,
     verify_preregistration,
 )
 from src.nomos.experiments.rl_validate import validate_sweep
@@ -148,10 +151,71 @@ class TestVerifyPreregistration:
         problems = verify_preregistration({"path": PREREG, "sha256": None})
         assert any("unverifiable" in p for p in problems)
 
-    def test_absent_file_is_not_reported_as_a_mismatch(self):
-        """A checkout without the file is an unknown, not a falsified claim."""
+    def test_unreadable_file_is_reported_not_passed_over(self):
+        """An unverifiable claim must not look identical to a verified one."""
         block = {"path": "book/does-not-exist.md", "sha256": "a" * 64}
-        assert verify_preregistration(block) == []
+        problems = verify_preregistration(block)
+        assert any("cannot be verified" in p for p in problems)
+
+    def test_reachable_but_unrelated_commit_is_rejected(self):
+        """Reachability alone would let any ancestor supply the date."""
+        other = subprocess.run(
+            ["git", "log", "-1", "--format=%H", "--", "src/nomos/identity/keys.py"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+        block = preregistration_provenance()
+        block["commit"] = other
+        problems = verify_preregistration(block)
+        assert any("never modified" in p for p in problems)
+
+    def test_missing_commit_is_reported(self):
+        block = preregistration_provenance()
+        block["commit"] = None
+        problems = verify_preregistration(block)
+        assert any("commit is missing" in p for p in problems)
+
+
+class TestPathResolution:
+    """Provenance must describe the repository, not the caller's working directory."""
+
+    def test_resolve_anchors_relative_paths_at_the_repo_root(self):
+        root = repo_root()
+        assert root is not None
+        assert os.path.abspath(resolve(PREREG)) == os.path.abspath(os.path.join(root, PREREG))
+
+    def test_absolute_paths_pass_through(self):
+        assert resolve(os.path.abspath(PREREG)) == os.path.abspath(PREREG)
+
+    def test_digest_is_identical_from_a_subdirectory(self):
+        expected = content_digest(PREREG)
+        cwd = os.getcwd()
+        os.chdir(os.path.join(cwd, "src"))
+        try:
+            assert content_digest(PREREG) == expected
+        finally:
+            os.chdir(cwd)
+
+    def test_verification_holds_from_a_subdirectory(self):
+        block = preregistration_provenance()
+        cwd = os.getcwd()
+        os.chdir(os.path.join(cwd, "tests"))
+        try:
+            assert verify_preregistration(block) == []
+        finally:
+            os.chdir(cwd)
+
+
+class TestCommitBinding:
+    def test_certifying_commit_modified_the_document(self, orphan_repo):
+        assert commit_touched_path(orphan_repo["head"], "prereg.md") is True
+
+    def test_commit_that_touched_another_file_is_not_bound(self, orphan_repo):
+        assert commit_touched_path(orphan_repo["orphan"], "prereg.md") is False
+
+    def test_unknown_revision_is_unknown(self):
+        assert commit_touched_path("0" * 40, PREREG) is None
 
 
 class TestPublishedFrontierIsVerifiable:
