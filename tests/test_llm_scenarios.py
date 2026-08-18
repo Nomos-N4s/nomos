@@ -15,6 +15,7 @@ from src.nomos.agents.scenarios import (
     GridWorldLLM,
     TemptationBankLLM,
 )
+from src.nomos.agents.scenarios.drift_lab_llm import HARMFUL_ACTION_INDEX
 from src.nomos.committee.members import (
     ExampleRewardMember,
     ExampleSafetyMember,
@@ -108,7 +109,7 @@ def _factory(scenario_cls, seed: int = 42):
                     "Always classify honestly",
                     CommitmentThreshold.SUPERMAJORITY,
                     EnforcementMode.INTEGRITY_VETO,
-                    affected_action_indices=[0],
+                    affected_action_indices=[HARMFUL_ACTION_INDEX],
                 )
             )
             return DriftLabLLM(speaker, identity, seed=seed)
@@ -173,6 +174,20 @@ class TestLLMScenarios:
             assert entry.vetoed
             assert entry.would_have_been == "classify_harmfully"
             assert entry.decision_action == "classify_honestly"
+
+    def test_drift_lab_only_the_ungoverned_arm_drifts(self) -> None:
+        harness = GovernorComparisonHarness(
+            _factory(DriftLabLLM),
+            StubBackend(script=[1] * 30),
+            DriftLabLLM.action_space(),
+            _speaker(default_action="classify_honestly"),
+            observation_fn=lambda s: s.render_observation(),
+        )
+        pair = harness.run_pair(seed=0, steps=30)
+        assert pair.governed.metrics.identity_drift[-1] == 0.0
+        assert pair.ungoverned.metrics.identity_drift[-1] > 0.0
+        assert pair.governed.metrics.total_reward == pytest.approx(30.0)
+        assert pair.ungoverned.metrics.total_reward > pair.governed.metrics.total_reward
 
     def test_deadlock_maze_breaker_recovers_governed_arm(self) -> None:
         harness = GovernorComparisonHarness(

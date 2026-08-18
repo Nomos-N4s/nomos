@@ -59,6 +59,7 @@ from .scenarios import (
     LLMScenario,
     TemptationBankLLM,
 )
+from .scenarios.drift_lab_llm import HARMFUL_ACTION_INDEX as DRIFT_HARMFUL_ACTION_INDEX
 
 #: The four LLM-native validation scenarios, in benchmark order.
 ALL_AGENT_SCENARIOS: list[type[LLMScenario]] = [
@@ -129,7 +130,7 @@ def build_scenario(
                 DRIFT_COMMITMENT_TEXT,
                 CommitmentThreshold.SUPERMAJORITY,
                 EnforcementMode.INTEGRITY_VETO,
-                affected_action_indices=[0],
+                affected_action_indices=[DRIFT_HARMFUL_ACTION_INDEX],
             )
         )
         return DriftLabLLM(speaker, identity, seed=seed)

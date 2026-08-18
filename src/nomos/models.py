@@ -219,8 +219,12 @@ class GovernanceContext:
             context for temporal patterns.
         member_statuses: Per-member state (e.g. remaining budget,
             veto eligibility, current score thresholds).
-        identity_vector: The canonical identity embedding, used by
-            the Identity Layer's coherence metrics.
+        identity_vector: The canonical identity embedding, carried for
+            members that want to score against it. Nothing reads it
+            today: :class:`~..committee.members.ExampleIntegrityMember`
+            scores the ``identity_coherence`` metadata key a proposal
+            supplies, and the embedding's only consumer is the identity
+            drift metric in the DriftLab experiments.
         ontology: The Ontology instance for looking up action
             bindings, runtime hashes, and extension candidates.
     """
