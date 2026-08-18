@@ -208,9 +208,12 @@ def stacked_enforcement(
 
     Returns:
         The first non-compliant result, or ``compliant=True`` if all
-        three modes pass. A fully elapsed timelock surfaces here as a
-        non-compliant result — that is how revocation becomes
-        permissible once the waiting period is over.
+        three modes pass. An elapsed timelock surfaces here as a
+        non-compliant result on its own account — ``parliament_vote`` is
+        not consulted, and a vote that does meet the revocation threshold
+        short-circuits at procedural inertia before the timelock is ever
+        evaluated. The timelock therefore reports that the waiting period
+        is over; it does not itself gate a revocation.
     """
     proc = enforce_procedural_inertia(contract, parliament_vote)
     if not proc.compliant:
