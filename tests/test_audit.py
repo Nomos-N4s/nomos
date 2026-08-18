@@ -5,8 +5,28 @@ import re
 
 import pytest
 
-from src.nomos.audit import ENTITY_TYPES, ZERO_HASH, AuditLog, AuditRecord, AuditVerification
+from src.nomos.audit import (
+    ANCHOR_ALGORITHM,
+    ENTITY_TYPES,
+    ZERO_HASH,
+    AuditLog,
+    AuditRecord,
+    AuditVerification,
+)
 from src.nomos.tee.batch import merkle_root
+
+
+def _generation_1_root(items: list[bytes]) -> str:
+    """The untagged Merkle fold that wrote anchors before domain separation."""
+    import hashlib
+
+    if not items:
+        return hashlib.sha256(b"empty").hexdigest()
+    if len(items) == 1:
+        return hashlib.sha256(items[0]).hexdigest()
+    mid = len(items) // 2
+    children = _generation_1_root(items[:mid]) + _generation_1_root(items[mid:])
+    return hashlib.sha256(children.encode("utf-8")).hexdigest()
 
 
 def _fixed_now(value: str = "2026-08-11T15:00:00.000Z"):
@@ -385,6 +405,59 @@ class TestTamperDetection:
         result = log.verify()
         assert not result.valid
         assert "root mismatch" in result.message
+
+    def test_anchor_records_the_merkle_generation(self, tmp_path):
+        _make_log(tmp_path, count=3)
+        payload = json.loads((tmp_path / "events.jsonl.root").read_text(encoding="utf-8"))
+        assert payload["alg"] == ANCHOR_ALGORITHM
+
+    def test_anchor_from_an_earlier_generation_is_reported_as_stale(self, tmp_path):
+        """A log written before leaf/node domain separation carries a root the
+        current fold cannot reproduce. The chain is intact, so verify() must
+        say the anchor is stale, not that someone rewrote the log."""
+        log = _make_log(tmp_path, count=3)
+        stale = _generation_1_root([r.hash.encode("utf-8") for r in log.records()])
+        assert stale != log.batch_root()
+        (tmp_path / "events.jsonl.root").write_text(
+            json.dumps({"root": stale}, sort_keys=True, separators=(",", ":")),
+            encoding="utf-8",
+        )
+
+        result = log.verify()
+        assert not result.valid
+        assert "stale anchor" in result.message
+        assert "rewritten" not in result.message
+
+    def test_re_anchoring_clears_a_stale_anchor(self, tmp_path):
+        """The documented migration: one append rewrites the sidecar."""
+        log = _make_log(tmp_path, count=3)
+        stale = _generation_1_root([r.hash.encode("utf-8") for r in log.records()])
+        (tmp_path / "events.jsonl.root").write_text(
+            json.dumps({"root": stale}, sort_keys=True, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        assert not log.verify().valid
+
+        log.append("decision", "adopted", "proposal:3", {"action": "act_3"})
+        assert log.verify().valid
+
+    def test_current_generation_mismatch_still_names_a_rewrite(self, tmp_path):
+        """The stale branch must not swallow a forged anchor that carries the
+        current generation stamp."""
+        log = _make_log(tmp_path, count=3)
+        (tmp_path / "events.jsonl.root").write_text(
+            json.dumps(
+                {"alg": ANCHOR_ALGORITHM, "root": "a" * 64},
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+            encoding="utf-8",
+        )
+
+        result = log.verify()
+        assert not result.valid
+        assert "stale anchor" not in result.message
+        assert "rewritten" in result.message
 
 
 class TestAppendOnly:
