@@ -201,12 +201,18 @@ def test_falsification_module_imports_the_tier_model() -> None:
 
 
 def test_falsification_invariance_derives_from_the_tier_theorem() -> None:
-    """The immutable-tier invariance really rests on the tier model.
+    """The immutable-tier invariance is routed through the tier model.
 
     An import that is never used would satisfy the source check above while
     leaving the two models as disconnected as they were before it. So this
     reads the elaborated proof terms instead: the headlined theorem must reach
     ``immutable_parameters_never_change`` through the generic tier gate.
+
+    The equation those theorems state is definitional -- ``isPermitted
+    Tier.immutable`` reduces to ``False``, so ``rfl`` would close it too --
+    which is why the routing needs a guard at all: nothing in the build would
+    notice if a proof stopped mentioning the tier theorem. This test pins that
+    routing convention; it is not a measure of proof strength.
     """
     headline = "falsification_params_unchanged_at_immutable_tier"
     generic = "governance_step_unchanged_at_immutable_tier"
@@ -220,5 +226,6 @@ def test_falsification_invariance_derives_from_the_tier_theorem() -> None:
     )
     assert "immutable_parameters_never_change" in printed[1], (
         f"{generic} does not use IdentityTiers.immutable_parameters_never_change, "
-        f"so the immutable tier is asserted here rather than derived:\n{stdout}"
+        f"so the link to the tier model is no longer carried by the proof "
+        f"term:\n{stdout}"
     )
