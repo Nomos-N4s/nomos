@@ -26,6 +26,8 @@ REPO_ROOT = Path(__file__).parent.parent
 README_PATH = REPO_ROOT / "README.md"
 LEAN_ROOT = REPO_ROOT / "gov-budget-proof"
 VOTE_MODULE = LEAN_ROOT / "GovBudgetProof" / "VoteAndFalsification.lean"
+TIER_MODULE = LEAN_ROOT / "GovBudgetProof" / "IdentityTiers.lean"
+TIER_IMPORT = "import GovBudgetProof.IdentityTiers"
 
 HEADLINE_LABEL = "Lean 4 theorems proven:"
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_'!?]*")
@@ -41,6 +43,8 @@ VOTE_DECLARATIONS = (
     "vote_outcome_computes",
     "vote_resolution_total",
     "governance_cycle_invariant",
+    "decidableIsPermitted",
+    "governance_step_unchanged_at_immutable_tier",
 )
 
 
@@ -89,18 +93,15 @@ def _declaration_body(name: str) -> tuple[Path, str]:
     pytest.fail(f"no Lean declaration named {name!r} in {LEAN_ROOT}")
 
 
-def _axiom_dependencies(names: list[str]) -> dict[str, str]:
-    """Return what ``#print axioms`` reports for each of ``names``.
+def _lean_probe(commands: list[str], what: str) -> str:
+    """Build the corpus and return what Lean prints for ``commands``.
 
-    Lean resolves the whole proof term, so a classical dependency reached
-    through an intermediate lemma is reported here even when the declaration's
-    own source text never spells ``Classical``. Skipped when the pinned
-    toolchain is absent; the Lean CI job runs this with the toolchain
-    installed.
+    Skipped when the pinned toolchain is absent; the Lean CI job runs this with
+    the toolchain installed.
     """
     lake = shutil.which("lake")
     if lake is None:
-        pytest.skip("lake is not on PATH, so Lean axiom dependencies cannot be resolved")
+        pytest.skip(f"lake is not on PATH, so {what} cannot be resolved")
 
     build = subprocess.run(
         [lake, "build", "GovBudgetProof"],
@@ -113,9 +114,9 @@ def _axiom_dependencies(names: list[str]) -> dict[str, str]:
     )
     assert build.returncode == 0, f"lake build failed:\n{build.stdout}\n{build.stderr}"
 
-    probe = "\n".join(["import GovBudgetProof"] + [f"#print axioms {name}" for name in names])
+    probe = "\n".join(["import GovBudgetProof", *commands])
     with tempfile.TemporaryDirectory() as directory:
-        probe_path = Path(directory) / "Axioms.lean"
+        probe_path = Path(directory) / "Probe.lean"
         probe_path.write_text(probe + "\n", encoding="utf-8")
         printed = subprocess.run(
             [lake, "env", "lean", str(probe_path)],
@@ -128,12 +129,23 @@ def _axiom_dependencies(names: list[str]) -> dict[str, str]:
         )
 
     assert printed.returncode == 0, (
-        f"Lean rejected the axiom probe, so at least one name is not declared "
+        f"Lean rejected the {what} probe, so at least one name is not declared "
         f"in the corpus:\n{printed.stdout}\n{printed.stderr}"
     )
-    reported = dict(AXIOM_REPORT.findall(printed.stdout))
+    return printed.stdout
+
+
+def _axiom_dependencies(names: list[str]) -> dict[str, str]:
+    """Return what ``#print axioms`` reports for each of ``names``.
+
+    Lean resolves the whole proof term, so a classical dependency reached
+    through an intermediate lemma is reported here even when the declaration's
+    own source text never spells ``Classical``.
+    """
+    stdout = _lean_probe([f"#print axioms {name}" for name in names], "Lean axiom dependencies")
+    reported = dict(AXIOM_REPORT.findall(stdout))
     missing = [name for name in names if name not in reported]
-    assert not missing, f"Lean reported no axioms line for {missing}:\n{printed.stdout}"
+    assert not missing, f"Lean reported no axioms line for {missing}:\n{stdout}"
     return reported
 
 
@@ -176,4 +188,37 @@ def test_governance_cycle_invariant_uses_the_decision_procedure() -> None:
         "governance_cycle_invariant must state its vote conjunct over the "
         "Decidable instance (via vote_outcome_computes), not over an "
         "excluded-middle disjunction"
+    )
+
+
+def test_falsification_module_imports_the_tier_model() -> None:
+    """The falsification parameters can only be tiered if the tiers are in scope."""
+    assert TIER_MODULE.exists(), f"{TIER_MODULE} is the tier model the import names"
+    assert TIER_IMPORT in VOTE_MODULE.read_text(encoding="utf-8"), (
+        f"VoteAndFalsification.lean must {TIER_IMPORT!r}: without it the "
+        f"falsification parameters are linked to the tier model by prose only"
+    )
+
+
+def test_falsification_invariance_derives_from_the_tier_theorem() -> None:
+    """The immutable-tier invariance really rests on the tier model.
+
+    An import that is never used would satisfy the source check above while
+    leaving the two models as disconnected as they were before it. So this
+    reads the elaborated proof terms instead: the headlined theorem must reach
+    ``immutable_parameters_never_change`` through the generic tier gate.
+    """
+    headline = "falsification_params_unchanged_at_immutable_tier"
+    generic = "governance_step_unchanged_at_immutable_tier"
+    stdout = _lean_probe([f"#print {headline}", f"#print {generic}"], "Lean proof terms")
+
+    printed = stdout.split(f"theorem {generic}")
+    assert len(printed) == 2, f"Lean printed no proof term for {generic}:\n{stdout}"
+    assert generic in printed[0], (
+        f"{headline} does not use {generic}, so its proof no longer routes "
+        f"through the tier gate:\n{stdout}"
+    )
+    assert "immutable_parameters_never_change" in printed[1], (
+        f"{generic} does not use IdentityTiers.immutable_parameters_never_change, "
+        f"so the immutable tier is asserted here rather than derived:\n{stdout}"
     )
