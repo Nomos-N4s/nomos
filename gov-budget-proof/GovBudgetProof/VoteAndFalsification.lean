@@ -66,8 +66,8 @@ theorem vote_outcome_computes (votes : List Vote) (d : DecisionClass) :
 
 /-- Every ballot resolves one way or the other, and the resolution is reached
     by the decision procedure above rather than by the law of excluded middle:
-    `#print axioms vote_resolution_decidable` reports no axioms. -/
-theorem vote_resolution_decidable (votes : List Vote) (d : DecisionClass) :
+    `#print axioms vote_resolution_total` reports no axioms. -/
+theorem vote_resolution_total (votes : List Vote) (d : DecisionClass) :
     votePasses votes d ∨ ¬ votePasses votes d :=
   Decidable.em (votePasses votes d)
 
