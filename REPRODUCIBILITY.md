@@ -37,13 +37,15 @@ python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 ### Expected Runtime
 
 - **Reference hardware** (single core, 2.5 GHz): ~6 seconds wall-clock
-- All 400 runs (4 scenarios × 5 strategies × 20 seeds × 1,000 steps)
-  complete in under 10 seconds on any modern CPU.
+- All 380 runs (19 scenario-strategy combinations × 20 seeds × 1,000
+  steps) complete in under 10 seconds on any modern CPU.
 
 ### Seed Strategy
 
-20 fixed seeds per scenario-strategy combination (80 combinations × 20
-seeds = 1,600 individual experiment runs). Each experiment uses a
+20 fixed seeds per scenario-strategy combination (19 combinations × 20
+seeds = 380 individual experiment runs). Four scenarios × five strategies
+is 20 combinations; GridWorld has no `static_masking` arm, for the reason
+given below the results table. Each experiment uses a
 deterministic seed for the RNG — same seed always produces identical
 results. The seed list covers a diverse range to detect sensitivity.
 
