@@ -1,5 +1,6 @@
 import hashlib
 
+import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
@@ -24,7 +25,7 @@ from src.nomos.identity.ontology import compute_hash
 from src.nomos.identity.tiers import TIER_RULES, MutabilityTier
 from src.nomos.models import PriorityTag, Proposal
 from src.nomos.speaker import SpeakerStateMachine
-from src.nomos.tee.batch import merkle_root
+from src.nomos.tee.batch import BatchVerifier, merkle_proof, merkle_root
 from src.nomos.tee.constant_time import cmov, constant_time_compare, oblivious_access
 from src.nomos.tee.watchdog import DeadlockBreaker, WatchdogState, WatchdogTimer
 
@@ -568,6 +569,25 @@ class TestPropertyMerkleConsistency:
     def test_single_item_root(self, item):
         expected = hashlib.sha256(item).hexdigest()
         assert merkle_root([item]) == expected
+
+
+class TestPropertyMerkleProof:
+    @given(indices=st.lists(st.integers(min_value=0, max_value=99), min_size=1, max_size=9))
+    def test_generated_proof_verifies_for_every_leaf(self, indices):
+        verifier = BatchVerifier()
+        items = [str(i).encode() for i in indices]
+        root = merkle_root(items)
+        for position, action_index in enumerate(indices):
+            proof = merkle_proof(items, position)
+            assert verifier.verify_proof(action_index, proof, root)
+
+    @given(
+        items=st.lists(st.binary(min_size=1, max_size=8), min_size=1, max_size=9),
+        offset=st.integers(min_value=0, max_value=20),
+    )
+    def test_out_of_range_index_raises(self, items, offset):
+        with pytest.raises(IndexError):
+            merkle_proof(items, len(items) + offset)
 
 
 class TestPropertyConstantTime:
