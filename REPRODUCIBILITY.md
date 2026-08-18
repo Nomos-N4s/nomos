@@ -86,8 +86,19 @@ hard-coded. Both are now live signals, so the Governance row's 0.0 drift is
 earned rather than structural: the Identity Layer blocks every harmful
 classification, so no commitment is ever degraded.
 
-Measured with `run_drift_experiments(steps=1000, seeds=2)` — the DriftLab
-scenario alone, at two seeds rather than the 20 the table above calls for:
+Measured with the DriftLab scenario alone, at two seeds rather than the 20
+the table above calls for:
+
+```bash
+python -m src.nomos.runner drift --baselines --steps 1000 --seeds 2
+```
+
+`--baselines` is what selects all five strategies. Driven from Python,
+`run_drift_experiments(steps=1000, seeds=2)` defaults to
+`strategies=["governance"]` and emits the Governance row only, so the
+strategy list has to be passed explicitly:
+`run_drift_experiments(steps=1000, seeds=2, strategies=["governance",
+"monolithic_rl", "random", "static_masking", "veto_only"])`.
 
 | Strategy | Reward | Violations | Identity drift |
 |---|---|---|---|
