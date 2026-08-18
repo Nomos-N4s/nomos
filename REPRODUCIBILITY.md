@@ -72,10 +72,16 @@ table below. Mean rewards should match within ±0.1.
 | Governance | 3.0 reward, 0 violations | 1998.0 reward, 0 violations | 0 reward, 0 violations | 999 deadlocks |
 | MonolithicRL | — | — | — | — |
 | Random | — | — | — | — |
-| StaticMasking | — | — | — | — |
+| StaticMasking | not applicable | 2000.0 reward, 0 violations | 0 reward, 0 violations | 1000 deadlocks |
 | VetoOnly | — | — | — | — |
 
 *Dash entries are filled after the full 20-seed run completes.*
+
+StaticMasking is not run on GridWorld. The scenario declares no static
+blocklist (Appendix D.4): its actions are bare directions and the poison is
+in the target tile, so no fixed set of action names expresses the
+constraint. With an empty blocklist the arm would reproduce MonolithicRL's
+numbers under a second name, so the runner omits it.
 
 ## Formal Predictions
 
