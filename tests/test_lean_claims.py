@@ -9,6 +9,9 @@ middle, which would make the headline claim independent of the model it names.
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -24,6 +27,14 @@ DECL_START = re.compile(
     r"^(?:@\[[^\]]*\]\s*)?"
     r"(?:private\s+|protected\s+|noncomputable\s+)*"
     r"(?:theorem|lemma|instance|def|abbrev|example|structure|inductive)\b"
+)
+AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
+LEAN_TIMEOUT_SECONDS = 600
+VOTE_DECLARATIONS = (
+    "decidableVotePasses",
+    "vote_outcome_computes",
+    "vote_resolution_total",
+    "governance_cycle_invariant",
 )
 
 
@@ -72,40 +83,89 @@ def _declaration_body(name: str) -> tuple[Path, str]:
     pytest.fail(f"no Lean declaration named {name!r} in {LEAN_ROOT}")
 
 
-def test_readme_headline_theorems_exist_and_are_not_vacuous() -> None:
-    """Every headlined theorem is declared, and none is proved by Classical.em."""
+def _axiom_dependencies(names: list[str]) -> dict[str, str]:
+    """Return what ``#print axioms`` reports for each of ``names``.
+
+    Lean resolves the whole proof term, so a classical dependency reached
+    through an intermediate lemma is reported here even when the declaration's
+    own source text never spells ``Classical``. Skipped when the pinned
+    toolchain is absent; the Lean CI job runs this with the toolchain
+    installed.
+    """
+    lake = shutil.which("lake")
+    if lake is None:
+        pytest.skip("lake is not on PATH, so Lean axiom dependencies cannot be resolved")
+
+    build = subprocess.run(
+        [lake, "build", "GovBudgetProof"],
+        cwd=LEAN_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=LEAN_TIMEOUT_SECONDS,
+    )
+    assert build.returncode == 0, f"lake build failed:\n{build.stdout}\n{build.stderr}"
+
+    probe = "\n".join(["import GovBudgetProof"] + [f"#print axioms {name}" for name in names])
+    with tempfile.TemporaryDirectory() as directory:
+        probe_path = Path(directory) / "Axioms.lean"
+        probe_path.write_text(probe + "\n", encoding="utf-8")
+        printed = subprocess.run(
+            [lake, "env", "lean", str(probe_path)],
+            cwd=LEAN_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=LEAN_TIMEOUT_SECONDS,
+        )
+
+    assert printed.returncode == 0, (
+        f"Lean rejected the axiom probe, so at least one name is not declared "
+        f"in the corpus:\n{printed.stdout}\n{printed.stderr}"
+    )
+    reported = dict(AXIOM_REPORT.findall(printed.stdout))
+    missing = [name for name in names if name not in reported]
+    assert not missing, f"Lean reported no axioms line for {missing}:\n{printed.stdout}"
+    return reported
+
+
+def test_readme_headline_theorems_are_declared() -> None:
+    """Every headlined theorem is a real declaration in the Lean corpus."""
     names = _headline_theorem_names()
     assert names, "the README headline list of Lean theorems is empty"
 
     for name in names:
         assert IDENTIFIER.fullmatch(name), f"{name!r} is not a Lean identifier"
-        path, body = _declaration_body(name)
-        assert "Classical." not in body, (
-            f"{name} is headlined in README.md as proven but its proof in "
-            f"{path.name} appeals to Classical — an excluded-middle proof holds "
-            f"for any Prop and so claims nothing about the model it names"
+        _declaration_body(name)
+
+
+def test_headline_and_vote_declarations_depend_on_no_classical_axiom() -> None:
+    """Lean reports the axiom base of every headlined and vote declaration."""
+    names = list(dict.fromkeys(_headline_theorem_names() + list(VOTE_DECLARATIONS)))
+    for name, axioms in _axiom_dependencies(names).items():
+        assert "Classical." not in axioms, (
+            f"{name} {axioms}: a classical axiom anywhere in the proof term "
+            f"means the declaration is closed by excluded middle somewhere in "
+            f"its dependencies, which holds for any Prop and so claims nothing "
+            f"about the model it names"
         )
 
 
-def test_vote_passes_has_a_constructive_decidable_instance() -> None:
-    """votePasses is decided by computation, with no classical axiom in the proof."""
+def test_vote_passes_has_a_decidable_instance() -> None:
+    """votePasses is decided by computation rather than postulated."""
     source = VOTE_MODULE.read_text(encoding="utf-8")
     assert "Decidable (votePasses votes d)" in source, (
         "VoteAndFalsification.lean must declare a Decidable instance for "
         "votePasses so vote outcomes are computed rather than postulated"
     )
-
-    _, body = _declaration_body("decidableVotePasses")
-    assert "Classical" not in body, (
-        "decidableVotePasses must be constructive: a Classical dependency here "
-        "defeats the point of the instance"
-    )
+    _declaration_body("decidableVotePasses")
 
 
 def test_governance_cycle_invariant_uses_the_decision_procedure() -> None:
-    """The combined invariant rests on the decision procedure, not on Classical.em."""
+    """The combined invariant rests on the decision procedure, not on a disjunction."""
     _, body = _declaration_body("governance_cycle_invariant")
-    assert "Classical" not in body
     assert "vote_outcome_computes" in body, (
         "governance_cycle_invariant must state its vote conjunct over the "
         "Decidable instance (via vote_outcome_computes), not over an "
