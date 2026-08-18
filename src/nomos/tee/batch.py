@@ -20,6 +20,9 @@ import hashlib
 from dataclasses import dataclass, field
 from typing import Any
 
+# A sibling path from leaf to root: (sibling_digest, sibling_is_left).
+MerkleProof = list[tuple[str, bool]]
+
 
 @dataclass
 class BatchProposal:
@@ -71,7 +74,7 @@ def merkle_root(items: list[bytes]) -> str:
     return _hash_node(merkle_root(items[:mid]), merkle_root(items[mid:]))
 
 
-def merkle_proof(items: list[bytes], index: int) -> list[tuple[str, bool]]:
+def merkle_proof(items: list[bytes], index: int) -> MerkleProof:
     """Generate the sibling path proving ``items[index]`` is in the tree.
 
     Walks the same ``mid = len(items) // 2`` split that :func:`merkle_root`
@@ -158,9 +161,7 @@ class BatchVerifier:
         root = merkle_root([str(i).encode() for i in proposal.action_indices])
         return True, f"Batch valid. Root: {root[:16]}..."
 
-    def verify_proof(
-        self, action_index: int, proof: list[tuple[str, bool]], root: str
-    ) -> bool:
+    def verify_proof(self, action_index: int, proof: MerkleProof, root: str) -> bool:
         """Verify a Merkle proof for a single action within a batch.
 
         :func:`merkle_root` builds internal nodes positionally, so each
