@@ -2,7 +2,8 @@
   Vote Threshold and Falsification Counter Invariants
   ====================================================
   From Chapter 2 (§2.4–2.5) and Chapter 4 (§7.2):
-  - Vote resolution is deterministic
+  - Vote resolution is constructively decidable, and is determined by the
+    tallies alone
   - Threshold comparison is consistent across decision classes
   - Falsification counts are non-negative and correct
   - Budget halving preserves b ≥ 1 when starting from b ≥ 1
