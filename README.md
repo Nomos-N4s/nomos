@@ -148,7 +148,7 @@ Every formal claim in the book chapters has a corresponding executable test:
 | 4 | Ch2 §3.7 | Tag falsification halves budget after 3+ offences | ✓ |
 | 5 | Ch3 §2.1 | Contract restricts action set (allowed ∩ restricted) | ✓ |
 | 6 | Ch3 §2.3 | Revocation threshold > enactment threshold | ✓ |
-| 7 | Ch3 §2.4 | Timelock decrements monotonically | ✓ |
+| 7 | Ch3 §2.4 | Timelock holds until its unlock cycle | ✓ |
 | 8 | Ch3 §3.0 | Mask composition: (allowed − restricted) | ✓ |
 | 9 | Ch4 §2.1 | Low-coherence proposal triggers integrity veto | ✓ |
 | 10 | Ch4 §2.5 | Tier-4 requires external multisig; lower tiers do not | ✓ |
