@@ -106,6 +106,48 @@ def bindingDigest (b : ActionBinding) : Nat :=
 def chainRoot (bs : List ActionBinding) : Nat :=
   bs.foldl (fun acc b => hashImpl b.implementation + acc) GENESIS_HASH
 
+/-- The implementation reaches the digest: two bindings that commit the same
+    hash and the same link, but whose implementations hash apart, have
+    different digests. -/
+theorem bindingDigest_ne_of_impl_hash_ne (b b' : ActionBinding)
+    (hCommit : b.bindingHash = b'.bindingHash) (hLink : b.prevHash = b'.prevHash)
+    (hImpl : hashImpl b.implementation ≠ hashImpl b'.implementation) :
+    bindingDigest hashImpl b ≠ bindingDigest hashImpl b' := by
+  simp only [bindingDigest, MIX, hCommit, hLink]
+  omega
+
+/-- The link reaches the digest: re-pointing `prevHash` and nothing else
+    changes the digest. -/
+theorem bindingDigest_ne_of_prevHash_ne (b b' : ActionBinding)
+    (hImpl : b.implementation = b'.implementation)
+    (hCommit : b.bindingHash = b'.bindingHash) (hLink : b.prevHash ≠ b'.prevHash) :
+    bindingDigest hashImpl b ≠ bindingDigest hashImpl b' := by
+  simp only [bindingDigest, MIX, hImpl, hCommit]
+  omega
+
+/-- The commitment reaches the digest: forging `bindingHash` and nothing else
+    changes the digest. This is what connects `BindingValid` to the root —
+    under the old `+`-fold the committed hash never entered it. -/
+theorem bindingDigest_ne_of_bindingHash_ne (b b' : ActionBinding)
+    (hImpl : b.implementation = b'.implementation)
+    (hLink : b.prevHash = b'.prevHash) (hCommit : b.bindingHash ≠ b'.bindingHash) :
+    bindingDigest hashImpl b ≠ bindingDigest hashImpl b' := by
+  simp only [bindingDigest, MIX, hImpl, hLink]
+  omega
+
+/-- Two self-consistent bindings (each satisfying `BindingValid`) that share a
+    link but whose implementations hash apart have different digests. The
+    commitments need not be assumed equal here: `BindingValid` ties each one
+    to its own implementation hash. -/
+theorem bindingDigest_ne_of_valid_commitments_and_hash_ne (b b' : ActionBinding)
+    (hb : BindingValid hashImpl b) (hb' : BindingValid hashImpl b')
+    (hLink : b.prevHash = b'.prevHash)
+    (hImpl : hashImpl b.implementation ≠ hashImpl b'.implementation) :
+    bindingDigest hashImpl b ≠ bindingDigest hashImpl b' := by
+  unfold BindingValid at hb hb'
+  simp only [bindingDigest, MIX, hb, hb', hLink]
+  omega
+
 /-- Auxiliary: the fold accumulator is a function of the accumulator —
     equal fold results over the same suffix force equal accumulators
     (the combine step is injective on its first argument). -/
