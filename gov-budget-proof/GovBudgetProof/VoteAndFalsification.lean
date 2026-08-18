@@ -202,14 +202,16 @@ theorem falsification_params_are_immutable : falsificationParamsImmutable := by
   constructor <;> rfl
 
 /-
-  Combined invariant: every governance cycle deterministically produces
-  a vote outcome, and the falsification pipeline preserves budget ≥ 1.
+  Combined invariant: every governance cycle computes its vote outcome with
+  the decision procedure of `decidableVotePasses` — the boolean it returns is
+  correct against the specification — and the falsification pipeline preserves
+  budget ≥ 1.
 -/
 
 theorem governance_cycle_invariant (votes : List Vote) (d : DecisionClass)
     (oldBudget : Nat) (member : String) (proposals : List TrackedProposal)
     (hpos : 1 ≤ oldBudget) :
-    (votePasses votes d ∨ ¬ votePasses votes d) ∧
+    (decide (votePasses votes d) = true ↔ votePasses votes d) ∧
     1 ≤ budgetAfterFalsification oldBudget (falsificationCount member proposals) :=
-  And.intro (vote_resolution_deterministic votes d)
+  And.intro (vote_outcome_computes votes d)
             (budget_preserves_positive oldBudget (falsificationCount member proposals) hpos)
