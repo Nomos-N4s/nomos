@@ -2,8 +2,14 @@
 
 The root README headlines a short list of theorem names under "By the Numbers".
 These tests hold that list to two standards: every name is really declared in
-``gov-budget-proof/``, and none of them is discharged by the law of excluded
-middle, which would make the headline claim independent of the model it names.
+``gov-budget-proof/``, and no declaration's proof term reaches a classical
+axiom, which would mean the goal was closed by excluded middle and so holds
+for any ``Prop`` at all.
+
+An axiom-free proof term is a necessary condition for a headline claim, not a
+sufficient one: it rules out excluded middle, not a statement that is trivially
+true of the model. Whether each headlined statement says something about the
+governance model is a judgement no source check makes for us.
 """
 
 from __future__ import annotations
