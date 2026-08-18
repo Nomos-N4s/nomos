@@ -303,6 +303,31 @@ theorem budgetAfterFalsification_eq_at_default (oldBudget : Nat) (fc : Nat) :
       = budgetAfterFalsificationWith defaultFalsificationParams oldBudget fc :=
   rfl
 
+/-- One governance step against a parameter block held at tier `t`, for an
+    arbitrary proposed rewrite `edit`. The change takes effect exactly when the
+    tier permits it; otherwise the block is returned untouched. `edit` is
+    universally quantified, so nothing proved about this step depends on what
+    a proposal asks for. -/
+def applyGovernanceWith (edit : FalsificationParams → FalsificationParams)
+    (p : FalsificationParams) (c : Change) (t : Tier) : FalsificationParams :=
+  if isPermitted t c then edit p else p
+
+/-- The rewrite a proposal against these parameters would install: relax the
+    falsification bar by one step in each direction — a lower compliance
+    threshold, so fewer proposals count as falsifications, and a higher budget
+    cutoff, so more falsifications are tolerated before the budget is halved.
+    This is the abuse the immutable tier exists to prevent, and it is a real
+    rewrite: `relaxFalsificationBar defaultFalsificationParams ≠
+    defaultFalsificationParams`, witnessed below. -/
+def relaxFalsificationBar (p : FalsificationParams) : FalsificationParams :=
+  { tagComplianceThreshold := p.tagComplianceThreshold - 1,
+    budgetCutoff := p.budgetCutoff + 1 }
+
+/-- The governance step actually faced by the falsification parameters:
+    `applyGovernanceWith` at the relaxation above. -/
+def applyGovernance (p : FalsificationParams) (c : Change) (t : Tier) : FalsificationParams :=
+  applyGovernanceWith relaxFalsificationBar p c t
+
 /-
   Falsification parameters are immutable-tier: no governance procedure
   can change TAG_COMPLIANCE_THRESHOLD or FALSIFICATION_BUDGET_CUTOFF.
