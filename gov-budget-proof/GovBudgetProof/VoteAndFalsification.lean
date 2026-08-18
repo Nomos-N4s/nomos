@@ -2,7 +2,8 @@
   Vote Threshold and Falsification Counter Invariants
   ====================================================
   From Chapter 2 (§2.4–2.5) and Chapter 4 (§7.2):
-  - Vote resolution is deterministic
+  - Vote resolution is constructively decidable, and is determined by the
+    tallies alone
   - Threshold comparison is consistent across decision classes
   - Falsification counts are non-negative and correct
   - Budget halving preserves b ≥ 1 when starting from b ≥ 1
@@ -48,15 +49,43 @@ def votePasses (votes : List Vote) (d : DecisionClass) : Prop :=
   let tw := totalWeight votes
   tw ≠ 0 ∧ t.num * tw ≤ ws * t.denom
 
-/-- Vote resolution is deterministic (law of excluded middle). -/
-theorem vote_resolution_deterministic (votes : List Vote) (d : DecisionClass) :
-    votePasses votes d ∨ ¬ votePasses votes d := by
-  apply Classical.em
+/-- Vote resolution is decidable *constructively*: `votePasses` unfolds to a
+    `Nat` disequality and a `Nat` comparison, so the outcome is computed by
+    `Nat.decEq` and `Nat.decLe` and never postulated. `#print axioms` on this
+    instance reports no axioms at all — in particular no `Classical.choice`. -/
+instance decidableVotePasses (votes : List Vote) (d : DecisionClass) :
+    Decidable (votePasses votes d) :=
+  inferInstanceAs (Decidable (totalWeight votes ≠ 0 ∧
+    (thresholdOf d).num * totalWeight votes ≤ weightedSum votes * (thresholdOf d).denom))
+
+/-- The boolean decision procedure agrees with the specification: `decide`
+    returns `true` exactly on the ballots that pass. -/
+theorem vote_outcome_computes (votes : List Vote) (d : DecisionClass) :
+    decide (votePasses votes d) = true ↔ votePasses votes d :=
+  decide_eq_true_iff
+
+/-- Every ballot resolves one way or the other. The disjunction is closed by
+    `Decidable.em` on the instance above — excluded middle for a proposition
+    that is *decidable*, which is a theorem — rather than by the classical
+    axiom `Classical.em`. The delta is the axiom base, and only that:
+    `#print axioms vote_resolution_total` reports no axioms. -/
+theorem vote_resolution_total (votes : List Vote) (d : DecisionClass) :
+    votePasses votes d ∨ ¬ votePasses votes d :=
+  Decidable.em (votePasses votes d)
 
 /-- Consistency: equal vote lists produce the same outcome. -/
 theorem vote_threshold_consistent (v1 v2 : List Vote) (d : DecisionClass)
     (h : v1 = v2) : votePasses v1 d ↔ votePasses v2 d := by
   subst h; rfl
+
+/-- Determinism: the outcome is a function of the tallies alone. Two ballot
+    lists with the same weighted sum and the same total weight resolve the
+    same way in every decision class, so who cast which ballot, in what order
+    and in how many pieces, cannot change the result. -/
+theorem vote_resolution_determined_by_tallies (v1 v2 : List Vote) (d : DecisionClass)
+    (hw : weightedSum v1 = weightedSum v2) (ht : totalWeight v1 = totalWeight v2) :
+    votePasses v1 d ↔ votePasses v2 d := by
+  simp only [votePasses, hw, ht]
 
 /-- Identity passing (1*tw ≤ ws*1) implies totalWeight ≤ weightedSum. -/
 theorem identity_passes_implies_sum_ge (votes : List Vote)
@@ -97,6 +126,28 @@ theorem empty_vote_never_passes (d : DecisionClass) :
   intro h
   rcases h with ⟨htw, _⟩
   simp [totalWeight] at htw
+
+/-- A routine ballot that clears its threshold is resolved by computation:
+    `decide` closes the goal, so no classical step is involved. -/
+example : votePasses [⟨2, 1⟩] DecisionClass.routine := by decide
+
+/-- Boundary above: routine passes exactly at the halfway mark (4 ≤ 4). -/
+example : votePasses [⟨2, 1⟩, ⟨2, 0⟩] DecisionClass.routine := by decide
+
+/-- Boundary below: one weight more and the same computation rejects it. -/
+example : ¬ votePasses [⟨2, 1⟩, ⟨3, 0⟩] DecisionClass.routine := by decide
+
+/-- An identity vote that misses the unanimity bar is rejected by computation. -/
+example : ¬ votePasses [⟨2, 0⟩, ⟨1, 1⟩] DecisionClass.identity := by decide
+
+/-- The empty roll is rejected by the decision procedure too, independently of
+    `empty_vote_never_passes`. -/
+example : ¬ votePasses [] DecisionClass.highImpact := by decide
+
+/-- Two different ballot lists with the same tallies resolve alike. -/
+example : votePasses [⟨2, 1⟩] DecisionClass.routine ↔
+    votePasses [⟨1, 2⟩, ⟨1, 0⟩] DecisionClass.routine :=
+  vote_resolution_determined_by_tallies _ _ _ rfl rfl
 
 /-
   Falsification Counter
@@ -187,14 +238,22 @@ theorem falsification_params_are_immutable : falsificationParamsImmutable := by
   constructor <;> rfl
 
 /-
-  Combined invariant: every governance cycle deterministically produces
-  a vote outcome, and the falsification pipeline preserves budget ≥ 1.
+  Combined invariant: every governance cycle computes its vote outcome with
+  the decision procedure of `decidableVotePasses`, and the falsification
+  pipeline preserves budget ≥ 1.
+
+  The vote conjunct is `decide`/`Prop` agreement. That agreement is
+  definitional for any `Decidable` instance, so it is not a proved
+  correspondence between two independent definitions; what is specific to this
+  model is that the conjunct can be stated at all — the outcome is computed,
+  not postulated. What the outcome depends on is proved separately by
+  `vote_resolution_determined_by_tallies`.
 -/
 
 theorem governance_cycle_invariant (votes : List Vote) (d : DecisionClass)
     (oldBudget : Nat) (member : String) (proposals : List TrackedProposal)
     (hpos : 1 ≤ oldBudget) :
-    (votePasses votes d ∨ ¬ votePasses votes d) ∧
+    (decide (votePasses votes d) = true ↔ votePasses votes d) ∧
     1 ≤ budgetAfterFalsification oldBudget (falsificationCount member proposals) :=
-  And.intro (vote_resolution_deterministic votes d)
+  And.intro (vote_outcome_computes votes d)
             (budget_preserves_positive oldBudget (falsificationCount member proposals) hpos)

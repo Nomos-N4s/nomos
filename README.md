@@ -71,8 +71,9 @@ evidence-based split signals. See
 
 ```
 Formal predictions verified:    12 / 12
-Lean 4 theorems proven:          budget_invariant_holds, vote_resolution_deterministic,
-                                 budget_preserves_positive, falsification_params_are_immutable
+Lean 4 theorems proven:          budget_invariant_holds, budget_preserves_positive,
+                                 vote_resolution_determined_by_tallies,
+                                 falsification_params_are_immutable
 Reference implementation:        ~2,800 lines · 50+ files · 10 subpackages
 Benchmark coverage:              4 scenarios × 5 strategies (19 valid combinations) × 20 seeds × 1,000 steps
 Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual risks acknowledged

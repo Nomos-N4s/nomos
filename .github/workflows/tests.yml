@@ -107,6 +107,16 @@ jobs:
         run: |
           cd gov-budget-proof
           lake build
+      # The test job has no Lean toolchain, so the axiom check skips there.
+      # Run it here, where `lake env lean` can resolve the proof terms.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pytest
+        run: pip install pytest
+      - name: Check headline theorems depend on no classical axiom
+        run: python -m pytest tests/test_lean_claims.py -q
 
   typecheck:
     runs-on: ubuntu-latest
