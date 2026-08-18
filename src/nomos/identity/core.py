@@ -107,8 +107,15 @@ contracts, and an external audit only detects breaches after the fact."""
 COMPONENTS_PER_COMMITMENT = 3
 """Number of identity vector components each commitment contributes."""
 
-DEFAULT_VIOLATION_SEVERITY = 0.05
-"""Fraction of its remaining satisfaction a commitment loses per violation."""
+DEFAULT_VIOLATION_SEVERITY = 0.002
+"""Fraction of its remaining satisfaction a commitment loses per violation.
+
+Calibrated against the 1000-step benchmark run length: an adversary that
+breaches a commitment on every one of those steps ends at satisfaction
+0.135, so the drift it produces stays inside the metric's discriminating
+range instead of pinning at the ceiling. A larger value collapses the
+measurement into a near-binary "has it violated more than a few dozen
+times" signal, which ``constraint_violations`` already reports."""
 
 
 @dataclass(frozen=True)
