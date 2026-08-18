@@ -40,6 +40,16 @@ class BatchProposal:
     batch_metadata: dict[str, Any] = field(default_factory=dict)
 
 
+def _hash_leaf(item: bytes) -> str:
+    """Hash a single tree leaf into its hex digest."""
+    return hashlib.sha256(item).hexdigest()
+
+
+def _hash_node(left: str, right: str) -> str:
+    """Hash two child digests into their parent's hex digest."""
+    return hashlib.sha256((left + right).encode()).hexdigest()
+
+
 def merkle_root(items: list[bytes]) -> str:
     """Compute the Merkle root of a list of byte items.
 
@@ -56,12 +66,9 @@ def merkle_root(items: list[bytes]) -> str:
     if not items:
         return hashlib.sha256(b"empty").hexdigest()
     if len(items) == 1:
-        return hashlib.sha256(items[0]).hexdigest()
+        return _hash_leaf(items[0])
     mid = len(items) // 2
-    left = merkle_root(items[:mid])
-    right = merkle_root(items[mid:])
-    combined = (left + right).encode()
-    return hashlib.sha256(combined).hexdigest()
+    return _hash_node(merkle_root(items[:mid]), merkle_root(items[mid:]))
 
 
 def compute_diversity(action_indices: list[int]) -> float:
