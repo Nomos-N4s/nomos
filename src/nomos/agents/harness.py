@@ -331,12 +331,13 @@ class GovernorComparisonHarness(ABC):
             select_latency = time.perf_counter() - latency_start
             entry = self._action_space.entry(agent_action.action_index)
 
-            decision, trace = self._decide(arm, scenario, observation, entry, decision_class)
-            result = scenario.step(
-                state=observation,
-                decision_class=decision_class,
-                external_decision=decision,
-            )
+            with scenario.governance_latency_window():
+                decision, trace = self._decide(arm, scenario, observation, entry, decision_class)
+                result = scenario.step(
+                    state=observation,
+                    decision_class=decision_class,
+                    external_decision=decision,
+                )
 
             applied = result.decision
             vetoed = applied.is_default or applied.action != entry.action
