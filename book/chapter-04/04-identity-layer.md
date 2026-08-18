@@ -436,7 +436,7 @@ $$
 V_{\text{integrity}}(s, a) = \text{identity\_coherence}(a, \mathcal{C}_{\text{core}})
 $$
 
-The Identity Layer produces a fixed **identity vector** $\mathbf{id} \in \mathbb{R}^d$ from the core commitments $\mathcal{C}_{\text{core}}$. The Integrity Committee computes the cosine similarity (or other distance measure) between the proposed action's property vector $\text{prop}(a)$ and the identity vector:
+The Identity Layer produces an **identity vector** $\mathbf{id} \in \mathbb{R}^d$ from the core commitments $\mathcal{C}_{\text{core}}$. The Integrity Committee is specified to compute the cosine similarity (or other distance measure) between the proposed action's property vector $\text{prop}(a)$ and the identity vector:
 
 $$
 V_{\text{integrity}}(s, a) = \sigma\left(\frac{\text{prop}(a) \cdot \mathbf{id}}{\|\text{prop}(a)\| \cdot \|\mathbf{id}\|}\right)
@@ -444,7 +444,9 @@ $$
 
 where $\sigma$ maps $[-1, 1]$ to $[0, 1]$. Actions that align with the identity vector score highly; actions that diverge score low.
 
-The identity vector is **not learned** — it is derived deterministically from the enumerated core commitments $\mathcal{C}_{\text{core}}$. Semantic drift in the optimization layer does not affect it.
+The identity vector is **not learned**. Each commitment in $\mathcal{C}_{\text{core}}$ contributes three components: the procedural strength of its modification threshold, the runtime strength of its enforcement mode, and its current satisfaction score. The first two are fixed by the commitment and therefore derived deterministically from $\mathcal{C}_{\text{core}}$; the third is execution history — it decays each time an executed action breaches that commitment. So the vector is a function of $(\mathcal{C}_{\text{core}}, \text{history})$, not of $\mathcal{C}_{\text{core}}$ alone, and semantic drift in the optimization layer *does* move it. That is deliberate: the movement is what makes drift measurable, and it is what the DriftLab experiment reports as `final_identity_drift`.
+
+> **Implementation note.** The cosine-similarity formula above is specified but not implemented. `ExampleIntegrityMember.evaluate_proposal` (`src/nomos/committee/members.py`) scores the `identity_coherence` value the proposal's metadata supplies; it never reads $\mathbf{id}$. Nothing in the governance cycle does — the vector's only consumer is the drift metric.
 
 **Binding integrity verification.** Before computing $V_{\text{integrity}}(s, a)$, the TEE independently verifies that the proposed action index's runtime implementation matches the genesis commitment:
 
@@ -594,7 +596,7 @@ The Identity Layer is distinguished by:
 
 > In environments with high optimization pressure (adversarial reward functions, temporal discounting), agents with an Identity Layer will maintain consistent core commitments across $10^3$ governance cycles. Agents without an Identity Layer (Parliament-only) will exhibit measurable drift in their behavior distribution.
 
-*Rationale:* The Identity Layer's immutable action namespace and deterministic identity vector prevent the semantic drift that would gradually shift a Parliament-only agent's behavioral distribution. The Integrity Committee evaluates against a fixed identity vector, not against learned representations.
+*Rationale:* The Identity Layer's immutable action namespace and enumerated commitments prevent the semantic drift that would gradually shift a Parliament-only agent's behavioral distribution. The identity vector is the instrument that measures this rather than the mechanism that enforces it: it moves only when an executed action breaches a commitment, so a governed run that breaches none holds it at its genesis value and reports zero drift, while an ungoverned baseline that breaches on every cycle moves it. See §6.1 for what the reference Integrity member actually scores.
 
 **Prediction 2: Constitutional tier modification rarity**
 
