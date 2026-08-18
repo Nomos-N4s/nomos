@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01M09ZWBXKZGXXDWR4EYXS4CMZ",
+  "strategy": "manual-commit",
+  "branch": "issue-307-prereg-provenance",
+  "checkpoints_count": 2,
+  "files_touched": [
+    ".gitattributes",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "book/appendix-e-preregistration.md",
+    "book/appendix-f-data/verifier_frontier.json",
+    "src/nomos/experiments/provenance.py",
+    "src/nomos/experiments/rl_sweep.py",
+    "src/nomos/experiments/rl_validate.py",
+    "tests/test_provenance.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 57,
+    "cache_creation_tokens": 47376,
+    "cache_read_tokens": 8348192,
+    "output_tokens": 34452,
+    "api_call_count": 31
+  }
+}

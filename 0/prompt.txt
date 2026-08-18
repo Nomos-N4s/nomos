@@ -1,0 +1,127 @@
+<ci-monitor-event>Nomos-N4s/nomos PR #329 has 1 new review comment:
+- qodo-code-review[bot]: 
+<h3>Qodo is busy working</h3>
+
+Check back in a few minutes. Qodo's code review agents are on it.
+
+
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+
+
+
+
+<img src="https://www.qodo.ai/wp-content/uploads/2026/01/anteater-looking-at-ants-01-transparent-bg-croped-ezgif.com-optimize-1.gif" width="30%">
+
+
+Please address the feedback and push a fix. Then, for each inline comment you addressed (those with a comment_id), post a one-line reply on the thread via `gh api` saying what you changed (or why you didn't). End each reply with the line "_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_" so reviewers can see it was automated. Then resolve the thread. Skip replies for comments you didn't act on.</ci-monitor-event>
+<ci-monitor-event>Nomos-N4s/nomos PR #329 has 2 new review comments:
+- qodo-code-review[bot]: <h3>PR Summary by Qodo</h3>
+
+Enforce genesis multisig quorum integrity
+
+<code>🐞 Bug fix</code> <code>🧪 Tests</code> <code>🕐 20-40 Minutes</code>
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+
+<details>
+<summary>AI Description</summary>
+
+<dl>
+<dd>
+<br/>
+
+><pre>
+>• Reject invalid quorum configurations, duplicate identities, and registrations beyond the holder
+>  limit.
+>• Count distinct signed principals to prevent repeated identities from satisfying quorum.
+>• Cover quorum abuse in predictions, unit tests, and ontology finalization tests.
+></pre>
+
+</dd>
+</dl>
+
+</details>
+
+<details>
+<summary>Diagram</summary>
+
+<dl>
+<dd>
+
+<br/>
+
+```mermaid
+graph TD
+  A["Genesis config"] --> B{"Valid t-of-n?"} -- Yes --> C["Holder registry"] --> D{"Unique and capped?"} -- Yes --> E["Distinct signatures"] --> F{"Quorum met?"} -- Yes --> G["Finalize extension"]
+  B -- No --> H["Reject operation"]
+  D -- No --> H
+  F -- No --> H
+```
+
+</dd>
+</dl>
+
+</details>
+
+
+
+
+<details>
+<summary>High-Level Assessment</summary>
+
+<dl>
+<dd>
+
+<br/>
+
+>The layered approach is appropriate: reject duplicate registrations at ingress, validate t-of-n construction… [truncated — full text: `gh api repos/Nomos-N4s/nomos/issues/comments/5325456992`]
+- github-actions[bot]: ## Coverage report
+
+
+<img title="Coverage for the whole project is 91.68%. Previous coverage rate is not available, cannot report on evolution." src="https://img.shields.io/badge/Coverage-91%25-orange.svg"> <img title="100% of the statement lines added by this PR are covered" src="https://img.shields.io/badge/PR%20Coverage-100%25-brightgreen.svg">
+
+_This PR does not seem to contain any modification to coverable code._
+
+<!-- This comment was produced by python-coverage-comment-action -->
+
+Please address the feedback and push a fix. Then, for each inline comment you addressed (those with a comment_id), post a one-line reply on the thread via `gh api` saying what you changed (or why you didn't). End each reply with the line "_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_" so reviewers can see it was automated. Then resolve the thread. Skip replies for comments you didn't act on.</ci-monitor-event>
+
+---
+
+<ci-monitor-event>Nomos-N4s/nomos PR #329 has 1 new review comment:
+- qodo-code-review[bot]: 
+<h3>Code Review by Qodo</h3>
+<code>🐞 Bugs (0)</code>  <code>📘 Rule violations (0)</code>  <code>📎 Requirement gaps (0)</code>
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/06/qodo-anteater.svg" width="20%">
+
+<h3>Great, no issues found!</h3>
+Qodo reviewed your code and found no material issues that require review
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+
+
+
+<!-- qodo-daily-tip:start -->
+
+<details>
+<summary> Tip of the day</summary>
+
+<br/>
+
+<pre>💡 Did you know, you can keep summaries lean with Finding overflow, which tucks the rest behind &#x27;View more&#x27;</pre>
+
+<a href="https://docs.qodo.ai/tips-and-tricks">More tips ↗</a> | <a href="https://app.qodo.ai/configurations?tab=display-preferences">Customize Qodo ↗</a> | <a href="https://docs.qodo.ai">Qodo docs ↗</a>
+
+</details>
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+<!-- qodo-daily-tip:end -->
+
+
+<!-- https://github.com/Nomos-N4s/nomos/commit/66d0b84e9601e6a9f8d6f390401… [truncated — full text: `gh api repos/Nomos-N4s/nomos/issues/comments/5325477059`]
+
+Please address the feedback and push a fix. Then, for each inline comment you addressed (those with a comment_id), post a one-line reply on the thread via `gh api` saying what you changed (or why you didn't). End each reply with the line "_🤖 Addressed by [Claude Code](https://claude.com/claude-code)_" so reviewers can see it was automated. Then resolve the thread. Skip replies for comments you didn't act on.</ci-monitor-event>
