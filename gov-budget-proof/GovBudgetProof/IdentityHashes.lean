@@ -247,6 +247,37 @@ theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
     chainRoot hashImpl bs = chainRoot hashImpl bs' := by
   rw [h]
 
+/-- Chain validity and the chain root, joined — before issue #299 the two
+    identifier sets were disjoint and no theorem related them. Re-pointing
+    one binding's `prevHash` is the cheapest forgery available to an attacker
+    who leaves every implementation byte-identical: it breaks `IsValidChain`
+    at that position **and** moves the root, so a chain forged this way from
+    a valid chain cannot pass itself off as that chain.
+
+    Note the scope, which is narrower than "no invalid chain shares a root
+    with a valid one": this covers invalidity caused by a broken *link*. A
+    chain can also fail `IsValidChain` through a bad `bindingHash`, which
+    likewise moves the root (`bindingDigest_ne_of_bindingHash_ne`), but the
+    general statement is not proved here and is not true for an arbitrary
+    `hashImpl`. -/
+theorem relink_breaks_validity_and_changes_root
+    (a b : ActionBinding) (rest : List ActionBinding) (forgedPrev : Nat)
+    (hValid : IsValidChain hashImpl (a :: b :: rest))
+    (hForged : forgedPrev ≠ b.prevHash) :
+    ¬ IsValidChain hashImpl (a :: { b with prevHash := forgedPrev } :: rest) ∧
+      chainRoot hashImpl (a :: b :: rest) ≠
+        chainRoot hashImpl (a :: { b with prevHash := forgedPrev } :: rest) := by
+  have hLink : b.prevHash = hashImpl a.implementation :=
+    link_matches_previous_implementation hashImpl a b rest hValid
+  refine ⟨?_, ?_⟩
+  · intro hBad
+    have hForgedLink : forgedPrev = hashImpl a.implementation :=
+      link_matches_previous_implementation hashImpl a _ rest hBad
+    exact hForged (hForgedLink.trans hLink.symm)
+  · exact tamper_changes_chain_root_of_distinct_digests hashImpl [a] rest b
+      { b with prevHash := forgedPrev }
+      (bindingDigest_ne_of_prevHash_ne hashImpl b _ rfl rfl (fun h => hForged h.symm))
+
 /-- §6.1: TEE.verify_binding — the runtime implementation hash is compared
     against the committed binding hash. -/
 def verifyRuntime (runtime : String) (b : ActionBinding) : Bool :=
