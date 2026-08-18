@@ -441,6 +441,42 @@ class TestTamperDetection:
         log.append("decision", "adopted", "proposal:3", {"action": "act_3"})
         assert log.verify().valid
 
+    @pytest.mark.parametrize(
+        "algorithm",
+        ["2", None, 2.0, True, False, [2], {"v": 2}, 0, -1],
+        ids=["str", "null", "float", "true", "false", "list", "dict", "zero", "negative"],
+    )
+    def test_present_but_malformed_generation_is_not_read_as_legacy(self, tmp_path, algorithm):
+        """Only an absent ``alg`` means a pre-stamp anchor. A present value that
+        is not a positive integer is a malformed sidecar, and saying "stale,
+        re-anchor" would send an operator to migrate a file that is corrupt."""
+        log = _make_log(tmp_path, count=3)
+        (tmp_path / "events.jsonl.root").write_text(
+            json.dumps(
+                {"alg": algorithm, "root": log.batch_root()},
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+            encoding="utf-8",
+        )
+
+        result = log.verify()
+        assert not result.valid
+        assert "malformed" in result.message
+        assert "stale" not in result.message
+
+    def test_absent_generation_is_still_read_as_legacy(self, tmp_path):
+        """The legacy fallback the migration depends on must survive the
+        stricter parsing above."""
+        log = _make_log(tmp_path, count=3)
+        stale = _generation_1_root([r.hash.encode("utf-8") for r in log.records()])
+        (tmp_path / "events.jsonl.root").write_text(
+            json.dumps({"root": stale}, sort_keys=True, separators=(",", ":")),
+            encoding="utf-8",
+        )
+
+        assert "stale anchor" in log.verify().message
+
     def test_current_generation_mismatch_still_names_a_rewrite(self, tmp_path):
         """The stale branch must not swallow a forged anchor that carries the
         current generation stamp."""
