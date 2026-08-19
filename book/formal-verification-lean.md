@@ -48,7 +48,9 @@ Concretely, five links a reader might assume exist do not:
   say the Python mirrors the Lean model. (`tests/test_lean_claims.py` also
   names `votePasses` and `isPermitted`, but as string literals for scanning
   Lean source.) A docstring asserting a correspondence is a claim, not a
-  mechanism that checks one.
+  mechanism that checks one — for the genesis quorum a Python test does check
+  the corresponding property, but by hand, in Python, against no Lean artefact
+  (see below); nothing fails if the two models drift apart.
 - **Different numeric types.** The Lean model is `Nat` throughout —
   `IdentityCoherence.lean`'s `COHERENCE_THRESHOLD : Nat := 70` on a 0–100
   scale, `IdentityTiers.lean`'s `CONSTITUTIONAL_QUORUM : Nat := 3` as a count.
@@ -63,9 +65,17 @@ zero axioms declared by the corpus itself, no Mathlib and no other dependency
 at all (`gov-budget-proof/lake-manifest.json` lists no packages), all of it
 re-checked by the Lean kernel on every pull request. What is missing is the
 bridge, not the proofs. That the implementation matches the specification is
-**tested, not proven** — by `tests/test_speaker.py` for the κ₂ gate, and by
-the pre-registered adversarial run in
-[Appendix E](appendix-e-rl-adversary.md).
+**tested, not proven** — by `tests/test_speaker.py` for the κ₂ gate, by
+`tests/test_keys.py::TestGenesisQuorumIntegrity` for the genesis quorum, and
+by the pre-registered adversarial run in
+[Appendix E](appendix-e-rl-adversary.md). The genesis one is the closest thing
+the repo has to a model/code link: `double_signing_cannot_reach_quorum_alone`
+proves `¬ genesisAccepted [a, a]` of the Lean model, and
+`test_one_principal_cannot_reach_quorum_alone` asserts the same property of
+`GenesisMultisig` — one principal signing three times leaves
+`signatures_count == 1` and `is_authorized is False`. That is a real check on
+the Python side, written and maintained by hand, not a mechanism that would
+catch the Lean model and the Python drifting apart.
 
 ## Status
 
