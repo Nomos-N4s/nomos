@@ -101,6 +101,9 @@ def print_summary(results: list[PredictionResult]):
 
     Each prediction also gets its Lean line, so a reader of this output is
     never left to assume that a passing Python assert was checked by a proof.
+    The banner is labelled for the same reason: it is the line a reader is
+    most likely to quote, and on its own ``12/12 PASS`` says nothing about
+    what did the passing.
 
     Args:
         results: The prediction results to display.
@@ -108,7 +111,7 @@ def print_summary(results: list[PredictionResult]):
     passed = sum(1 for r in results if r.passed)
     total = len(results)
     print(f"\n{'=' * 60}")
-    print("  Formal Prediction Verification")
+    print("  Formal Prediction Tests (Python)")
     print(f"  {passed}/{total} PASS")
     print(f"{'=' * 60}\n")
     for r in results:
