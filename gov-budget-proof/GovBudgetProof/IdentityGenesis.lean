@@ -30,10 +30,10 @@
 
   Three declarations in this file are not axiom-free, and none of them is a
   TEE theorem: `any_three_distinct_signatures_sufficient` and
-  `double_signing_never_increases_quorum` depend on `propext` and `Quot.sound`,
-  and `quorumCount_bounded_by_five` on `propext`, all of them through `simp`.
-  Those are Lean's standard structural axioms; no declaration here depends on
-  `Classical.choice`.
+  `double_signing_never_increases_quorum` depend on `propext` and `Quot.sound`
+  through `simp`, and `quorumCount_bounded_by_five` on `propext` through the
+  core lemma `List.length_filter_le`. Those are Lean's standard structural
+  axioms; no declaration here depends on `Classical.choice`.
 -/
 
 /-- The five genesis key holders (§4.2 Phase 1 step 3). -/
