@@ -326,7 +326,7 @@ graph TB
         DL_MONO[MONO: 0 deadlocks]
     end
 
-    note[Means over seeds 0-19 at 1000 steps.<br/>Only GridWorld varies across seeds — see REPRODUCIBILITY.md Seed Strategy]
+    note[Means over seeds 0-19 at 1000 steps.<br/>Only GridWorld draws its world from the seed. Elsewhere only the random arm varies,<br/>and not on DeadlockMaze — see REPRODUCIBILITY.md Seed Strategy]
 ```
 
 ---
