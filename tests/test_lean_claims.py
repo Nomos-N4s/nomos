@@ -47,8 +47,15 @@ DECL_START = re.compile(
 )
 DECLARED_NAME = re.compile(
     r"^(?:private\s+|protected\s+|noncomputable\s+)*"
-    r"(?:theorem|lemma|instance|def|abbrev)\s+([A-Za-z_][A-Za-z0-9_'!?]*)"
+    r"(theorem|lemma|instance|def|abbrev)\s+([A-Za-z_][A-Za-z0-9_'!?]*)"
 )
+PROVING_KEYWORDS = frozenset({"theorem", "lemma"})
+DEFINING_KEYWORDS = frozenset({"def", "abbrev"})
+COVERAGE_KEYWORDS = {
+    LeanStatus.THEOREM: PROVING_KEYWORDS,
+    LeanStatus.DIFFERENT_ENCODING: PROVING_KEYWORDS,
+    LeanStatus.MODELLED_ONLY: DEFINING_KEYWORDS,
+}
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
 BACKTICKED = re.compile(r"`([^`]+)`")
 README_COVERAGE_CLAIM = re.compile(
@@ -114,20 +121,29 @@ def _declaration_body(name: str) -> tuple[Path, str]:
     pytest.fail(f"no Lean declaration named {name!r} in {LEAN_ROOT}")
 
 
-def _declared_names() -> dict[str, Path]:
-    """Return every named declaration in the corpus, mapped to its file.
+def _declarations() -> dict[str, tuple[str, Path]]:
+    """Return every named declaration, mapped to its keyword and its file.
+
+    The keyword is the one the corpus declares the name with -- ``theorem``,
+    ``lemma``, ``instance``, ``def`` or ``abbrev`` -- which is what separates
+    a proved statement from a definition that merely models the object.
 
     Anonymous ``example`` blocks carry no name and so are absent, which is
     why this cannot stand in for the axiom sweep. It is a source scan, so it
     needs no Lean toolchain.
     """
-    found: dict[str, Path] = {}
+    found: dict[str, tuple[str, Path]] = {}
     for path in _lean_sources():
         for line in path.read_text(encoding="utf-8").splitlines():
             match = DECLARED_NAME.match(line)
             if match:
-                found.setdefault(match.group(1), path)
+                found.setdefault(match.group(2), (match.group(1), path))
     return found
+
+
+def _declared_names() -> dict[str, Path]:
+    """Return every named declaration in the corpus, mapped to its file."""
+    return {name: path for name, (_, path) in _declarations().items()}
 
 
 def _lean_probe(commands: list[str], what: str, extra_imports: tuple[str, ...] = ()) -> str:
@@ -550,6 +566,47 @@ def test_prediction_coverage_names_declarations_the_corpus_has() -> None:
         if any(not IDENTIFIER.fullmatch(name) for name in coverage.declarations)
     }
     assert not malformed, f"these are not Lean identifiers: {malformed}"
+
+
+def test_prediction_coverage_rows_name_the_kind_of_declaration_they_claim() -> None:
+    """A row claiming a proof names a theorem, not a definition (#305).
+
+    "proved of the Lean model" versus "modelled, no theorem" is the split the
+    book's coverage table and the README's count publish, and until this
+    guard existed nothing checked it: the name scan accepts ``theorem``,
+    ``lemma``, ``instance``, ``def`` and ``abbrev`` alike, so a row promoted
+    to :attr:`LeanStatus.THEOREM` while still naming a ``def`` passed. P03 is
+    the live case -- it is ``MODELLED_ONLY`` precisely because the vote
+    declarations it names are definitions.
+
+    This pins the kind of declaration, not its content: a theorem that says
+    nothing about the prediction beside it still passes. That judgement is in
+    the map's ``note`` fields and in the book.
+
+    A source scan, so it runs with no Lean toolchain installed.
+    """
+    declarations = _declarations()
+    assert declarations, f"no declaration found under {LEAN_ROOT}, so the scan proves nothing"
+
+    wrong_kind = {}
+    for pid, coverage in sorted(LEAN_COVERAGE.items()):
+        allowed = COVERAGE_KEYWORDS.get(coverage.status)
+        if allowed is None:
+            continue
+        offenders = [
+            f"{name} is a {declarations[name][0]}"
+            for name in coverage.declarations
+            if name in declarations and declarations[name][0] not in allowed
+        ]
+        if offenders:
+            wrong_kind[f"P{pid:02d} ({coverage.status.value})"] = offenders
+
+    assert not wrong_kind, (
+        f"these coverage rows name a declaration of the wrong kind: {wrong_kind}. "
+        f"A row that claims a proof must name theorems or lemmas; a row that "
+        f"claims only a model must name definitions. Either the status is wrong "
+        f"or the declarations are"
+    )
 
 
 def _book_coverage_table() -> dict[int, tuple[str, tuple[str, ...]]]:
