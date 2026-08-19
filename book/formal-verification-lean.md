@@ -40,12 +40,14 @@ Concretely, five links a reader might assume exist do not:
   governance-cycle invariant rests on that decision procedure; that the
   falsification results are derived from the tier model rather than restated
   beside it; and that the prediction coverage map below names only
-  declarations the corpus really has, and that the table and the README
-  figures published from that map still agree with it. Every one of them
-  reads the Lean sources or the prose that names them; the coverage guards
-  also import the map from `src/nomos/prove/predictions.py`, but only to read
-  it. None executes governance code from `src/nomos/`, and nothing anywhere
-  runs a Lean decision and a Python one over the same input and compares them.
+  declarations the corpus really has, of the kind each row claims — theorems
+  where it reports a proof, definitions where it reports a model without one —
+  and that the table and the README figures published from that map still
+  agree with it. Every one of them reads the Lean sources or the prose that
+  names them; the coverage guards also import the map from
+  `src/nomos/prove/predictions.py`, but only to read it. None executes
+  governance code from `src/nomos/`, and nothing anywhere runs a Lean decision
+  and a Python one over the same input and compares them.
 - **No binding identifiers.** Lean names do appear outside
   `gov-budget-proof/`, but nothing is bound to them: no Python object
   imports, extracts or takes its meaning from a Lean declaration. They appear
