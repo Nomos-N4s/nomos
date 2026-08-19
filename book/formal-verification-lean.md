@@ -31,7 +31,7 @@ Concretely, five links a reader might assume exist do not:
   own `BudgetState` and `processProposal`; `src/nomos/speaker.py` implements
   the same gate as `_apply_budgets`. The two were written independently.
 - **No differential test.** The `lean-build` CI job compiles the proofs and
-  runs the eight checks in `tests/test_lean_claims.py`, which hold the corpus
+  runs the guards in `tests/test_lean_claims.py`, which hold the corpus
   to its own claims: that every headlined theorem name is really declared;
   that no proof term reaches a classical axiom; that no proof is closed by a
   native decision tactic and no module declares an axiom of its own (the two
@@ -62,7 +62,7 @@ Concretely, five links a reader might assume exist do not:
 None of that makes the corpus empty, and it should not be undersold either:
 102 theorems across the seven modules below plus the manifest, zero `sorry`,
 zero axioms declared by the corpus itself, no Mathlib and no other dependency
-at all (`gov-budget-proof/lake-manifest.json` lists no packages), all of it
+at all (`gov-budget-proof/lakefile.toml` declares no `require`), all of it
 re-checked by the Lean kernel on every pull request. What is missing is the
 bridge, not the proofs. That the implementation matches the specification is
 **tested, not proven** — by `tests/test_speaker.py` for the κ₂ gate, by
