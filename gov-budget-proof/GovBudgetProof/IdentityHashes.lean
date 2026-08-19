@@ -269,20 +269,18 @@ theorem chain_root_not_commutative_of_distinct_digests (a b : ActionBinding)
   intro hEq
   exact hDigest ((chain_root_swap_eq_iff_digest_eq hashImpl a b).mp hEq)
 
-/-- `chainRoot [a, b] = chainRoot [b, a]` for **distinct** `a` and `b` — the
-    property the old commutative root had — now fails, but only under the
-    hypothesis this theorem is named for: that the digest is collision-free,
-    i.e. that distinct records get distinct digests. With `hashImpl`
-    uninterpreted the hypothesis cannot be discharged inside the file, and
-    `chain_root_commutes_under_a_degenerate_hash` below shows it cannot
-    simply be dropped either. -/
-theorem chain_root_not_commutative_of_collision_free_digest
-    (hCollisionFree : ∀ x y : ActionBinding,
-      bindingDigest hashImpl x = bindingDigest hashImpl y → x = y)
-    (a b : ActionBinding) (hne : a ≠ b) :
-    chainRoot hashImpl [a, b] ≠ chainRoot hashImpl [b, a] :=
-  chain_root_not_commutative_of_distinct_digests hashImpl a b
-    (fun hEq => hne (hCollisionFree a b hEq))
+/-- The unconditional reading — "`chainRoot [a, b] = chainRoot [b, a]` fails
+    whenever `a ≠ b`" — is FALSE in this model, and this is its refutation,
+    not a caveat. It holds for every `hashImpl`, so it is not a statement
+    about a weak hash: the two witnesses share an implementation string and
+    differ only in the two fields the packing conflates. What survives is the
+    digest-level form immediately above; distinctness of the records is not
+    enough and cannot be made enough by strengthening `hashImpl`. -/
+theorem chain_root_swap_invisible_for_some_distinct_bindings (s : String) :
+    ∃ a b : ActionBinding,
+      a ≠ b ∧ chainRoot hashImpl [a, b] = chainRoot hashImpl [b, a] := by
+  rcases bindingDigest_collides_for_some_distinct_bindings hashImpl s with ⟨a, b, hne, hEq⟩
+  exact ⟨a, b, hne, (chain_root_swap_eq_iff_digest_eq hashImpl a b).mpr hEq⟩
 
 /-- Claim 3 (determinism): the chain root is a function of the binding
     sequence — equal sequences give equal roots. -/
