@@ -37,6 +37,9 @@ DECL_START = re.compile(
     r"(?:theorem|lemma|instance|def|abbrev|example|structure|inductive)\b"
 )
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
+BLOCK_COMMENT = re.compile(r"/-.*?-/", re.DOTALL)
+LINE_COMMENT = re.compile(r"--.*")
+NATIVE_DECISION = re.compile(r"native_decide|\+\s*native\b|\bnative\s*:=\s*true\b")
 LEAN_TIMEOUT_SECONDS = 600
 VOTE_DECLARATIONS = (
     "decidableVotePasses",
@@ -93,8 +96,12 @@ def _declaration_body(name: str) -> tuple[Path, str]:
     pytest.fail(f"no Lean declaration named {name!r} in {LEAN_ROOT}")
 
 
-def _lean_probe(commands: list[str], what: str) -> str:
+def _lean_probe(commands: list[str], what: str, extra_imports: tuple[str, ...] = ()) -> str:
     """Build the corpus and return what Lean prints for ``commands``.
+
+    ``extra_imports`` are added after ``import GovBudgetProof`` for probes that
+    need modules the corpus itself does not import -- ``Lean`` in particular,
+    for probes that inspect the environment rather than a named declaration.
 
     Skipped when the pinned toolchain is absent; the Lean CI job runs this with
     the toolchain installed.
@@ -114,7 +121,8 @@ def _lean_probe(commands: list[str], what: str) -> str:
     )
     assert build.returncode == 0, f"lake build failed:\n{build.stdout}\n{build.stderr}"
 
-    probe = "\n".join(["import GovBudgetProof", *commands])
+    imports = [f"import {module}" for module in ("GovBudgetProof", *extra_imports)]
+    probe = "\n".join([*imports, *commands])
     with tempfile.TemporaryDirectory() as directory:
         probe_path = Path(directory) / "Probe.lean"
         probe_path.write_text(probe + "\n", encoding="utf-8")
@@ -169,6 +177,235 @@ def test_headline_and_vote_declarations_depend_on_no_classical_axiom() -> None:
             f"its dependencies, which holds for any Prop and so claims nothing "
             f"about the model it names"
         )
+
+
+def _source_without_comments(path: Path) -> str:
+    """Return the file's text with comments blanked out, line numbers preserved.
+
+    Scans the source rather than pattern-matching it. Two properties of Lean
+    defeat a regex pass, and both fail *open* - they blank real code, which
+    silently disarms the guard below rather than tripping it:
+
+    * ``/-`` inside a string literal opens no comment, but a regex treats it
+      as one and blanks everything through the next genuine ``-/``.
+    * Block comments nest, so the first ``-/`` does not necessarily close the
+      comment a ``/-`` opened.
+
+    Character literals are deliberately not tracked: ``'`` is an identifier
+    character in Lean (``bs'``), so treating it as a delimiter would mis-scan
+    far more often than it would help.
+    """
+    text = path.read_text(encoding="utf-8")
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    depth = 0
+    while index < length:
+        if depth:
+            if text.startswith("/-", index):
+                depth += 1
+                out.append("  ")
+                index += 2
+            elif text.startswith("-/", index):
+                depth -= 1
+                out.append("  ")
+                index += 2
+            else:
+                character = text[index]
+                out.append(character if character.isspace() else " ")
+                index += 1
+            continue
+        if text.startswith("/-", index):
+            depth = 1
+            out.append("  ")
+            index += 2
+            continue
+        if text.startswith("--", index):
+            stop = text.find("\n", index)
+            stop = length if stop == -1 else stop
+            out.append("".join(c if c.isspace() else " " for c in text[index:stop]))
+            index = stop
+            continue
+        if text[index] == chr(34):
+            out.append(chr(34))
+            index += 1
+            while index < length:
+                if text[index] == "\\" and index + 1 < length:
+                    out.append(text[index : index + 2])
+                    index += 2
+                    continue
+                out.append(text[index])
+                index += 1
+                if text[index - 1] == chr(34):
+                    break
+            continue
+        out.append(text[index])
+        index += 1
+    return "".join(out)
+
+
+def test_comment_stripper_does_not_blank_live_code(tmp_path: Path) -> None:
+    """The source guard must not be disarmed by a comment-shaped string.
+
+    ``_source_without_comments`` decides what the native-decision scan can
+    see, so any way of making it blank live code is a hole in that guard --
+    and one that fails silently, because a blanked proof simply is not
+    scanned. Two shapes broke the regex it replaced: a string literal
+    containing ``/-``, which opened a comment that ran to the next genuine
+    ``-/`` and swallowed everything between, and a nested block comment,
+    whose first ``-/`` does not close the outer one.
+
+    Anonymous ``example`` blocks are exactly what this must protect: they
+    carry no name, so ``test_lean_corpus_declares_no_axioms_of_its_own``
+    cannot see them and this scan is their only guard.
+    """
+    live = {
+        "string literal holding a comment opener": (
+            'def s : String := "holds /- an opener"\n\n'
+            "example : (1 : Nat) = 1 := by native_decide\n\n/- a real comment -/\n"
+        ),
+        "nested block comment": (
+            "/- outer /- inner -/ still commented -/\nexample : (1 : Nat) = 1 := by native_decide\n"
+        ),
+    }
+    for description, source in live.items():
+        probe = tmp_path / "live.lean"
+        probe.write_text(source, encoding="utf-8")
+        assert NATIVE_DECISION.search(_source_without_comments(probe)), (
+            f"the native decision is live code but the stripper hid it: {description}"
+        )
+
+    commented = {
+        "inside a block comment": "/- example : (1 : Nat) = 1 := by native_decide -/\n",
+        "after a line comment": "-- example : (1 : Nat) = 1 := by native_decide\n",
+    }
+    for description, source in commented.items():
+        probe = tmp_path / "commented.lean"
+        probe.write_text(source, encoding="utf-8")
+        assert not NATIVE_DECISION.search(_source_without_comments(probe)), (
+            f"a commented-out tactic was reported as live: {description}"
+        )
+
+
+def test_no_proof_closes_by_a_native_decision() -> None:
+    """No proof in the corpus is closed by a native decision tactic (#300).
+
+    On the pinned toolchain these tactics do not reduce in the kernel: they
+    assert the compiled evaluation as a fresh opaque axiom per declaration,
+    named ``<theorem>._native.<tactic>.ax_1_1``. That name contains no
+    ``Classical.``, so the classical-axiom test above cannot see it.
+
+    This is a source scan, and it covers exactly the three spellings that
+    elaborate to such an axiom on leanprover/lean4:v4.32.1::
+
+        native_decide
+        decide +native
+        decide (config := { native := true })
+
+    All three were checked against the toolchain; the latter two mint
+    ``._native.decide.ax_1_1`` and contain no ``native_decide`` substring, so
+    an earlier substring test passed them. This scan is therefore a guard
+    against known spellings, not against the bug class: a spelling not listed
+    above would still slip past it.
+
+    The bug class is guarded by the sweep in
+    ``test_lean_corpus_declares_no_axioms_of_its_own``, which reads the
+    elaborated environment and so does not care how the tactic is spelled.
+    This scan is still needed alongside it for the one case that sweep cannot
+    see: an anonymous ``example`` leaves no constant in the environment, so a
+    native decision inside one is invisible to any axiom check. That case is
+    not hypothetical: ``IdentityHashes.lean`` carried four such uses inside
+    anonymous ``example`` blocks until #299 rewrote the file. This scan also
+    runs without a Lean toolchain, where the sweep skips.
+
+    Comments are blanked out first, so prose naming a tactic -- including the
+    module note in ``IdentityGenesis.lean`` that tells future editors not to
+    reintroduce it -- does not trip the guard.
+    """
+    used = [
+        f"{path.relative_to(REPO_ROOT).as_posix()}:{number}"
+        for path in _lean_sources()
+        for number, line in enumerate(_source_without_comments(path).splitlines(), 1)
+        if NATIVE_DECISION.search(line)
+    ]
+    assert not used, (
+        f"a native decision tactic closes a proof at {used}: on the pinned "
+        f"toolchain it asserts the evaluation as an opaque axiom instead of "
+        f"checking it, so the declaration rests on the compiler rather than on "
+        f"the kernel. Use decide, or a term proof off the Prop sibling"
+    )
+
+
+CORPUS_AXIOM_SWEEP = """open Lean in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let modules := env.header.moduleNames
+  let corpus := modules.filter fun m => m == `GovBudgetProof || (`GovBudgetProof).isPrefixOf m
+  let mut declared : Array Name := #[]
+  for (name, info) in env.constants.toList do
+    match info with
+    | .axiomInfo _ =>
+      match env.getModuleIdxFor? name with
+      | some index => if corpus.contains modules[index.toNat]! then declared := declared.push name
+      | none => declared := declared.push name
+    | _ => pure ()
+  IO.println s!"CORPUS_MODULES {corpus.toList}"
+  IO.println s!"CORPUS_AXIOMS {declared.toList}"
+"""
+
+
+def _swept_names(stdout: str, marker: str) -> list[str]:
+    """Return the Lean name list printed on the sweep's ``marker`` line."""
+    printed = [line for line in stdout.splitlines() if line.startswith(marker + " ")]
+    assert len(printed) == 1, f"the sweep printed {len(printed)} {marker} lines:\n{stdout}"
+    inside = printed[0][len(marker) + 1 :].strip()
+    assert inside.startswith("[") and inside.endswith("]"), f"unparsable line: {printed[0]}"
+    return [item.strip() for item in inside[1:-1].split(",") if item.strip()]
+
+
+def test_lean_corpus_declares_no_axioms_of_its_own() -> None:
+    """No module in the proof corpus declares an axiom of its own (issue #300).
+
+    A native decision tactic works by declaring a fresh axiom in the module
+    being elaborated and asserting the compiled evaluation as its statement --
+    ``<theorem>._native.native_decide.ax_1_1`` for ``native_decide``,
+    ``<theorem>._native.decide.ax_1_1`` for ``decide +native``. A hand-written
+    ``axiom`` command does the same thing. This sweeps the elaborated
+    environment rather than the source text, so it catches every such
+    declaration however the tactic is spelled, including spellings that did not
+    exist when it was written.
+
+    What it does not cover: an anonymous ``example`` leaves nothing behind in
+    the environment -- not the axiom, not any constant at all -- so a native
+    decision inside one is invisible here. The gap is real: ``IdentityHashes``
+    carried four such uses inside anonymous ``example`` blocks until #299
+    rewrote the file. The source scan in
+    ``test_no_proof_closes_by_a_native_decision`` is what covers that case.
+    Neither check subsumes the other.
+
+    The ``CORPUS_MODULES`` assertion is what stops this passing vacuously: if
+    the module filter ever stopped matching, the axiom list would come back
+    empty for the wrong reason and the test would still be green.
+
+    Skipped without a Lean toolchain; the ``lean-build`` CI job installs one
+    and runs this file.
+    """
+    stdout = _lean_probe([CORPUS_AXIOM_SWEEP], "the corpus's own axiom declarations", ("Lean",))
+
+    modules = _swept_names(stdout, "CORPUS_MODULES")
+    assert "GovBudgetProof.IdentityGenesis" in modules, (
+        f"the sweep matched no GovBudgetProof modules, so an empty axiom list "
+        f"would say nothing about the corpus; it saw {modules}"
+    )
+
+    declared = _swept_names(stdout, "CORPUS_AXIOMS")
+    assert not declared, (
+        f"the corpus declares axioms of its own: {declared}. An axiom is "
+        f"asserted, not proven, so every declaration reaching one rests on "
+        f"that assertion rather than on the kernel. A ``._native.`` name means "
+        f"a native decision tactic asserted a compiled evaluation; use decide, "
+        f"or a term proof off the Prop sibling"
+    )
 
 
 def test_vote_passes_has_a_decidable_instance() -> None:
