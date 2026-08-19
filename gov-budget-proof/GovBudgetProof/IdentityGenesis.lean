@@ -140,5 +140,5 @@ theorem tee_accepts_three : teeVerifies [GenesisKey.k1, GenesisKey.k2, GenesisKe
   decide_eq_true three_signatures_sufficient
 
 /-- The TEE ignores duplicates: k1 signing twice still counts once. -/
-theorem tee_rejects_duplicate_alone : teeVerifies [GenesisKey.k1, GenesisKey.k1] = false := by
-  native_decide
+theorem tee_rejects_duplicate_alone : teeVerifies [GenesisKey.k1, GenesisKey.k1] = false :=
+  decide_eq_false (double_signing_cannot_reach_quorum_alone GenesisKey.k1)
