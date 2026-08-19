@@ -110,6 +110,25 @@ class ExperimentScenario(ABC):
     #: arm instead of publishing the same numbers under a second name.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
 
+    #: Whether this scenario's world is drawn from the benchmark seed.
+    #:
+    #: ``True`` means the constructor takes a ``seed`` and the run actually
+    #: consumes it, so two seeds are two different worlds. The benchmark
+    #: runner passes its loop seed to such a scenario, and repeating it
+    #: across seeds is real replication.
+    #:
+    #: ``False`` means the scenario is deterministic. The runner passes it no
+    #: seed, and running it at twenty seeds returns twenty copies of one
+    #: trajectory — so a standard deviation or a bootstrap interval taken
+    #: over those repeats describes the harness, not the scenario, and must
+    #: not be published as if it measured sampling variation.
+    #:
+    #: Determinism here is a fact to declare, not a defect to paper over with
+    #: noise. A scenario exists to demonstrate a mechanism — a contract
+    #: binding, a breaker firing — and injecting randomness would change what
+    #: it measures rather than make it more rigorous.
+    SEEDED: ClassVar[bool] = False
+
     def __init__(self, speaker: SpeakerStateMachine):
         self.speaker = speaker
         self.metrics = ExperimentMetrics()
