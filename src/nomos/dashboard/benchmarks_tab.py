@@ -193,7 +193,7 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
                     for _, r in fail_df.iterrows():
                         st.caption(f"**P{r['id']:02d}**: {r['description']} — {r['evidence']}")
                 else:
-                    st.success("All predictions verified.")
+                    st.success("All prediction tests pass (Python asserts).")
 
         all_results = _load_all_results()
         if all_results:
