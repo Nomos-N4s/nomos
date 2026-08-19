@@ -17,7 +17,6 @@ Real-world analogy:
 """
 
 import math
-import random
 import time
 from typing import Any, ClassVar
 
@@ -48,10 +47,14 @@ class DriftLab(ExperimentScenario):
     experiment measures the resulting cosine distance between the original
     and current identity vectors.
 
+    The scenario is deterministic: the drift schedule and the agenda are
+    fixed functions of the step index and nothing in the run draws a random
+    number, so the trajectory is settled once the strategy is. It therefore
+    takes no seed — see :attr:`~.base.ExperimentScenario.SEEDED`.
+
     Args:
         speaker: The governance Speaker instance.
         identity: The :class:`~..identity.core.IdentityCore` to test.
-        seed: Random seed for reproducibility.
     """
 
     #: ``classify_harmful_as_safe`` is the dishonest classification, and it is
@@ -61,10 +64,15 @@ class DriftLab(ExperimentScenario):
     #: Layer's coherence check.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset({"classify_harmful_as_safe"})
 
-    def __init__(self, speaker: SpeakerStateMachine, identity: IdentityCore, seed: int = 42):
+    #: Deterministic. Drift advances 0.001 per step, the agenda is the same
+    #: two proposals every step, and the reward is the executed proposal's
+    #: ``expected_reward``, so every seed replays one trajectory. The scenario
+    #: used to construct a ``random.Random(seed)`` it never consulted.
+    SEEDED: ClassVar[bool] = False
+
+    def __init__(self, speaker: SpeakerStateMachine, identity: IdentityCore):
         super().__init__(speaker)
         self.identity = identity
-        self.rng = random.Random(seed)
         self._drift = 0.0
         self._original_vector = list(identity.identity_vector)
 
