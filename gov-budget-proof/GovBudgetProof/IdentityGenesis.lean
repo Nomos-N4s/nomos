@@ -28,6 +28,18 @@
   reintroduce `native_decide` here: the signature lists are tiny and plain
   `decide` is a kernel computation.
 
+  That rule is enforced by two checks in `tests/test_lean_claims.py`, not by
+  grepping this tree. `test_no_proof_closes_by_a_native_decision` scans the
+  source for the three spellings that mint such an axiom on this toolchain —
+  `native_decide`, `decide +native`, `decide (config := { native := true })`.
+  `test_lean_corpus_declares_no_axioms_of_its_own` reads the elaborated
+  environment and fails if any GovBudgetProof module declares an axiom at all,
+  however the tactic is spelled. A bare `grep -rn native_decide
+  gov-budget-proof/` is not that check and does not come back empty: it still
+  matches this note, and the hash note at `IdentityHashes.lean:38` that
+  predates issue #300. Both are prose telling editors what not to do, and the
+  guards blank comments out before scanning so prose cannot trip them.
+
   Three declarations in this file are not axiom-free, and none of them is a
   TEE theorem: `any_three_distinct_signatures_sufficient` and
   `double_signing_never_increases_quorum` depend on `propext` and `Quot.sound`
