@@ -107,6 +107,57 @@ corrected or for the file to gain the definitions it claimed; the module was
 deleted instead, which is a third route and is recorded here so it can be
 reviewed as one.
 
+## Prediction coverage
+
+The repository ships 12 formal predictions, listed in the README and run with
+`python -m src.nomos.runner prove --all`. They are Python asserts over
+`src/nomos/`: running them runs no Lean, and a passing prediction is a passing
+test, not a discharged proof obligation. This table records what the corpus
+has to say about the same property, and where it has nothing to say.
+
+| # | Prediction | Coverage | Lean declarations |
+|---|---|---|---|
+| P01 | Ch2 §3.1 — Budget caps proposals per member (κ₂) | proved of the Lean model | `budget_invariant_holds`, `budget_never_exceeded` |
+| P02 | Ch2 §3.2 — CRITICAL_SAFETY priority before ROUTINE | no counterpart | — |
+| P03 | Ch2 §3.4 — Weighted vote outcome matches formal spec | modelled, no theorem | `weightedSum`, `totalWeight`, `thresholdOf`, `votePasses` |
+| P04 | Ch2 §3.7 — Tag falsification halves budget after 3+ offences | proved of the Lean model | `budget_halving_formula`, `budget_unchanged_below_cutoff`, `budget_preserves_positive` |
+| P05 | Ch3 §2.1 — Contract restricts action set | no counterpart | — |
+| P06 | Ch3 §2.3 — Revocation threshold above enactment threshold | no counterpart | — |
+| P07 | Ch3 §2.4 — Timelock holds until its unlock cycle | no counterpart | — |
+| P08 | Ch3 §3.0 — Mask composition: allowed − restricted | no counterpart | — |
+| P09 | Ch4 §2.1 — Low-coherence proposal triggers integrity veto | modelled under a different encoding | `acceptable_iff_ge`, `below_threshold_rejection_leaves_state`, `rejected_action_does_not_mutate_identity` |
+| P10 | Ch4 §2.5 — Tier-4 requires external multisig; lower tiers do not | modelled under a different encoding | `constitutional_requires_quorum_and_cooldown`, `constitutional_change_meets_genesis_bar`, `dynamic_requires_only_majority` |
+| P11 | Ch4 §3.1 — Genesis 3-of-5: 2 sigs insufficient, 3 sigs authorises | proved of the Lean model | `two_signatures_insufficient`, `three_signatures_sufficient`, `double_signing_cannot_reach_quorum_alone`, `quorumCount_bounded_by_five` |
+| P12 | Ch4 §3.6 — Deadlock breaker fires after N defaults, resets | no counterpart | — |
+
+Reading the four coverage values:
+
+- **proved of the Lean model** — a theorem states the prediction's property of
+  the Lean model. It remains a property of the model and not of `src/nomos/`:
+  everything in [Scope and limits](#scope-and-limits) applies to these rows
+  unchanged. P01 and P11 are the two that section also names on the Python
+  side, where a hand-written test checks the same property of `src/nomos/` —
+  separately, in Python, against no Lean artefact.
+- **modelled under a different encoding** — the corpus models the same
+  mechanism and proves theorems about it, but under an encoding the Python
+  does not share, so the theorem and the assert are not two statements of one
+  claim. Both cases are numeric: a `Nat` coherence score against a 0–100
+  threshold where the Python uses a `float` on 0.0–1.0, and a bar stated as a
+  quorum count and a cooldown in days where the Python reads a `bool` flag.
+- **modelled, no theorem** — the definitions are there and the constants
+  agree, but no theorem states what the prediction asserts.
+- **no counterpart** — nothing in the corpus models this at all.
+
+The correspondence is thin in the other direction too. `IdentityBuffer.lean`
+and `IdentityHashes.lean` — the sandboxed isolation buffer and the runtime
+integrity hash chains — have no prediction pointing at them at all.
+
+The table is rendered from `LEAN_COVERAGE` in
+`src/nomos/prove/predictions.py`, which carries the per-row reasoning that
+does not fit in a cell. Two tests in `tests/test_lean_claims.py` keep the
+three artefacts together: one fails if any name above is not declared in
+`gov-budget-proof/`, the other fails if this table and that map disagree.
+
 ## Building the proofs
 
 Requires Lean 4 with elan (toolchain pinned in `gov-budget-proof/lean-toolchain`):
