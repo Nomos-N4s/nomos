@@ -12,7 +12,7 @@ pre-commitment, and identity coherence.
 [![Release](https://img.shields.io/github/v/release/Nomos-N4s/nomos)](https://github.com/Nomos-N4s/nomos/releases/latest)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 [![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)](CHANGELOG.md)
-[![Lean 4](https://img.shields.io/badge/Lean%204-verified-2ea44f)](gov-budget-proof/)
+[![Lean 4](https://img.shields.io/badge/Lean%204-proofs%20build-2ea44f)](gov-budget-proof/)
 [![Types](https://img.shields.io/badge/types-ty-blue)](https://docs.astral.sh/ty/)
 [![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Nomos-N4s/nomos?utm_source=oss&utm_medium=github&utm_campaign=Nomos-N4s%2Fnomos&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
 
@@ -78,6 +78,14 @@ Reference implementation:        ~2,800 lines · 50+ files · 10 subpackages
 Benchmark coverage:              4 scenarios × 5 strategies (19 valid combinations) × 20 seeds × 1,000 steps
 Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual risks acknowledged
 ```
+
+Those theorems — 102 of them across seven modules, machine-checked with no
+`sorry`, no axiom of the corpus's own and no Mathlib — are properties of Lean
+models of the protocol, not of `src/nomos/`: nothing extracts the models from
+the Python and no refinement argument connects the two, so the implementation
+is tested rather than verified
+([Chapter 5 §7](book/chapter-05/05-related-work.md#7-where-to-attack-this-chapter),
+[Scope and limits](book/formal-verification-lean.md#scope-and-limits)).
 
 ## Quick Start
 
