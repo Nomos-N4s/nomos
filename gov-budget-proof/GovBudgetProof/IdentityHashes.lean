@@ -21,9 +21,12 @@
      ontology may hold; consecutive entries always satisfy the link), and
      re-pointing a link is visible in the chain root.
   2. Tamper evidence: replacing a binding changes the chain root —
-     conditional on the replacement changing that binding's digest, which
-     is the cryptographic collision-resistance assumption and is carried
-     as an explicit hypothesis named in every theorem that needs it.
+     conditional on the replacement changing that binding's DIGEST, carried
+     as an explicit hypothesis named in every theorem that needs it. That
+     hypothesis is strictly stronger than collision-resistance of the hash
+     and is not implied by it —
+     `chain_root_swap_invisible_for_two_valid_bindings` is the
+     counterexample.
   3. Determinism: chain roots are a function of the binding sequence —
      equal sequences always yield equal roots.
 
@@ -106,18 +109,31 @@ theorem head_binding_self_consistent (a b : ActionBinding)
   unfold IsValidChain at h
   exact h.1
 
-/-- The leaf digest of a single binding: a positional encoding of the whole
-    record — the runtime hash of the implementation, the hash the record
-    commits to, and the link to its predecessor. All three fields reach the
-    chain root through this digest, so the root is sensitive to a swapped
-    implementation, to a forged commitment and to a re-pointed link alike. -/
+/-- The leaf digest of a single binding: a stride-`MIX` packing of the runtime
+    hash of the implementation, the hash the record commits to, and the link
+    to its predecessor. Each of the three fields reaches the chain root
+    through this digest, so changing any ONE of them on its own moves the
+    digest — that is what the three `bindingDigest_ne_of_*` lemmas below say,
+    and it is all they say.
+
+    The packing is NOT injective, and the docstrings here are careful not to
+    suggest it is. `MIX * bindingHash` and `prevHash` are added at the same
+    stride and neither field is bounded, so two changes can cancel:
+    `bindingDigest_collides_for_some_distinct_bindings` exhibits distinct
+    records with equal digests for every `hashImpl`, and
+    `bindingDigest_eq_iff_fields_eq_of_fields_lt_MIX` gives the range in
+    which no such cancellation is available. -/
 def bindingDigest (b : ActionBinding) : Nat :=
   MIX * MIX * hashImpl b.implementation + MIX * b.bindingHash + b.prevHash
 
 /-- The chain root: a positional (Horner) fold of the per-binding digests,
     seeded by the genesis commitment. The step `acc ↦ MIX * acc + digest` is
     not commutative, so — unlike the plain sum this replaced — the root
-    distinguishes orderings and sees every field of every record. -/
+    distinguishes two orderings exactly when it distinguishes the two digests
+    (`chain_root_swap_eq_iff_digest_eq`). It does not follow that the root
+    sees every field of every record: it sees the digest, and the digest is
+    lossy (see `bindingDigest`). Two distinct records with equal digests are
+    interchangeable everywhere in this file. -/
 def chainRoot (bs : List ActionBinding) : Nat :=
   bs.foldl (fun acc b => MIX * acc + bindingDigest hashImpl b) GENESIS_HASH
 
@@ -235,10 +251,17 @@ theorem foldl_mix_acc_determines_result (suffix : List ActionBinding) :
 
 /-- Claim 2 (tamper evidence), general form: replacing one binding — prefix
     and suffix untouched — changes the chain root, **provided the two
-    bindings have different digests**. That hypothesis is the
-    collision-resistance assumption of the real system. It cannot be
-    discharged inside this file, because `hashImpl` is uninterpreted, which
-    is why it is named in the theorem's name rather than left implied. -/
+    bindings have different digests**. The hypothesis is stated over the
+    digests, and the theorem's name says so, because that is the only form
+    that is true here.
+
+    It is NOT the collision-resistance assumption of the real system, and it
+    is not implied by one: collision-resistance separates the implementation
+    hashes, whereas this asks the whole packed digest to differ.
+    `chain_root_swap_invisible_for_two_valid_bindings` exhibits two records
+    that a hash separating their implementations still leaves with the same
+    digest. So a caller must discharge `hDigest` for the pair at hand; it
+    does not come for free from the strength of `hashImpl`. -/
 theorem tamper_changes_chain_root_of_distinct_digests (pre suf : List ActionBinding)
     (orig new : ActionBinding)
     (hDigest : bindingDigest hashImpl orig ≠ bindingDigest hashImpl new) :
