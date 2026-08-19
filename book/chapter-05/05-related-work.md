@@ -475,7 +475,7 @@ than as demonstrated advantages.
 3. **Identity as a persistence constraint.** Four-tier mutability governs what may
    change and how fast, which is a bound on what the agent may remain rather than
    on what it may do. *Status: implemented and the most heavily Lean-verified part
-   of the system — five of the eight proof modules.*
+   of the system — five of the seven proof modules.*
 4. **Adversarial evidence against a trained attacker.** Appendices E and F train a
    PPO adversary specifically to defeat the governance layer. No other row in
    §3's table reports an adaptive attacker trained against the mechanism itself —
