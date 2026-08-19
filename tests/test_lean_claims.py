@@ -180,12 +180,111 @@ def test_headline_and_vote_declarations_depend_on_no_classical_axiom() -> None:
 
 
 def _source_without_comments(path: Path) -> str:
-    """Return the file's text with comments blanked out, line numbers preserved."""
+    """Return the file's text with comments blanked out, line numbers preserved.
 
-    def blank(match: re.Match[str]) -> str:
-        return "".join(c if c.isspace() else " " for c in match.group(0))
+    Scans the source rather than pattern-matching it. Two properties of Lean
+    defeat a regex pass, and both fail *open* - they blank real code, which
+    silently disarms the guard below rather than tripping it:
 
-    return LINE_COMMENT.sub(blank, BLOCK_COMMENT.sub(blank, path.read_text(encoding="utf-8")))
+    * ``/-`` inside a string literal opens no comment, but a regex treats it
+      as one and blanks everything through the next genuine ``-/``.
+    * Block comments nest, so the first ``-/`` does not necessarily close the
+      comment a ``/-`` opened.
+
+    Character literals are deliberately not tracked: ``'`` is an identifier
+    character in Lean (``bs'``), so treating it as a delimiter would mis-scan
+    far more often than it would help.
+    """
+    text = path.read_text(encoding="utf-8")
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    depth = 0
+    while index < length:
+        if depth:
+            if text.startswith("/-", index):
+                depth += 1
+                out.append("  ")
+                index += 2
+            elif text.startswith("-/", index):
+                depth -= 1
+                out.append("  ")
+                index += 2
+            else:
+                character = text[index]
+                out.append(character if character.isspace() else " ")
+                index += 1
+            continue
+        if text.startswith("/-", index):
+            depth = 1
+            out.append("  ")
+            index += 2
+            continue
+        if text.startswith("--", index):
+            stop = text.find("\n", index)
+            stop = length if stop == -1 else stop
+            out.append("".join(c if c.isspace() else " " for c in text[index:stop]))
+            index = stop
+            continue
+        if text[index] == chr(34):
+            out.append(chr(34))
+            index += 1
+            while index < length:
+                if text[index] == "\\" and index + 1 < length:
+                    out.append(text[index : index + 2])
+                    index += 2
+                    continue
+                out.append(text[index])
+                index += 1
+                if text[index - 1] == chr(34):
+                    break
+            continue
+        out.append(text[index])
+        index += 1
+    return "".join(out)
+
+
+def test_comment_stripper_does_not_blank_live_code(tmp_path: Path) -> None:
+    """The source guard must not be disarmed by a comment-shaped string.
+
+    ``_source_without_comments`` decides what the native-decision scan can
+    see, so any way of making it blank live code is a hole in that guard --
+    and one that fails silently, because a blanked proof simply is not
+    scanned. Two shapes broke the regex it replaced: a string literal
+    containing ``/-``, which opened a comment that ran to the next genuine
+    ``-/`` and swallowed everything between, and a nested block comment,
+    whose first ``-/`` does not close the outer one.
+
+    Anonymous ``example`` blocks are exactly what this must protect: they
+    carry no name, so ``test_lean_corpus_declares_no_axioms_of_its_own``
+    cannot see them and this scan is their only guard.
+    """
+    live = {
+        "string literal holding a comment opener": (
+            'def s : String := "holds /- an opener"\n\n'
+            "example : (1 : Nat) = 1 := by native_decide\n\n/- a real comment -/\n"
+        ),
+        "nested block comment": (
+            "/- outer /- inner -/ still commented -/\nexample : (1 : Nat) = 1 := by native_decide\n"
+        ),
+    }
+    for description, source in live.items():
+        probe = tmp_path / "live.lean"
+        probe.write_text(source, encoding="utf-8")
+        assert NATIVE_DECISION.search(_source_without_comments(probe)), (
+            f"the native decision is live code but the stripper hid it: {description}"
+        )
+
+    commented = {
+        "inside a block comment": "/- example : (1 : Nat) = 1 := by native_decide -/\n",
+        "after a line comment": "-- example : (1 : Nat) = 1 := by native_decide\n",
+    }
+    for description, source in commented.items():
+        probe = tmp_path / "commented.lean"
+        probe.write_text(source, encoding="utf-8")
+        assert not NATIVE_DECISION.search(_source_without_comments(probe)), (
+            f"a commented-out tactic was reported as live: {description}"
+        )
 
 
 def test_no_proof_closes_by_a_native_decision() -> None:
