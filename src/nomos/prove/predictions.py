@@ -266,8 +266,13 @@ LEAN_COVERAGE: dict[int, LeanCoverage] = {
             "permitted constitutional change carries at least the genesis "
             "quorum, which is as close as the corpus comes to 'requires "
             "external multisig'. This test reads a bool flag on TIER_RULES "
-            "instead. The Lean model has no such flag, and no quorum or "
-            "cooldown appears anywhere in the Python this test touches."
+            "instead, and the Lean model has no such flag. The TierRule "
+            "records it indexes do carry a cooling_off_days at the same "
+            "numbers the Lean model uses -- 30 days constitutional, 7 "
+            "operational -- and a modification_threshold string naming the "
+            "same 3-of-5 multisig, but the test asserts neither and nothing "
+            "ties either to the model, so the theorem and the assert are "
+            "still not two statements of one claim."
         ),
     ),
     11: LeanCoverage(
