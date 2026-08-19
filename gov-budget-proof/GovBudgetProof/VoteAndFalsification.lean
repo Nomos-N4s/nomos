@@ -7,8 +7,14 @@
   - Threshold comparison is consistent across decision classes
   - Falsification counts are non-negative and correct
   - Budget halving preserves b ≥ 1 when starting from b ≥ 1
-  - Falsification parameters are immutable-tier
+  - The falsification parameters are *declared* to sit at the immutable tier
+    of `GovBudgetProof.IdentityTiers`, and a governance step gated on that
+    tier leaves them unchanged. The declaration is an input, not a result:
+    nothing here proves that the running system files these parameters under
+    that tier, or that every parameter write goes through the gate.
 -/
+
+import GovBudgetProof.IdentityTiers
 
 /-- Three decision classes for vote threshold. -/
 inductive DecisionClass : Type
@@ -226,16 +232,192 @@ theorem budget_halving_formula (oldBudget : Nat) (fc : Nat)
   simp [h]
 
 /-
-  Falsification parameters are immutable-tier: no governance procedure
-  can change TAG_COMPLIANCE_THRESHOLD or FALSIFICATION_BUDGET_CUTOFF.
+  Falsification Parameter Mutability
+  ==================================
+  Chapter 4 §3.1. The falsification parameters are *declared* to sit at the
+  immutable tier of `GovBudgetProof.IdentityTiers`, and this section works out
+  what that declaration buys: a governance step gated on `isPermitted` cannot
+  move them.
 -/
 
-def falsificationParamsImmutable : Prop :=
-  TAG_COMPLIANCE_THRESHOLD = 4 ∧ FALSIFICATION_BUDGET_CUTOFF = 3
+/-- `isPermitted` is decidable, so a governance step can branch on it by
+    computation. Every branch is a `Nat` comparison or the empty condition of
+    the immutable tier, so the instance is constructive: `#print axioms`
+    reports none, in particular no `Classical.choice`.
 
-theorem falsification_params_are_immutable : falsificationParamsImmutable := by
-  unfold falsificationParamsImmutable
-  constructor <;> rfl
+    The instance lives here rather than in `IdentityTiers.lean` because it is
+    this module that needs to *run* the gate; the tier model itself states the
+    bars propositionally and is left untouched. -/
+instance decidableIsPermitted (t : Tier) (c : Change) : Decidable (isPermitted t c) :=
+  match t with
+  | Tier.immutable      => inferInstanceAs (Decidable False)
+  | Tier.constitutional =>
+      inferInstanceAs (Decidable (CONSTITUTIONAL_QUORUM ≤ c.quorum ∧
+        CONSTITUTIONAL_COOLDOWN ≤ c.cooldownDays))
+  | Tier.operational    =>
+      inferInstanceAs (Decidable (OPERATIONAL_QUORUM ≤ c.quorum ∧
+        OPERATIONAL_COOLDOWN ≤ c.cooldownDays))
+  | Tier.dynamic        => inferInstanceAs (Decidable (DYNAMIC_QUORUM ≤ c.quorum))
+
+/-- The falsification parameters as a block a governance step could rewrite.
+    A bare `def` cannot be immutable — every `def` equals its own body by
+    `rfl`, whatever the running system does — so the parameters are carried in
+    a value that a transition function is free to change. -/
+structure FalsificationParams where
+  tagComplianceThreshold : Nat
+  budgetCutoff : Nat
+  deriving DecidableEq
+
+/-- The block this module actually computes with: the two constants above. -/
+def defaultFalsificationParams : FalsificationParams :=
+  { tagComplianceThreshold := TAG_COMPLIANCE_THRESHOLD,
+    budgetCutoff := FALSIFICATION_BUDGET_CUTOFF }
+
+/-- The tier the falsification parameters are declared at (Chapter 4 §3.1).
+    This is a *declaration*, not a theorem: nothing here proves that the
+    running system files these parameters under this tier. What the tier buys,
+    once granted, is proved below. -/
+def falsificationParamsTier : Tier := Tier.immutable
+
+/-- The falsification test, read off a parameter block rather than off the
+    module constant. -/
+def isFalsificationWith (p : FalsificationParams) (integrityScore : Nat) : Bool :=
+  integrityScore < p.tagComplianceThreshold
+
+/-- The budget update, read off a parameter block rather than off the module
+    constant. -/
+def budgetAfterFalsificationWith (p : FalsificationParams) (oldBudget : Nat) (fc : Nat) : Nat :=
+  if fc ≥ p.budgetCutoff then
+    max 1 (oldBudget / 2)
+  else
+    oldBudget
+
+/-- The parameterised falsification test is the operative one: at the default
+    block it *is* `isFalsification`, by `rfl`. Without this the block below
+    would be a shadow model, and invariance of it would say nothing about the
+    behaviour this module defines. -/
+theorem isFalsification_eq_at_default (integrityScore : Nat) :
+    isFalsification integrityScore
+      = isFalsificationWith defaultFalsificationParams integrityScore :=
+  rfl
+
+/-- The parameterised budget update is likewise the operative one. -/
+theorem budgetAfterFalsification_eq_at_default (oldBudget : Nat) (fc : Nat) :
+    budgetAfterFalsification oldBudget fc
+      = budgetAfterFalsificationWith defaultFalsificationParams oldBudget fc :=
+  rfl
+
+/-- One governance step against a parameter block held at tier `t`, for an
+    arbitrary proposed rewrite `edit`. The change takes effect exactly when the
+    tier permits it; otherwise the block is returned untouched. `edit` is
+    universally quantified, so nothing proved about this step depends on what
+    a proposal asks for. -/
+def applyGovernanceWith (edit : FalsificationParams → FalsificationParams)
+    (p : FalsificationParams) (c : Change) (t : Tier) : FalsificationParams :=
+  if isPermitted t c then edit p else p
+
+/-- The rewrite a proposal against these parameters would install: relax the
+    falsification bar by one step in each direction — a lower compliance
+    threshold, so fewer proposals count as falsifications, and a higher budget
+    cutoff, so more falsifications are tolerated before the budget is halved.
+    This is the abuse the immutable tier exists to prevent, and it is a real
+    rewrite: `relaxFalsificationBar defaultFalsificationParams ≠
+    defaultFalsificationParams`, witnessed below. -/
+def relaxFalsificationBar (p : FalsificationParams) : FalsificationParams :=
+  { tagComplianceThreshold := p.tagComplianceThreshold - 1,
+    budgetCutoff := p.budgetCutoff + 1 }
+
+/-- The governance step actually faced by the falsification parameters:
+    `applyGovernanceWith` at the relaxation above. -/
+def applyGovernance (p : FalsificationParams) (c : Change) (t : Tier) : FalsificationParams :=
+  applyGovernanceWith relaxFalsificationBar p c t
+
+/-- §3.1, in full generality: at the immutable tier a governance step is the
+    identity, for every change `c` and every proposed rewrite `edit`.
+
+    The equation is definitional: `isPermitted Tier.immutable c` reduces to
+    `False`, so `rfl` closes this goal on its own. It is nevertheless routed
+    through `IdentityTiers.immutable_parameters_never_change`, which supplies
+    the `¬ isPermitted Tier.immutable c` that `if_neg` consumes. That is a
+    choice about provenance, not a necessity of the proof: it puts the tier
+    theorem in the elaborated proof term, so the two modules' tier models are
+    linked by an import that `#print` can see rather than by prose, and the
+    guard in `tests/test_lean_claims.py` can check that link. -/
+theorem governance_step_unchanged_at_immutable_tier
+    (edit : FalsificationParams → FalsificationParams)
+    (p : FalsificationParams) (c : Change) :
+    applyGovernanceWith edit p c Tier.immutable = p :=
+  if_neg (immutable_parameters_never_change c)
+
+/-- The falsification parameters are unchanged by any governance step taken at
+    the immutable tier, for every change presented — whatever quorum and
+    cooling-off period it carries.
+
+    Two hypotheses are doing work and neither is proved here. That the
+    parameters are held at `Tier.immutable` is the declaration
+    `falsificationParamsTier`, not a theorem; and that every parameter write in
+    the running system goes through `applyGovernance` is an implementation
+    obligation on the reference implementation. Granted those, the conclusion
+    is unconditional in `c`. -/
+theorem falsification_params_unchanged_at_immutable_tier
+    (p : FalsificationParams) (c : Change) :
+    applyGovernance p c Tier.immutable = p :=
+  governance_step_unchanged_at_immutable_tier relaxFalsificationBar p c
+
+/-- The same conclusion at the tier these parameters are actually declared
+    at. `falsificationParamsTier` reduces to `Tier.immutable`, so this is the
+    theorem above; it is stated separately to make the declaration
+    load-bearing. Refile the parameters under a weaker tier and this stops
+    type-checking, rather than leaving the invariance stranded at a tier
+    nothing in this module is filed under. -/
+theorem falsification_params_unchanged_at_declared_tier
+    (p : FalsificationParams) (c : Change) :
+    applyGovernance p c falsificationParamsTier = p :=
+  falsification_params_unchanged_at_immutable_tier p c
+
+/-- What the block-level invariance means for behaviour: the falsification
+    test and the budget update induced by the parameters answer the same way
+    after a governance step at the immutable tier as before it. -/
+theorem falsification_bar_unchanged_at_immutable_tier
+    (p : FalsificationParams) (c : Change) (integrityScore oldBudget fc : Nat) :
+    isFalsificationWith (applyGovernance p c Tier.immutable) integrityScore
+      = isFalsificationWith p integrityScore ∧
+    budgetAfterFalsificationWith (applyGovernance p c Tier.immutable) oldBudget fc
+      = budgetAfterFalsificationWith p oldBudget fc := by
+  rw [falsification_params_unchanged_at_immutable_tier]
+  exact ⟨rfl, rfl⟩
+
+/-- Non-vacuity, part one: the proposed rewrite really moves the parameters,
+    so the theorems above are not invariance under a disguised identity. -/
+example : relaxFalsificationBar defaultFalsificationParams ≠ defaultFalsificationParams := by
+  decide
+
+/-- Non-vacuity, part two: the same step at a tier that does admit changes
+    installs the rewrite. `applyGovernance` is therefore not constant in its
+    tier argument, and the immutable-tier result is a property of that tier
+    rather than of the transition function. -/
+example : applyGovernance defaultFalsificationParams
+    { quorum := 3, cooldownDays := 30 } Tier.constitutional ≠ defaultFalsificationParams := by
+  decide
+
+/-- The same change, at the immutable tier, is refused. -/
+example : applyGovernance defaultFalsificationParams
+    { quorum := 3, cooldownDays := 30 } Tier.immutable = defaultFalsificationParams := by
+  decide
+
+/-- A constant-value check and nothing more: it records which numerals the two
+    falsification parameters are configured with. Both sides of each conjunct
+    are the same literal after unfolding, so this is closed by `rfl` and would
+    hold just as well for a parameter the running system rewrote on every tick.
+    It carries no immutability claim; that claim is
+    `falsification_params_unchanged_at_immutable_tier` above, which quantifies
+    over governance changes.
+
+    It replaces `falsification_params_are_immutable`, whose name promised the
+    invariance this statement does not have. -/
+theorem falsification_params_have_configured_values :
+    TAG_COMPLIANCE_THRESHOLD = 4 ∧ FALSIFICATION_BUDGET_CUTOFF = 3 :=
+  ⟨rfl, rfl⟩
 
 /-
   Combined invariant: every governance cycle computes its vote outcome with
