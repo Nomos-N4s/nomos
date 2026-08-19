@@ -15,7 +15,7 @@ request runs the `lean-build` job (`lake build`), so a broken proof blocks a mer
 are not properties of the Python in `src/nomos/`.** Nothing extracts the model
 from `speaker.py`, and no refinement argument connects the two. That limit is
 stated in the same words, and argued at length, in
-[Chapter 5, Sec 7](/book/chapter-05/05-related-work#7-where-to-attack-this-chapter);
+[Chapter 5, Sec 7](chapter-05/05-related-work.md#7-where-to-attack-this-chapter);
 that section is the canonical statement of it, and this one exists so the
 caveat travels with the inventory instead of being findable only in the
 related-work chapter.
@@ -59,7 +59,7 @@ re-checked by the Lean kernel on every pull request. What is missing is the
 bridge, not the proofs. That the implementation matches the specification is
 **tested, not proven** — by `tests/test_speaker.py` for the κ₂ gate, and by
 the pre-registered adversarial run in
-[Appendix E](/book/appendix-e-rl-adversary).
+[Appendix E](appendix-e-rl-adversary.md).
 
 ## Status
 
