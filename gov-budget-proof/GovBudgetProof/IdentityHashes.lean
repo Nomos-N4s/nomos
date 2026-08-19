@@ -37,11 +37,21 @@
   concrete digest; in particular no proof may appeal to `String.length`.
   Two consequences a reader must keep in mind:
 
-  * Every tamper- and order-sensitivity result is CONDITIONAL. An
-    uninterpreted hash may be constant, so "the bindings differ, therefore
-    the roots differ" is not merely unproven but refutable — see
-    `chain_root_commutes_under_a_degenerate_hash`, which exhibits the
-    counterexample. Each theorem names the hypothesis it needs.
+  * Every tamper- and order-sensitivity result is CONDITIONAL, and the
+    condition is that the two records have distinct DIGESTS — not that the
+    hash is well behaved. Two limitations follow, and no docstring below may
+    soften either. First, "the bindings differ, therefore the roots differ"
+    is refutable, for EVERY `hashImpl` and not merely for a degenerate one,
+    because the digest packing itself collides
+    (`chain_root_swap_invisible_for_some_distinct_bindings`; and
+    `chain_root_swap_invisible_for_two_valid_bindings` for two self-
+    consistent records whose implementations the hash does separate).
+    Second, "a chain failing `IsValidChain` cannot share a root with a valid
+    one" is false for every `hashImpl` as well
+    (`invalid_chain_can_share_a_root_with_a_valid_one`). Degeneracy of the
+    hash is a further and weaker limitation, kept for what it is in
+    `chain_root_commutes_under_a_degenerate_hash`. Each theorem names the
+    hypothesis it needs.
   * The concrete examples at the foot of the file introduce their
     commitments (`bindingHash := 11`, `bindingHash := 13`) through
     `BindingValid` hypotheses, and the proofs consume those hypotheses.
@@ -383,10 +393,14 @@ theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
 
     Note the scope, which is narrower than "no invalid chain shares a root
     with a valid one": this covers invalidity caused by a broken *link*
-    between two otherwise identical chains. A chain can also fail
-    `IsValidChain` through a bad `bindingHash`, which likewise moves the
-    root (`bindingDigest_ne_of_bindingHash_ne`). The general statement is
-    not proved here and must not be read into this one: it is false, and
+    between two otherwise identical chains, and it needs `hForged` to name
+    the field that moved. A chain can also fail `IsValidChain` through a
+    forged `bindingHash`, which moves the root only while the rest of the
+    record is held fixed — `bindingDigest_ne_of_bindingHash_ne` assumes an
+    unchanged link, and an attacker free to move the link too can forge the
+    commitment and leave the root exactly where it was. So the general
+    statement is not proved here and must not be read into this one: it is
+    false, for every `hashImpl` and not only for degenerate ones, and
     `invalid_chain_can_share_a_root_with_a_valid_one` below is the
     counterexample. -/
 theorem relink_breaks_validity_and_changes_root
@@ -515,12 +529,15 @@ example
 
 end RuntimeHash
 
-/-- Why every tamper- and order-sensitivity theorem above carries a
-    hypothesis. An uninterpreted `hashImpl` may be constant, and then two
-    bindings that differ only in their implementation have the same digest
-    and the swap is invisible in the root. So the unconditional reading —
-    "distinct bindings, therefore distinct roots" — is refutable, not merely
-    unproven, and no honest theorem in this file may state it. -/
+/-- The hash's own contribution to the limitation, isolated. Under a constant
+    `hashImpl` two bindings that differ ONLY in their implementation carry
+    the same digest, so the swap is invisible in the root.
+
+    This is the weaker half of the story and is kept for exactly that: it is
+    the one failure mode a stronger `hashImpl` would remove. The collisions
+    proved inside the section assume nothing about the hash and survive an
+    injective one, so it is those, not this, that stop any theorem here from
+    reading "distinct bindings, therefore distinct roots". -/
 theorem chain_root_commutes_under_a_degenerate_hash :
     ∃ (hashImpl : String → Nat) (a b : ActionBinding),
       a ≠ b ∧ chainRoot hashImpl [a, b] = chainRoot hashImpl [b, a] := by
