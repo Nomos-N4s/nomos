@@ -9,6 +9,58 @@ The formal framework is backed by machine-checked proofs written in [Lean 4](htt
 The proof library lives in `gov-budget-proof/` and is enforced in CI: every pull
 request runs the `lean-build` job (`lake build`), so a broken proof blocks a merge.
 
+## Scope and limits
+
+**These are machine-checked properties of Lean models of the protocol. They
+are not properties of the Python in `src/nomos/`.** Nothing extracts the model
+from `speaker.py`, and no refinement argument connects the two. That limit is
+stated in the same words, and argued at length, in
+[Chapter 5, Sec 7](/book/chapter-05/05-related-work#7-where-to-attack-this-chapter);
+that section is the canonical statement of it, and this one exists so the
+caveat travels with the inventory instead of being findable only in the
+related-work chapter.
+
+Concretely, five links a reader might assume exist do not:
+
+- **No extraction.** `gov-budget-proof/lakefile.toml` declares one `lean_lib`
+  and one `lean_exe` and no codegen target. The executable, `Main.lean`, is a
+  sequence of `IO.println` string literals: it computes nothing, and it reads
+  nothing from the Python side.
+- **No refinement argument.** No statement in the corpus relates a Lean
+  definition to a Python function. `BudgetEnforcement.lean` reasons over its
+  own `BudgetState` and `processProposal`; `src/nomos/speaker.py` implements
+  the same gate as `_apply_budgets`. The two were written independently.
+- **No differential test.** The `lean-build` CI job compiles the proofs and
+  runs `tests/test_lean_claims.py`, which checks the corpus against itself —
+  that headlined theorem names are declared, that no proof term reaches a
+  classical axiom, that no module declares an axiom of its own. It never
+  executes governance code from `src/nomos/`, and nothing anywhere runs a Lean
+  decision and a Python one over the same input and compares them.
+- **No shared identifiers.** Outside `gov-budget-proof/`, Lean names appear
+  only in prose: `processProposal` in Chapter 5, and `quorumCount` in the
+  docstrings of `src/nomos/identity/keys.py` and `tests/test_keys.py`, which
+  say the Python mirrors the Lean model. (`tests/test_lean_claims.py` also
+  names `votePasses` and `isPermitted`, but as string literals for scanning
+  Lean source.) A docstring asserting a correspondence is a claim, not a
+  mechanism that checks one.
+- **Different numeric types.** The Lean model is `Nat` throughout —
+  `IdentityCoherence.lean`'s `COHERENCE_THRESHOLD : Nat := 70` on a 0–100
+  scale, `IdentityTiers.lean`'s `CONSTITUTIONAL_QUORUM : Nat := 3` as a count.
+  The Python thresholds are `float` — `enactment_threshold: float = 0.66` as a
+  fraction, `identity_coherence` on 0.0–1.0. The κ₂ budget is the one
+  exception, a count on both sides, so the flagship budget theorem is not
+  type-mismatched — merely unlinked.
+
+None of that makes the corpus empty, and it should not be undersold either:
+102 theorems across the seven modules below plus the manifest, zero `sorry`,
+zero axioms declared by the corpus itself, no Mathlib and no other dependency
+at all (`gov-budget-proof/lake-manifest.json` lists no packages), all of it
+re-checked by the Lean kernel on every pull request. What is missing is the
+bridge, not the proofs. That the implementation matches the specification is
+**tested, not proven** — by `tests/test_speaker.py` for the κ₂ gate, and by
+the pre-registered adversarial run in
+[Appendix E](/book/appendix-e-rl-adversary).
+
 ## Status
 
 - **Identity Layer — done (2026-08-10).** Five proof modules for Chapter 4 were
