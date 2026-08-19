@@ -30,6 +30,15 @@ request runs the `lean-build` job (`lake build`), so a broken proof blocks a mer
 | `IdentityHashes.lean` | Runtime integrity hash chains over an uninterpreted hash; the root separates two bindings exactly as far as it separates their digests, and the digest packing is proved to collide, so tamper evidence is conditional on the two records having different digests — a claim about the digests that collision-resistance of the hash does not deliver; TEE.verify_binding takes the genesis commitment as its own argument and does not take the proposed binding at all, so the verdict is a function of the runtime and that commitment alone — where the caller obtained the commitment is an assumption of the model, disclosed in the module header, not a theorem — [Chapter 4, Sec 2.1 and 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityCoherence.lean` | Coherence threshold guard; below-threshold actions are rejected without mutating identity state — [Chapter 4, Sec 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 
+The table lists every module under `gov-budget-proof/GovBudgetProof/`, so
+seven proof modules plus the manifest. It had one more row until issue #298:
+`Basic.lean`, described here as "Core definitions (budget, thresholds)", was
+in fact the unmodified `lake new` template `def hello := "world"` — imported
+by the manifest and by nothing else. Issue #298 asked for the row to be
+corrected or for the file to gain the definitions it claimed; the module was
+deleted instead, which is a third route and is recorded here so it can be
+reviewed as one.
+
 ## Building the proofs
 
 Requires Lean 4 with elan (toolchain pinned in `gov-budget-proof/lean-toolchain`):
