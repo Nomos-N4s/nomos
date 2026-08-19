@@ -364,7 +364,7 @@ theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
     `IsValidChain` through a bad `bindingHash`, which likewise moves the
     root (`bindingDigest_ne_of_bindingHash_ne`). The general statement is
     not proved here and must not be read into this one: it is false, and
-    `invalid_chain_can_share_a_root_under_a_degenerate_hash` below is the
+    `invalid_chain_can_share_a_root_with_a_valid_one` below is the
     counterexample. -/
 theorem relink_breaks_validity_and_changes_root
     (a b : ActionBinding) (rest : List ActionBinding) (forgedPrev : Nat)
@@ -383,6 +383,42 @@ theorem relink_breaks_validity_and_changes_root
   · exact tamper_changes_chain_root_of_distinct_digests hashImpl [a] rest b
       { b with prevHash := forgedPrev }
       (bindingDigest_ne_of_prevHash_ne hashImpl b _ rfl rfl (fun h => hForged h.symm))
+
+/-- The scope limit on `relink_breaks_validity_and_changes_root`, made
+    explicit and proved. "A chain failing `IsValidChain` cannot share a root
+    with a valid one" is false, and it is false for EVERY `hashImpl` —
+    `hashImpl` is the section variable here, so this counterexample is
+    universally quantified over it and an injective, collision-resistant hash
+    admits it just as the constant hash does.
+
+    The valid chain is as strong as the model allows: it satisfies
+    `IsValidChain` and every one of its bindings satisfies `BindingValid`.
+    The forgery keeps the second record byte-identical and rewrites the head,
+    raising its committed hash by one — which breaks `BindingValid`, and with
+    it the chain — while dropping the head's link by `MIX`. The digest packs
+    those two fields at the same stride, so the two changes cancel and the
+    root does not move. -/
+theorem invalid_chain_can_share_a_root_with_a_valid_one (sa sb : String) :
+    ∃ valid invalid : List ActionBinding,
+      IsValidChain hashImpl valid ∧ (∀ b ∈ valid, BindingValid hashImpl b) ∧
+        ¬ IsValidChain hashImpl invalid ∧
+          chainRoot hashImpl valid = chainRoot hashImpl invalid := by
+  refine ⟨[{ implementation := sa, bindingHash := hashImpl sa, prevHash := MIX },
+           { implementation := sb, bindingHash := hashImpl sb,
+             prevHash := hashImpl sa }],
+          [{ implementation := sa, bindingHash := hashImpl sa + 1, prevHash := 0 },
+           { implementation := sb, bindingHash := hashImpl sb,
+             prevHash := hashImpl sa }],
+          ⟨rfl, rfl, trivial⟩, ?_, ?_, ?_⟩
+  · intro b hb
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+    rcases hb with rfl | rfl <;> rfl
+  · intro hForged
+    have hHead : hashImpl sa + 1 = hashImpl sa := hForged.1
+    omega
+  · unfold chainRoot bindingDigest
+    simp only [List.foldl_cons, List.foldl_nil, GENESIS_HASH, MIX]
+    omega
 
 /-- §6.1: TEE.verify_binding — the runtime implementation hash is compared
     against the committed binding hash. -/
@@ -471,23 +507,3 @@ theorem chain_root_commutes_under_a_degenerate_hash :
   intro h
   injection h with hImpl _ _
   exact absurd hImpl (by decide)
-
-/-- The scope limit on `relink_breaks_validity_and_changes_root`, made
-    explicit. "A chain failing `IsValidChain` cannot share a root with a
-    valid one" is false for an arbitrary `hashImpl`: under the constant hash
-    a valid one-element chain and a chain whose link is broken can carry the
-    same root. Chain validity constrains the reachable roots only as far as
-    the hash separates the digests, which is why no theorem here states the
-    general form. -/
-theorem invalid_chain_can_share_a_root_under_a_degenerate_hash :
-    ∃ (hashImpl : String → Nat) (valid invalid : List ActionBinding),
-      IsValidChain hashImpl valid ∧ ¬ IsValidChain hashImpl invalid ∧
-        chainRoot hashImpl valid = chainRoot hashImpl invalid := by
-  refine ⟨fun _ => 0,
-    [{ implementation := "x", bindingHash := 5, prevHash := 3 }],
-    [{ implementation := "x", bindingHash := 0, prevHash := 5 },
-     { implementation := "y", bindingHash := 0, prevHash := 3 }],
-    trivial, ?_, by decide⟩
-  intro h
-  unfold IsValidChain at h
-  exact absurd h.2.1 (by decide)
