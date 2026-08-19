@@ -26,6 +26,14 @@
   - a failed validation leaves the base ontology unchanged — no partial
     application
 
+  Two limits a reader must keep, and no docstring below softens either.
+  First, the roster holds exactly `MONITOR_COUNT` monitors, so the Phase 2
+  bar is UNANIMITY of the monitors that exist and not a threshold among a
+  larger pool; `every_monitor_must_approve` states that outright. Second,
+  the sandbox measurement of Phase 2 is still a single `Bool`
+  (`measuredByMonitor`): it is an input this model records, not a quantity
+  it counts, and nothing here proves a measurement happened.
+
   Before issue #298 the monitors and the key holders were three `Bool`
   fields: `MONITOR_COUNT` was declared and then never mentioned outside its
   own theorem `1 ≤ MONITOR_COUNT`, and the "external 3-of-5 key-holder
@@ -57,8 +65,13 @@ def monitorRoster : List Monitor :=
     the number of distinct approvals a candidate needs. -/
 def MONITOR_COUNT : Nat := 3
 
-/-- The constant and the roster are the same three monitors. Without this the
-    bar could drift away from the set of monitors that exist. -/
+/-- A configuration check and nothing more: both sides reduce to the numeral
+    3, so this is closed by `rfl` and would hold of a roster the running
+    system rewrote on every tick. It carries no claim about monitors. What it
+    is for is that it stops compiling if the bar and the roster drift apart —
+    shorten `monitorRoster` or raise `MONITOR_COUNT` and the mismatch is
+    caught here rather than turning `monitorsValidated` into a gate no
+    approval list can pass. -/
 theorem monitor_roster_has_monitor_count : monitorRoster.length = MONITOR_COUNT := rfl
 
 /-- Whether a monitor has approved: their name occurs in the approval list. -/
