@@ -176,11 +176,30 @@ class TestLeanCoverageReporting:
         assert "No Lean proof is checked by this run" in output
 
     def test_tally_counts_the_map(self):
+        """The tally agrees with LEAN_COVERAGE, status by status.
+
+        Parsed back into counts rather than searched for substrings, because
+        ``lean_coverage_tally`` omits a status no row carries. Asserting that
+        every status appears would fail the day one empties -- for instance
+        when P03 gains the theorem it lacks -- with the runner, the map and
+        the published table all correct and agreeing.
+        """
         results = run_all()
         tally = lean_coverage_tally(results)
-        for status in LeanStatus:
-            expected = sum(1 for c in LEAN_COVERAGE.values() if c.status is status)
-            assert f"{expected} {status.value}" in tally
+        assert tally, "run_all() carries coverage rows, so the tally cannot be empty"
+
+        counted = {}
+        for part in tally.split(" | "):
+            count, _, label = part.partition(" ")
+            counted[label] = int(count)
+
+        expected = {
+            status.value: sum(1 for c in LEAN_COVERAGE.values() if c.status is status)
+            for status in LeanStatus
+        }
+        assert counted == {label: n for label, n in expected.items() if n}, (
+            f"the tally {tally!r} does not agree with LEAN_COVERAGE"
+        )
         assert tally in self._summary()
 
     def test_tally_of_nothing_is_empty(self):
