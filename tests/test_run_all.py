@@ -20,6 +20,7 @@ from src.nomos.benchmarks.run_all import (
     run_temptation_experiments,
 )
 from src.nomos.experiments.deadlock_maze import DeadlockMaze
+from src.nomos.experiments.base import ExperimentScenario
 from src.nomos.experiments.drift_lab import DriftLab
 from src.nomos.experiments.grid_world import GridWorld
 from src.nomos.experiments.temptation_bank import TemptationBank
@@ -286,6 +287,29 @@ _SEEDED_STRATEGIES = frozenset({"random"})
 """Strategies that draw on the seed themselves, through ``_get_baseline``."""
 
 
+def _concrete_scenarios() -> list[type[ExperimentScenario]]:
+    """Every concrete ``ExperimentScenario`` in the package, benchmark or not.
+
+    Walked from the base class rather than listed, so a scenario added
+    later is covered without anyone remembering to add it here. Classes
+    defined inside a test are excluded by module, since a stub built to
+    record constructor arguments is not a scenario making a claim.
+    """
+    import src.nomos.agents.scenarios  # noqa: F401  registers the LLM subclasses
+
+    found: dict[str, type[ExperimentScenario]] = {}
+    pending = list(ExperimentScenario.__subclasses__())
+    while pending:
+        scenario_class = pending.pop()
+        pending.extend(scenario_class.__subclasses__())
+        if getattr(scenario_class, "__abstractmethods__", None):
+            continue
+        if not scenario_class.__module__.startswith("src.nomos."):
+            continue
+        found[scenario_class.__name__] = scenario_class
+    return [found[name] for name in sorted(found)]
+
+
 def _agenda_size(scenario_class) -> int:
     """How many proposals the scenario puts on the agenda at reset."""
     scenario = _SCENARIO_BUILDERS[scenario_class](build_governance_layer())
@@ -358,12 +382,23 @@ class TestSeedVariance:
             "scenario SEEDED and correct the published seed protocol"
         )
 
-    def test_gridworld_is_the_only_seeded_scenario(self):
+    def test_gridworld_is_the_only_seeded_benchmark_scenario(self):
         seeded = {cls.__name__ for cls in _SCENARIO_RUNNERS if cls.SEEDED}
         assert seeded == {"GridWorld"}
 
     def test_seeded_declaration_matches_the_constructor(self):
-        for scenario_class in _SCENARIO_RUNNERS:
+        """Across every scenario, not only the four the benchmark runs.
+
+        ``SEEDED`` defaults to ``False``, so a scenario that never
+        overrides it declares itself independent of the seed. Checked only
+        over the benchmark four, that default could be inherited wrong by a
+        scenario elsewhere in the package and nothing would say so — which
+        is what had happened to ``GridWorldLLM``, whose ``reset`` rolls its
+        grid from a seed it declared it did not take.
+        """
+        scenarios = _concrete_scenarios()
+        assert set(_SCENARIO_RUNNERS) <= set(scenarios)
+        for scenario_class in scenarios:
             takes_seed = "seed" in inspect.signature(scenario_class).parameters
             assert scenario_class.SEEDED == takes_seed, (
                 f"{scenario_class.__name__}.SEEDED is {scenario_class.SEEDED} but its "
