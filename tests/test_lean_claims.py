@@ -214,9 +214,10 @@ def test_no_proof_closes_by_a_native_decision() -> None:
     elaborated environment and so does not care how the tactic is spelled.
     This scan is still needed alongside it for the one case that sweep cannot
     see: an anonymous ``example`` leaves no constant in the environment, so a
-    native decision inside one is invisible to any axiom check. Four of the
-    occurrences #300 removed were in ``example`` blocks. This scan also runs
-    without a Lean toolchain, where the sweep skips.
+    native decision inside one is invisible to any axiom check. That case is
+    not hypothetical: ``IdentityHashes.lean`` carried four such uses inside
+    anonymous ``example`` blocks until #299 rewrote the file. This scan also
+    runs without a Lean toolchain, where the sweep skips.
 
     Comments are blanked out first, so prose naming a tactic -- including the
     module note in ``IdentityGenesis.lean`` that tells future editors not to
@@ -277,10 +278,11 @@ def test_lean_corpus_declares_no_axioms_of_its_own() -> None:
 
     What it does not cover: an anonymous ``example`` leaves nothing behind in
     the environment -- not the axiom, not any constant at all -- so a native
-    decision inside one is invisible here. Four of the occurrences #300 removed
-    sat in ``example`` blocks, so the gap is real, and the source scan in
-    ``test_no_proof_closes_by_a_native_decision`` is what covers it. Neither
-    check subsumes the other.
+    decision inside one is invisible here. The gap is real: ``IdentityHashes``
+    carried four such uses inside anonymous ``example`` blocks until #299
+    rewrote the file. The source scan in
+    ``test_no_proof_closes_by_a_native_decision`` is what covers that case.
+    Neither check subsumes the other.
 
     The ``CORPUS_MODULES`` assertion is what stops this passing vacuously: if
     the module filter ever stopped matching, the axiom list would come back
