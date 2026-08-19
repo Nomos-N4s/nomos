@@ -193,6 +193,28 @@ theorem bindingDigest_is_not_collision_free :
   rcases bindingDigest_collides_for_some_distinct_bindings hashImpl "" with ⟨x, y, hne, hEq⟩
   exact hne (hCollisionFree x y hEq)
 
+/-- Exactly where the packing stops losing information: while both packed
+    fields stay below the stride, the digest determines all three components
+    of the record, and the collision above is impossible. The hypotheses are
+    what the name says and nothing weaker — `MIX` is 31, so this holds only
+    of records whose committed hash and link are single "digits" in base
+    `MIX`. A `BindingValid` record commits `hashImpl b.implementation`, and a
+    real hash's outputs are not below 31, so this lemma does NOT apply to the
+    bindings the chapter is about; it is here to locate the failure, not to
+    repair it. -/
+theorem bindingDigest_eq_iff_fields_eq_of_fields_lt_MIX (b b' : ActionBinding)
+    (hCommit : b.bindingHash < MIX) (hLink : b.prevHash < MIX)
+    (hCommit' : b'.bindingHash < MIX) (hLink' : b'.prevHash < MIX) :
+    bindingDigest hashImpl b = bindingDigest hashImpl b' ↔
+      hashImpl b.implementation = hashImpl b'.implementation ∧
+        b.bindingHash = b'.bindingHash ∧ b.prevHash = b'.prevHash := by
+  simp only [bindingDigest, MIX] at hCommit hLink hCommit' hLink' ⊢
+  constructor
+  · intro hEq
+    refine ⟨?_, ?_, ?_⟩ <;> omega
+  · intro hFields
+    omega
+
 /-- Auxiliary: the fold accumulator is determined by the fold result — equal
     roots over the same suffix force equal accumulators, because the combine
     step `acc ↦ MIX * acc + d` is injective in `acc` (`MIX ≠ 0`). -/
