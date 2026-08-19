@@ -172,10 +172,12 @@ LEAN_COVERAGE: dict[int, LeanCoverage] = {
             "threshold of 1/2 is the 0.5 majority_threshold default of "
             "SpeakerStateMachine. But the equivalence this test asserts -- "
             "consensus exactly when the weighted average clears the threshold "
-            "-- is that definition rather than a theorem about it. What the "
-            "corpus proves of the vote is that the outcome depends only on the "
-            "tallies and that it is decided by computation, neither of which "
-            "is this claim."
+            "-- is that definition rather than a theorem about it. Nothing "
+            "the corpus proves of the vote is that equivalence: its theorems "
+            "there are about the resolution itself, among them that it is "
+            "decidable and total, that it depends only on the tallies, that "
+            "clearing the identity bar clears the lower ones, and that an "
+            "empty ballot never passes."
         ),
     ),
     4: LeanCoverage(
