@@ -20,19 +20,27 @@
     imported from `GovBudgetProof.IdentityGenesis` rather than restated, so
     two key holders can no more clear a buffer extension than they can
     bootstrap genesis
-  - extensions from the buffer never mutate the base ontology directly:
-    base ontology changes require the core (Constitutional-tier) mutability
-    path
+  - extensions from the buffer never mutate the base ontology: the base is
+    either untouched or extended by exactly one entry, and its existing
+    entries are never altered, reordered or removed
   - a failed validation leaves the base ontology unchanged — no partial
     application
 
-  Two limits a reader must keep, and no docstring below softens either.
-  First, the roster holds exactly `MONITOR_COUNT` monitors, so the Phase 2
-  bar is UNANIMITY of the monitors that exist and not a threshold among a
-  larger pool; `every_monitor_must_approve` states that outright. Second,
-  the sandbox measurement of Phase 2 is still a single `Bool`
+  Three limits a reader must keep, and no docstring below softens any of
+  them. First, the roster holds exactly `MONITOR_COUNT` monitors, so the
+  Phase 2 bar is UNANIMITY of the monitors that exist and not a threshold
+  among a larger pool; `every_monitor_must_approve` states that outright.
+  Second, the sandbox measurement of Phase 2 is still a single `Bool`
   (`measuredByMonitor`): it is an input this model records, not a quantity
-  it counts, and nothing here proves a measurement happened.
+  it counts, and nothing here proves a measurement happened. Third, every
+  result below is a statement about `extendFromBuffer` and about nothing
+  else. What governs a change made to the base ontology OUTSIDE this
+  protocol is not modelled here: the chapter routes such a change through
+  the §3.2 Constitutional-tier core-mutability path, but that path lives in
+  `GovBudgetProof.IdentityTiers`, which this module does not import, and no
+  statement below so much as mentions a tier. That the extension protocol
+  is the only way into the base ontology is an assumption of the model, not
+  a theorem of it.
 
   Before issue #298 the monitors and the key holders were three `Bool`
   fields: `MONITOR_COUNT` was declared and then never mentioned outside its
@@ -230,10 +238,10 @@ theorem extension_only_extends_base (ext : BufferedExtension) :
   unfold extendFromBuffer
   by_cases hc : clearedCheck ext = true <;> simp [hc, baseOntology, List.IsPrefix]
 
-/-- §5.2 + §3.2: a buffer extension never rewrites the base ontology — the
-    base is either untouched or extended by exactly one entry. Base ontology
-    changes outside this protocol are Constitutional-tier core-mutability
-    changes, which are disjoint from the extension procedure. -/
+/-- §5.2: a buffer extension never rewrites the base ontology — the base is
+    either untouched or extended by exactly one entry. The quantifier is over
+    extensions, not over changes: what may happen to the base ontology outside
+    `extendFromBuffer` is not modelled (third limit in the header). -/
 theorem buffer_extension_never_rewrites_base (ext : BufferedExtension) :
     (extendFromBuffer ext).length = baseOntology.length ∨
     (extendFromBuffer ext).length = baseOntology.length + 1 := by
