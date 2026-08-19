@@ -282,6 +282,47 @@ theorem chain_root_swap_invisible_for_some_distinct_bindings (s : String) :
   rcases bindingDigest_collides_for_some_distinct_bindings hashImpl s with ⟨a, b, hne, hEq⟩
   exact ⟨a, b, hne, (chain_root_swap_eq_iff_digest_eq hashImpl a b).mpr hEq⟩
 
+/-- The collision above uses one implementation string twice, so a reader may
+    hope that two *self-consistent* records whose implementations the hash
+    separates are safe. They are not. For any two strings the hash tells
+    apart there are records committing to them — each satisfying
+    `BindingValid`, i.e. each carrying the true runtime hash of its own
+    implementation — whose swap the root does not see. The forger pays for
+    the difference between the two implementation hashes in the link field,
+    which the packing adds at a stride the difference can exceed.
+
+    This is the precise sense in which collision-resistance of `hashImpl`
+    does not lift to the digest: `hSep` is exactly what a collision-resistant
+    hash gives on distinct implementations, and it is not enough. -/
+theorem chain_root_swap_invisible_for_two_valid_bindings (s t : String)
+    (hSep : hashImpl s ≠ hashImpl t) :
+    ∃ a b : ActionBinding,
+      a ≠ b ∧ a.implementation = s ∧ b.implementation = t ∧
+        BindingValid hashImpl a ∧ BindingValid hashImpl b ∧
+          chainRoot hashImpl [a, b] = chainRoot hashImpl [b, a] := by
+  have hst : s ≠ t := fun hEq => hSep (by rw [hEq])
+  rcases Nat.le_total (hashImpl s) (hashImpl t) with hle | hle
+  · refine ⟨{ implementation := s, bindingHash := hashImpl s,
+              prevHash := (MIX * MIX + MIX) * (hashImpl t - hashImpl s) },
+            { implementation := t, bindingHash := hashImpl t, prevHash := 0 },
+            ?_, rfl, rfl, rfl, rfl, ?_⟩
+    · intro hEq
+      injection hEq with hImpl _ _
+      exact hst hImpl
+    · refine (chain_root_swap_eq_iff_digest_eq hashImpl _ _).mpr ?_
+      simp only [bindingDigest, MIX]
+      omega
+  · refine ⟨{ implementation := s, bindingHash := hashImpl s, prevHash := 0 },
+            { implementation := t, bindingHash := hashImpl t,
+              prevHash := (MIX * MIX + MIX) * (hashImpl s - hashImpl t) },
+            ?_, rfl, rfl, rfl, rfl, ?_⟩
+    · intro hEq
+      injection hEq with hImpl _ _
+      exact hst hImpl
+    · refine (chain_root_swap_eq_iff_digest_eq hashImpl _ _).mpr ?_
+      simp only [bindingDigest, MIX]
+      omega
+
 /-- Claim 3 (determinism): the chain root is a function of the binding
     sequence — equal sequences give equal roots. -/
 theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
