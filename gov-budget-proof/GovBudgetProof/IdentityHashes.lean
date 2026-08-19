@@ -113,7 +113,7 @@ def BindingValid (b : ActionBinding) : Prop :=
     satisfies its own hash commitment. -/
 def IsValidChain : List ActionBinding → Prop
   | [] => True
-  | [_] => True
+  | [b] => BindingValid hashImpl b
   | a :: b :: rest =>
       BindingValid hashImpl a ∧ b.prevHash = hashImpl a.implementation ∧
         IsValidChain (b :: rest)
@@ -444,8 +444,9 @@ theorem relink_breaks_validity_and_changes_root
     universally quantified over it and an injective, collision-resistant hash
     admits it just as the constant hash does.
 
-    The valid chain is as strong as the model allows: it satisfies
-    `IsValidChain` and every one of its bindings satisfies `BindingValid`.
+    The valid chain is as strong as the model allows: `IsValidChain` now
+    requires `BindingValid` of every binding, terminal element included, so
+    satisfying it is the whole of validity.
     The forgery keeps the second record byte-identical and rewrites the head,
     raising its committed hash by one — which breaks `BindingValid`, and with
     it the chain — while dropping the head's link by `MIX`. The digest packs
@@ -453,8 +454,7 @@ theorem relink_breaks_validity_and_changes_root
     root does not move. -/
 theorem invalid_chain_can_share_a_root_with_a_valid_one (sa sb : String) :
     ∃ valid invalid : List ActionBinding,
-      IsValidChain hashImpl valid ∧ (∀ b ∈ valid, BindingValid hashImpl b) ∧
-        ¬ IsValidChain hashImpl invalid ∧
+      IsValidChain hashImpl valid ∧ ¬ IsValidChain hashImpl invalid ∧
           chainRoot hashImpl valid = chainRoot hashImpl invalid := by
   refine ⟨[{ implementation := sa, bindingHash := hashImpl sa, prevHash := MIX },
            { implementation := sb, bindingHash := hashImpl sb,
@@ -462,10 +462,7 @@ theorem invalid_chain_can_share_a_root_with_a_valid_one (sa sb : String) :
           [{ implementation := sa, bindingHash := hashImpl sa + 1, prevHash := 0 },
            { implementation := sb, bindingHash := hashImpl sb,
              prevHash := hashImpl sa }],
-          ⟨rfl, rfl, trivial⟩, ?_, ?_, ?_⟩
-  · intro b hb
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-    rcases hb with rfl | rfl <;> rfl
+          ⟨rfl, rfl, rfl⟩, ?_, ?_⟩
   · intro hForged
     have hHead : hashImpl sa + 1 = hashImpl sa := hForged.1
     omega
