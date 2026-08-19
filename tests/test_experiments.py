@@ -302,7 +302,7 @@ class TestDriftLab:
         from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
-        dl = DriftLab(speaker, identity, seed=42)
+        dl = DriftLab(speaker, identity)
         dl.reset()
         assert dl._drift == 0.0
         assert dl.metrics.total_steps == 0
@@ -324,7 +324,7 @@ class TestDriftLab:
         from src.nomos.identity.core import IdentityCore
         speaker = SpeakerStateMachine(members={}, default_action="stay")
         identity = IdentityCore()
-        dl = DriftLab(speaker, identity, seed=42)
+        dl = DriftLab(speaker, identity)
         dl.reset()
         assert dl._drift == 0.0
         dl.step("state", external_decision=_gov(action="classify_honestly"))
@@ -406,7 +406,7 @@ class TestDriftLabIdentityDrift:
     @staticmethod
     def _lab(steps: int, action: str) -> DriftLab:
         speaker = SpeakerStateMachine(members={}, default_action="stay")
-        dl = DriftLab(speaker, _drift_identity(), seed=42)
+        dl = DriftLab(speaker, _drift_identity())
         dl.reset()
         for _ in range(steps):
             dl.step("state", external_decision=_gov(action=action))
@@ -636,7 +636,7 @@ class TestGovernanceLatency:
         builders = [
             lambda s: GridWorld(s, size=6, seed=42),
             lambda s: TemptationBank(s),
-            lambda s: DriftLab(s, IdentityCore(), seed=42),
+            lambda s: DriftLab(s, IdentityCore()),
             lambda s: DeadlockMaze(s, DeadlockBreaker(threshold_cycles=5)),
         ]
         for build in builders:
