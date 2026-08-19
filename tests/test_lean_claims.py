@@ -39,6 +39,7 @@ DECL_START = re.compile(
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
 BLOCK_COMMENT = re.compile(r"/-.*?-/", re.DOTALL)
 LINE_COMMENT = re.compile(r"--.*")
+NATIVE_DECISION = re.compile(r"native_decide|\+\s*native\b|\bnative\s*:=\s*true\b")
 LEAN_TIMEOUT_SECONDS = 600
 VOTE_DECLARATIONS = (
     "decidableVotePasses",
@@ -182,17 +183,28 @@ def _source_without_comments(path: Path) -> str:
     return LINE_COMMENT.sub(blank, BLOCK_COMMENT.sub(blank, path.read_text(encoding="utf-8")))
 
 
-def test_no_proof_closes_by_native_decide() -> None:
-    """No proof in the corpus is closed by ``native_decide`` (issue #300).
+def test_no_proof_closes_by_a_native_decision() -> None:
+    """No proof in the corpus is closed by a native decision tactic (#300).
 
-    On the pinned toolchain ``native_decide`` does not reduce in the kernel: it
-    asserts the compiled evaluation as a fresh opaque axiom per declaration,
-    named ``<theorem>._native.native_decide.ax_1_1``. That name contains no
-    ``Classical.``, so the axiom-base test above cannot see it -- a declaration
-    could rest on an unchecked compiler assertion and still pass there. Hence
-    this separate source check.
+    On the pinned toolchain these tactics do not reduce in the kernel: they
+    assert the compiled evaluation as a fresh opaque axiom per declaration,
+    named ``<theorem>._native.<tactic>.ax_1_1``. That name contains no
+    ``Classical.``, so the classical-axiom test above cannot see it.
 
-    Comments are blanked out first, so prose naming the tactic -- including the
+    This is a source scan, and it covers exactly the three spellings that
+    elaborate to such an axiom on leanprover/lean4:v4.32.1::
+
+        native_decide
+        decide +native
+        decide (config := { native := true })
+
+    All three were checked against the toolchain; the latter two mint
+    ``._native.decide.ax_1_1`` and contain no ``native_decide`` substring, so
+    an earlier substring test passed them. This scan is therefore a guard
+    against known spellings, not against the bug class: a spelling not listed
+    above would still slip past it.
+
+    Comments are blanked out first, so prose naming a tactic -- including the
     module note in ``IdentityGenesis.lean`` that tells future editors not to
     reintroduce it -- does not trip the guard.
     """
@@ -200,13 +212,13 @@ def test_no_proof_closes_by_native_decide() -> None:
         f"{path.relative_to(REPO_ROOT).as_posix()}:{number}"
         for path in _lean_sources()
         for number, line in enumerate(_source_without_comments(path).splitlines(), 1)
-        if "native_decide" in line
+        if NATIVE_DECISION.search(line)
     ]
     assert not used, (
-        f"native_decide closes a proof at {used}: on the pinned toolchain it "
-        f"asserts the evaluation as an opaque axiom instead of checking it, so "
-        f"the declaration rests on the compiler rather than on the kernel. Use "
-        f"decide, or a term proof off the Prop sibling"
+        f"a native decision tactic closes a proof at {used}: on the pinned "
+        f"toolchain it asserts the evaluation as an opaque axiom instead of "
+        f"checking it, so the declaration rests on the compiler rather than on "
+        f"the kernel. Use decide, or a term proof off the Prop sibling"
     )
 
 
