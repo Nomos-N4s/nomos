@@ -30,6 +30,8 @@ from src.nomos.prove.predictions import LEAN_COVERAGE
 
 REPO_ROOT = Path(__file__).parent.parent
 README_PATH = REPO_ROOT / "README.md"
+BOOK_PATH = REPO_ROOT / "book" / "formal-verification-lean.md"
+COVERAGE_HEADING = "## Prediction coverage"
 LEAN_ROOT = REPO_ROOT / "gov-budget-proof"
 VOTE_MODULE = LEAN_ROOT / "GovBudgetProof" / "VoteAndFalsification.lean"
 TIER_MODULE = LEAN_ROOT / "GovBudgetProof" / "IdentityTiers.lean"
@@ -47,6 +49,7 @@ DECLARED_NAME = re.compile(
     r"(?:theorem|lemma|instance|def|abbrev)\s+([A-Za-z_][A-Za-z0-9_'!?]*)"
 )
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
+BACKTICKED = re.compile(r"`([^`]+)`")
 BLOCK_COMMENT = re.compile(r"/-.*?-/", re.DOTALL)
 LINE_COMMENT = re.compile(r"--.*")
 NATIVE_DECISION = re.compile(r"native_decide|\+\s*native\b|\bnative\s*:=\s*true\b")
@@ -542,3 +545,64 @@ def test_prediction_coverage_names_declarations_the_corpus_has() -> None:
         if any(not IDENTIFIER.fullmatch(name) for name in coverage.declarations)
     }
     assert not malformed, f"these are not Lean identifiers: {malformed}"
+
+
+def _book_coverage_table() -> dict[int, tuple[str, tuple[str, ...]]]:
+    """Return the coverage table published in the book, keyed by prediction id.
+
+    Each value is the row's coverage wording and the Lean declarations it
+    names, in the order it names them.
+    """
+    text = BOOK_PATH.read_text(encoding="utf-8")
+    _, heading, after = text.partition(COVERAGE_HEADING)
+    assert heading, f"{BOOK_PATH} has no {COVERAGE_HEADING!r} section"
+
+    published: dict[int, tuple[str, tuple[str, ...]]] = {}
+    for line in after.splitlines():
+        if line.startswith("## "):
+            break
+        if not line.startswith("| P"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        assert len(cells) == 4, f"the coverage row has {len(cells)} cells: {line}"
+        identifier = int(cells[0].lstrip("P"))
+        assert identifier not in published, f"P{identifier:02d} has two rows in the table"
+        published[identifier] = (cells[2], tuple(BACKTICKED.findall(cells[3])))
+    return published
+
+
+def test_book_prediction_coverage_table_matches_the_map() -> None:
+    """The published coverage table says what LEAN_COVERAGE says (#305).
+
+    The table in ``book/formal-verification-lean.md`` is rendered from
+    ``LEAN_COVERAGE``, and a rendered table drifts from its source the moment
+    someone edits one of them -- which is the whole failure this epic is
+    remediating. Re-deriving a row in the map without re-rendering the table
+    fails here, and so does editing a cell by hand.
+
+    The names themselves are checked against the corpus by
+    ``test_prediction_coverage_names_declarations_the_corpus_has``; this test
+    only holds the two published forms to each other.
+    """
+    published = _book_coverage_table()
+    assert published, (
+        f"no coverage rows parsed out of {BOOK_PATH}: the table is gone, or "
+        f"its rows no longer start with '| P'"
+    )
+
+    expected = {
+        identifier: (coverage.status.value, coverage.declarations)
+        for identifier, coverage in LEAN_COVERAGE.items()
+    }
+    differing = sorted(
+        identifier
+        for identifier in set(published) | set(expected)
+        if published.get(identifier) != expected.get(identifier)
+    )
+    assert not differing, (
+        f"the coverage table in {BOOK_PATH.name} and LEAN_COVERAGE in "
+        f"src/nomos/prove/predictions.py disagree about "
+        f"{[f'P{i:02d}' for i in differing]}. The map is the source: "
+        f"published={ {i: published.get(i) for i in differing} }, "
+        f"map={ {i: expected.get(i) for i in differing} }"
+    )
