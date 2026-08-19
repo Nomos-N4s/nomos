@@ -227,6 +227,77 @@ def test_no_proof_closes_by_a_native_decision() -> None:
     )
 
 
+CORPUS_AXIOM_SWEEP = """open Lean in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let modules := env.header.moduleNames
+  let corpus := modules.filter fun m => m == `GovBudgetProof || (`GovBudgetProof).isPrefixOf m
+  let mut declared : Array Name := #[]
+  for (name, info) in env.constants.toList do
+    match info with
+    | .axiomInfo _ =>
+      match env.getModuleIdxFor? name with
+      | some index => if corpus.contains modules[index.toNat]! then declared := declared.push name
+      | none => declared := declared.push name
+    | _ => pure ()
+  IO.println s!"CORPUS_MODULES {corpus.toList}"
+  IO.println s!"CORPUS_AXIOMS {declared.toList}"
+"""
+
+
+def _swept_names(stdout: str, marker: str) -> list[str]:
+    """Return the Lean name list printed on the sweep's ``marker`` line."""
+    printed = [line for line in stdout.splitlines() if line.startswith(marker + " ")]
+    assert len(printed) == 1, f"the sweep printed {len(printed)} {marker} lines:\n{stdout}"
+    inside = printed[0][len(marker) + 1 :].strip()
+    assert inside.startswith("[") and inside.endswith("]"), f"unparsable line: {printed[0]}"
+    return [item.strip() for item in inside[1:-1].split(",") if item.strip()]
+
+
+def test_lean_corpus_declares_no_axioms_of_its_own() -> None:
+    """No module in the proof corpus declares an axiom of its own (issue #300).
+
+    A native decision tactic works by declaring a fresh axiom in the module
+    being elaborated and asserting the compiled evaluation as its statement --
+    ``<theorem>._native.native_decide.ax_1_1`` for ``native_decide``,
+    ``<theorem>._native.decide.ax_1_1`` for ``decide +native``. A hand-written
+    ``axiom`` command does the same thing. This sweeps the elaborated
+    environment rather than the source text, so it catches every such
+    declaration however the tactic is spelled, including spellings that did not
+    exist when it was written.
+
+    What it does not cover: an anonymous ``example`` leaves nothing behind in
+    the environment -- not the axiom, not any constant at all -- so a native
+    decision inside one is invisible here. Four of the occurrences #300 removed
+    sat in ``example`` blocks, so the gap is real, and the source scan in
+    ``test_no_proof_closes_by_a_native_decision`` is what covers it. Neither
+    check subsumes the other.
+
+    The ``CORPUS_MODULES`` assertion is what stops this passing vacuously: if
+    the module filter ever stopped matching, the axiom list would come back
+    empty for the wrong reason and the test would still be green.
+
+    Skipped without a Lean toolchain; the ``lean-build`` CI job installs one
+    and runs this file.
+    """
+    stdout = _lean_probe([CORPUS_AXIOM_SWEEP], "the corpus's own axiom declarations", ("Lean",))
+
+    modules = _swept_names(stdout, "CORPUS_MODULES")
+    assert "GovBudgetProof.IdentityGenesis" in modules, (
+        f"the sweep matched no GovBudgetProof modules, so an empty axiom list "
+        f"would say nothing about the corpus; it saw {modules}"
+    )
+
+    declared = _swept_names(stdout, "CORPUS_AXIOMS")
+    assert not declared, (
+        f"the corpus declares axioms of its own: {declared}. An axiom is "
+        f"asserted, not proven, so every declaration reaching one rests on "
+        f"that assertion rather than on the kernel. A ``._native.`` name means "
+        f"a native decision tactic asserted a compiled evaluation; use decide, "
+        f"or a term proof off the Prop sibling"
+    )
+
+
 def test_vote_passes_has_a_decidable_instance() -> None:
     """votePasses is decided by computation rather than postulated."""
     source = VOTE_MODULE.read_text(encoding="utf-8")
