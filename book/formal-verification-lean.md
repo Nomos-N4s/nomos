@@ -46,15 +46,23 @@ Concretely, five links a reader might assume exist do not:
   also import the map from `src/nomos/prove/predictions.py`, but only to read
   it. None executes governance code from `src/nomos/`, and nothing anywhere
   runs a Lean decision and a Python one over the same input and compares them.
-- **No shared identifiers.** Outside `gov-budget-proof/`, Lean names appear
-  only in prose: `processProposal` in Chapter 5, and `quorumCount` in the
-  docstrings of `src/nomos/identity/keys.py` and `tests/test_keys.py`, which
-  say the Python mirrors the Lean model. (`tests/test_lean_claims.py` also
-  names `votePasses` and `isPermitted`, but as string literals for scanning
-  Lean source.) A docstring asserting a correspondence is a claim, not a
-  mechanism that checks one — for the genesis quorum a Python test does check
-  the corresponding property, but by hand, in Python, against no Lean artefact
-  (see below); nothing fails if the two models drift apart.
+- **No binding identifiers.** Lean names do appear outside
+  `gov-budget-proof/`, but nothing is bound to them: no Python object
+  imports, extracts or takes its meaning from a Lean declaration. They appear
+  in prose, as `processProposal` in Chapter 5; in docstrings saying the Python
+  mirrors the Lean model, as `quorumCount` in `src/nomos/identity/keys.py` and
+  `tests/test_keys.py`; as the string literals `tests/test_lean_claims.py`
+  scans the Lean sources for; and as the `declarations` of `LEAN_COVERAGE` in
+  `src/nomos/prove/predictions.py` — a shipped module, whose names the prove
+  runner prints and the exported results JSON carries. A docstring or a table
+  cell asserting a correspondence is a claim, not a mechanism that checks one;
+  for the genesis quorum a Python test does check the corresponding property,
+  but by hand, in Python, against no Lean artefact (see below). One kind of
+  drift is caught now: the coverage guards fail if the corpus stops declaring
+  a name the map lists, or declares it under a kind the row does not claim.
+  That holds the map to the corpus's names, not the models to each other — a
+  theorem and the assert beside it can come to say different things, and
+  nothing fails.
 - **Different numeric types.** The Lean model is `Nat` throughout —
   `IdentityCoherence.lean`'s `COHERENCE_THRESHOLD : Nat := 70` on a 0–100
   scale, `IdentityTiers.lean`'s `CONSTITUTIONAL_QUORUM : Nat := 3` as a count.
