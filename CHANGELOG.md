@@ -8,6 +8,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [1.1.0](https://github.com/Nomos-N4s/nomos/compare/v1.0.0...v1.1.0) (2026-08-19)
+
+
+### Features
+
+* **lean:** add the MIX multiplier and the per-binding digest ([4792837](https://github.com/Nomos-N4s/nomos/commit/4792837e97026ff847a2a5ad86688c4a00e8b633))
+* **lean:** decide the tier permission gate in the falsification module ([97e9f6e](https://github.com/Nomos-N4s/nomos/commit/97e9f6e9be573e16900af1c3e230fce81340c77f))
+* **lean:** exhibit an invalid chain sharing a root under every hash ([1d09e58](https://github.com/Nomos-N4s/nomos/commit/1d09e58358f1a9181d8b2642371d3f1f429c7b47))
+* **lean:** gate falsification parameter edits on the tier model ([82123b9](https://github.com/Nomos-N4s/nomos/commit/82123b97673052488aa739f4a252a15ee1c647b6))
+* **lean:** model the falsification parameters as a governed block ([2441b3d](https://github.com/Nomos-N4s/nomos/commit/2441b3d3483b7ed9ceea274b25731ed414d98cd4))
+* **lean:** pin where the digest packing is still injective ([690546f](https://github.com/Nomos-N4s/nomos/commit/690546fa30e1ce5675d0114db37df2d83f93f0da))
+* **lean:** prove chainRoot order sensitivity ([7b5292a](https://github.com/Nomos-N4s/nomos/commit/7b5292abf12499e5be2f31f301fca12b529b65bc))
+* **lean:** prove falsification params unchanged at the immutable tier ([b0b52d9](https://github.com/Nomos-N4s/nomos/commit/b0b52d9208ff1cfbcd4b5a7cdea40bab7fa5245f))
+* **lean:** prove the binding digest collides for distinct records ([fd842dd](https://github.com/Nomos-N4s/nomos/commit/fd842dd378aa54b8d213a61b7e0e1e70e5c176ab))
+* **lean:** prove the binding digest separates each record field ([5eed2db](https://github.com/Nomos-N4s/nomos/commit/5eed2db57f73b6a1eff78cc0fe2080753865c474))
+* **lean:** read the falsification bar off a parameter block ([1296d4a](https://github.com/Nomos-N4s/nomos/commit/1296d4a6d176d59aadb904fa5a31d715a4b45709))
+* **lean:** refute the general invalid-chain root claim ([ca946f7](https://github.com/Nomos-N4s/nomos/commit/ca946f7d0b0f4ed0b4f6924fb5b976be31322bef))
+* **lean:** relate IsValidChain to chainRoot via link forgery ([940dd42](https://github.com/Nomos-N4s/nomos/commit/940dd42aba32749c173269798639012ee76a5973))
+* **lean:** show the root cannot separate two self-consistent bindings ([b61ad9c](https://github.com/Nomos-N4s/nomos/commit/b61ad9cb4e22e7297ae60d319293e4fff376b365))
+* **lean:** tie the invariance to the declared parameter tier ([e759c9d](https://github.com/Nomos-N4s/nomos/commit/e759c9de4c9a4565afafe944659c3dde6014921e))
+
+
+### Bug Fixes
+
+* **lean:** commit bindingHash 13 for the tampered_impl example ([f37781f](https://github.com/Nomos-N4s/nomos/commit/f37781f4e98bd69d7af6a6fbc83d0bca56b3b3e7))
+* **lean:** make the identity hash chain a real commitment ([e267152](https://github.com/Nomos-N4s/nomos/commit/e267152abf96215326f67224ee2103cee6ecf997))
+* **lean:** prove falsification-parameter invariance against the tier model ([3c498f4](https://github.com/Nomos-N4s/nomos/commit/3c498f40e06e0de7231c463a7ede1b4f23ff6443))
+* **lean:** replace the vacuous collision-free swap theorem ([6fab310](https://github.com/Nomos-N4s/nomos/commit/6fab31014c8f8ad3c8c6cda342d3d62fc5217ce9))
+* **lean:** require BindingValid of a chain's terminal binding ([1751dd2](https://github.com/Nomos-N4s/nomos/commit/1751dd26ca2f3dcbf493e537786fc615acd39809))
+
+
+### Documentation
+
+* **book:** correct the IdentityHashes row in the Lean inventory ([daed677](https://github.com/Nomos-N4s/nomos/commit/daed67710d91eca794228f1a66032767578e954f))
+* **book:** describe what VoteAndFalsification actually proves ([018a43e](https://github.com/Nomos-N4s/nomos/commit/018a43eb586a7a409ab25c2a1d82360646d482ef))
+* **book:** qualify the IdentityHashes row in the Lean inventory ([ff9e218](https://github.com/Nomos-N4s/nomos/commit/ff9e21887793b6e717a865ac32a78483b8124e25))
+* **lean:** drop the false necessity claim on the immutable-tier gate ([78223be](https://github.com/Nomos-N4s/nomos/commit/78223bef8ce855496738cb6ea4c6626e153a4134))
+* **lean:** drop the unproved ordering between the two hypotheses ([4254bdc](https://github.com/Nomos-N4s/nomos/commit/4254bdc42b29773c1bfccda812926c7870c2e901))
+* **lean:** qualify what the digest and the root actually separate ([504504c](https://github.com/Nomos-N4s/nomos/commit/504504ccd1cb5c0bc3c54b5e41ba2b26c684dfb0))
+* **lean:** restate the IdentityHashes header assumptions ([c88ab59](https://github.com/Nomos-N4s/nomos/commit/c88ab598c9e8ca7941eba84b0c5505108bbb289f))
+* **lean:** say the falsification params are declared immutable-tier ([ed5cc88](https://github.com/Nomos-N4s/nomos/commit/ed5cc88359c340c92d98556874954340f864d9cf))
+* **lean:** say the tamper literals are illustrative, not pinned ([31d1cb0](https://github.com/Nomos-N4s/nomos/commit/31d1cb0ca28dc3dcdd03e76426df43f72beb3098))
+* **lean:** scope the uninterpreted-hash claim to the RuntimeHash section ([f6a3d0b](https://github.com/Nomos-N4s/nomos/commit/f6a3d0bd51b8e0edd6a1bc1c5082d3ccb1bc0268))
+* **lean:** sharpen the two caveats added with the collision lemmas ([6afddbc](https://github.com/Nomos-N4s/nomos/commit/6afddbc5566492a06a6f35082be2cdc72eaffd52))
+* **lean:** stop blaming hash degeneracy for the root collisions ([ac417cb](https://github.com/Nomos-N4s/nomos/commit/ac417cbbfc5682e13ad924b22cfec13bd06e1b94))
+* **readme:** headline the tier-derived falsification invariance ([c1189b4](https://github.com/Nomos-N4s/nomos/commit/c1189b40d03465aee66b00cf1d7fa90b1a1b9c53))
+
 ## [1.0.0](https://github.com/Nomos-N4s/nomos/compare/v0.15.2...v1.0.0) (2026-08-18)
 
 
