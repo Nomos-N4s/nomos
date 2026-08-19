@@ -2,8 +2,9 @@
 
 The Lean 4 proof library for Nomos: seven proof modules plus the
 `GovBudgetProof.lean` manifest, 102 theorems, zero `sorry`, zero axioms
-declared by the corpus, and no dependencies at all (`lake-manifest.json` lists
-no packages). The toolchain is pinned in `lean-toolchain`
+declared by the corpus, and no dependencies at all (`lakefile.toml` declares
+no `require`; the resolved `lake-manifest.json` is build output and is
+gitignored). The toolchain is pinned in `lean-toolchain`
 (`leanprover/lean4:v4.32.1`). Every pull request runs `lake build` in the
 `lean-build` CI job, so a broken proof blocks a merge.
 
