@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [1.2.1](https://github.com/Nomos-N4s/nomos/compare/v1.2.0...v1.2.1) (2026-08-19)
+
+
+### Documentation
+
+* **book:** drop a check count that had already gone stale ([c40a01b](https://github.com/Nomos-N4s/nomos/commit/c40a01b498e9c3a9f7bc0d1a09312e2b32866e42))
+* cite a tracked file as the no-dependency evidence ([418b34a](https://github.com/Nomos-N4s/nomos/commit/418b34a0f87fe79b3445e07ac7a69bbb5b6ba71b))
+* say what the Lean corpus proves, and what it does not reach ([cd864ff](https://github.com/Nomos-N4s/nomos/commit/cd864ff7418dd07ae3896375a9cda8e93eeb1dd6))
+
 ## [1.2.0](https://github.com/Nomos-N4s/nomos/compare/v1.1.0...v1.2.0) (2026-08-19)
 
 
