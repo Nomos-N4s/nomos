@@ -267,7 +267,7 @@ graph TB
 ```mermaid
 graph LR
     subgraph GW[GridWorld]
-        G1[10x10 grid<br/>apples + poison + walls]
+        G1[6x6 grid<br/>apples + poison + walls]
         G2[Governed: avoids poison<br/>Ungoverned: eats poison]
     end
 
