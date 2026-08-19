@@ -31,10 +31,20 @@
      equal sequences always yield equal roots.
 
   THE HASH IS UNINTERPRETED (issue #299). `hashImpl` is a section variable
-  of type `String -> Nat`, not a definition, so every declaration below is
-  universally quantified over the hash. Nothing here can unfold it,
-  evaluate it, or discharge a goal with `decide`/`native_decide` on a
-  concrete digest; in particular no proof may appeal to `String.length`.
+  of type `String -> Nat`, not a definition, so every declaration inside
+  section `RuntimeHash` is universally quantified over the hash: nothing in
+  the section can unfold it, evaluate it, or discharge a goal with
+  `decide`/`native_decide` on a concrete digest, and in particular no proof
+  there may appeal to `String.length`.
+
+  One declaration sits after `end RuntimeHash` and is the deliberate
+  exception: `chain_root_commutes_under_a_degenerate_hash` quantifies over
+  hashes existentially, so it has to exhibit one — the constant `fun _ => 0`
+  — and its proof does evaluate that hash with `rfl` and `decide`. The
+  exception is safe in one direction only: a concrete hash may witness a
+  limitation, never a guarantee, and this is the sole place in the file
+  where a concrete hash appears at all.
+
   Two consequences a reader must keep in mind:
 
   * Every tamper- and order-sensitivity result is CONDITIONAL, and the
@@ -537,7 +547,12 @@ end RuntimeHash
     the one failure mode a stronger `hashImpl` would remove. The collisions
     proved inside the section assume nothing about the hash and survive an
     injective one, so it is those, not this, that stop any theorem here from
-    reading "distinct bindings, therefore distinct roots". -/
+    reading "distinct bindings, therefore distinct roots".
+
+    Being existential over hashes it must exhibit one, so — alone in this
+    file — it evaluates a concrete `hashImpl`. That is why it sits outside
+    section `RuntimeHash`, where the header's no-evaluation rule holds, and
+    why what it proves is a limitation rather than a guarantee. -/
 theorem chain_root_commutes_under_a_degenerate_hash :
     ∃ (hashImpl : String → Nat) (a b : ActionBinding),
       a ≠ b ∧ chainRoot hashImpl [a, b] = chainRoot hashImpl [b, a] := by
