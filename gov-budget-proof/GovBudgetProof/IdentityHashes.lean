@@ -62,12 +62,16 @@
     hash is a further and weaker limitation, kept for what it is in
     `chain_root_commutes_under_a_degenerate_hash`. Each theorem names the
     hypothesis it needs.
-  * The concrete examples at the foot of the file introduce their
+  * The concrete examples at the foot of the section introduce their
     commitments (`bindingHash := 11`, `bindingHash := 13`) through
-    `BindingValid` hypotheses, and the proofs consume those hypotheses.
-    The literals are the values the documented stand-in `String.length`
-    would produce for those strings; with the hash uninterpreted they are
-    assumed, not computed.
+    `BindingValid` hypotheses, and the proofs consume those hypotheses. The
+    literals are the values the documented stand-in `String.length` would
+    give for those strings, but NOTHING in this file ties either literal to
+    its string, and with the hash uninterpreted nothing can: a `BindingValid`
+    hypothesis asserts `11 = hashImpl "benign_impl"`, it does not check it.
+    The proofs use only that 13 and 11 are different naturals, so any other
+    distinct pair would compile just as well. Read the literals as
+    illustration; the distinctness is the only load-bearing part.
 -/
 
 /-- An action binding `bind(i) = < Operation_i, hash_i >` (§2.1), carrying
@@ -517,11 +521,17 @@ example (hBenign : BindingValid hashImpl
   verify_rejects_changed_implementation hashImpl _ _ hSwapped hBenign
 
 /-- Tampering with a bound action's past implementation changes the root of
-    its chain ('benign_impl' → 'tampered_impl'). Both records now carry their
-    own `BindingValid` commitment — `13` and `11`, the lengths the documented
-    stand-in gives — and the proof consumes both: it is the two commitments
-    being different naturals that supplies the hash difference, so neither
-    literal is decorative. -/
+    its chain ('benign_impl' → 'tampered_impl'). Each record carries its own
+    `BindingValid` commitment — `13` and `11`, the lengths the documented
+    stand-in would give — and the proof consumes both hypotheses: they are
+    what turns the two literals into a difference between
+    `hashImpl "tampered_impl"` and `hashImpl "benign_impl"`.
+
+    What the proof uses of the literals is only that they are DISTINCT. No
+    step ties 13 to `"tampered_impl"`, and with `hashImpl` uninterpreted no
+    step could: substituting 12, or any other natural different from 11,
+    leaves the example compiling. The values illustrate §2.1, they are not
+    pinned by it. -/
 example
     (hTampered : BindingValid hashImpl
       { implementation := "tampered_impl", bindingHash := 13, prevHash := 0 })
