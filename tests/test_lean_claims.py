@@ -22,11 +22,12 @@ import re
 import shutil
 import subprocess
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
-from src.nomos.prove.predictions import LEAN_COVERAGE
+from src.nomos.prove.predictions import LEAN_COVERAGE, LeanStatus
 
 REPO_ROOT = Path(__file__).parent.parent
 README_PATH = REPO_ROOT / "README.md"
@@ -50,6 +51,10 @@ DECLARED_NAME = re.compile(
 )
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
 BACKTICKED = re.compile(r"`([^`]+)`")
+README_COVERAGE_CLAIM = re.compile(
+    r"(\d+) of the (\d+) prediction tests have a theorem of the Lean model "
+    r"behind them; (\d+) have no counterpart"
+)
 BLOCK_COMMENT = re.compile(r"/-.*?-/", re.DOTALL)
 LINE_COMMENT = re.compile(r"--.*")
 NATIVE_DECISION = re.compile(r"native_decide|\+\s*native\b|\bnative\s*:=\s*true\b")
@@ -605,4 +610,41 @@ def test_book_prediction_coverage_table_matches_the_map() -> None:
         f"{[f'P{i:02d}' for i in differing]}. The map is the source: "
         f"published={ {i: published.get(i) for i in differing} }, "
         f"map={ {i: expected.get(i) for i in differing} }"
+    )
+
+
+def test_readme_prediction_coverage_counts_match_the_map() -> None:
+    """The README's coverage counts are the ones LEAN_COVERAGE supports (#305).
+
+    The README states two figures a reader is likely to remember: how many of
+    the 12 predictions have a Lean theorem behind them, and how many have no
+    counterpart at all. Hand-maintained counts in prose are exactly what this
+    epic found going stale beneath the code, so both are recounted here from
+    the map rather than trusted.
+
+    A reworded sentence fails this test. That is the intended cost: the
+    counts have to stay findable to stay checkable, and rewording is the
+    moment to re-derive them.
+    """
+    text = " ".join(README_PATH.read_text(encoding="utf-8").split())
+    match = README_COVERAGE_CLAIM.search(text)
+    assert match, (
+        f"{README_PATH.name} no longer states its prediction coverage in a "
+        f"form this test can read. Restore the sentence, or move the counts "
+        f"out of the README entirely -- but do not leave a count in prose "
+        f"that nothing recounts"
+    )
+
+    published_proved, published_total, published_uncovered = (int(g) for g in match.groups())
+    counted = Counter(coverage.status for coverage in LEAN_COVERAGE.values())
+    assert published_total == len(LEAN_COVERAGE), (
+        f"the README counts {published_total} predictions, the map has {len(LEAN_COVERAGE)}"
+    )
+    assert published_proved == counted[LeanStatus.THEOREM], (
+        f"the README says {published_proved} predictions have a Lean theorem "
+        f"behind them; the map says {counted[LeanStatus.THEOREM]}"
+    )
+    assert published_uncovered == counted[LeanStatus.NO_COUNTERPART], (
+        f"the README says {published_uncovered} predictions have no Lean "
+        f"counterpart; the map says {counted[LeanStatus.NO_COUNTERPART]}"
     )
