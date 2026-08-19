@@ -6,6 +6,10 @@ These tests hold that list to two standards: every name is really declared in
 axiom, which would mean the goal was closed by excluded middle and so holds
 for any ``Prop`` at all.
 
+The prediction-to-theorem map in ``src/nomos/prove/predictions.py`` is held to
+the first of those standards too, since it names theorems in the same way and
+is published as a table in the book.
+
 An axiom-free proof term is a necessary condition for a headline claim, not a
 sufficient one: it rules out excluded middle, not a statement that is trivially
 true of the model. Whether each headlined statement says something about the
@@ -22,6 +26,8 @@ from pathlib import Path
 
 import pytest
 
+from src.nomos.prove.predictions import LEAN_COVERAGE
+
 REPO_ROOT = Path(__file__).parent.parent
 README_PATH = REPO_ROOT / "README.md"
 LEAN_ROOT = REPO_ROOT / "gov-budget-proof"
@@ -35,6 +41,10 @@ DECL_START = re.compile(
     r"^(?:@\[[^\]]*\]\s*)?"
     r"(?:private\s+|protected\s+|noncomputable\s+)*"
     r"(?:theorem|lemma|instance|def|abbrev|example|structure|inductive)\b"
+)
+DECLARED_NAME = re.compile(
+    r"^(?:private\s+|protected\s+|noncomputable\s+)*"
+    r"(?:theorem|lemma|instance|def|abbrev)\s+([A-Za-z_][A-Za-z0-9_'!?]*)"
 )
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
 BLOCK_COMMENT = re.compile(r"/-.*?-/", re.DOTALL)
@@ -94,6 +104,22 @@ def _declaration_body(name: str) -> tuple[Path, str]:
                 body.append(following)
             return path, "\n".join(body)
     pytest.fail(f"no Lean declaration named {name!r} in {LEAN_ROOT}")
+
+
+def _declared_names() -> dict[str, Path]:
+    """Return every named declaration in the corpus, mapped to its file.
+
+    Anonymous ``example`` blocks carry no name and so are absent, which is
+    why this cannot stand in for the axiom sweep. It is a source scan, so it
+    needs no Lean toolchain.
+    """
+    found: dict[str, Path] = {}
+    for path in _lean_sources():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = DECLARED_NAME.match(line)
+            if match:
+                found.setdefault(match.group(1), path)
+    return found
 
 
 def _lean_probe(commands: list[str], what: str, extra_imports: tuple[str, ...] = ()) -> str:
@@ -466,3 +492,53 @@ def test_falsification_invariance_derives_from_the_tier_theorem() -> None:
         f"so the link to the tier model is no longer carried by the proof "
         f"term:\n{stdout}"
     )
+
+
+def test_prediction_coverage_names_declarations_the_corpus_has() -> None:
+    """Every Lean name in the prediction coverage map is really declared (#305).
+
+    ``LEAN_COVERAGE`` is the repo's prediction-to-theorem map and the source
+    of the coverage table in ``book/formal-verification-lean.md``. A name in
+    it that the corpus does not declare would leave a published table
+    pointing at nothing, which is not hypothetical: the issue that asked for
+    this map cited ``vote_resolution_deterministic``, a name the corpus has
+    not declared since the commit that replaced it with a constructive
+    proof.
+
+    The check says nothing about whether a named theorem is *about* the
+    prediction beside it. That judgement is in the map's ``note`` fields and
+    in the book, and no source check makes it for us.
+
+    A source scan, so it runs with no Lean toolchain installed.
+    """
+    declared = _declared_names()
+
+    modules = [path for path in _lean_sources() if path.parent.name == "GovBudgetProof"]
+    assert modules, f"no proof modules under {LEAN_ROOT}, so the scan proves nothing"
+    silent = sorted(path.name for path in modules if path not in declared.values())
+    assert not silent, (
+        f"the declaration scan found no declaration at all in {silent}, so a "
+        f"missing name would go unnoticed and this test would pass for the "
+        f"wrong reason"
+    )
+
+    missing = {
+        f"P{pid:02d}": [name for name in coverage.declarations if name not in declared]
+        for pid, coverage in sorted(LEAN_COVERAGE.items())
+        if any(name not in declared for name in coverage.declarations)
+    }
+    assert not missing, (
+        f"the prediction coverage map names Lean declarations the corpus does "
+        f"not have: {missing}. Either the declaration was renamed or removed "
+        f"and the map still points at the old name, or the map claims a "
+        f"counterpart that was never there. Re-derive the row against "
+        f"{LEAN_ROOT}, and if the prediction has no counterpart any more, say "
+        f"so with LeanStatus.NO_COUNTERPART rather than by dropping the row"
+    )
+
+    malformed = {
+        f"P{pid:02d}": [name for name in coverage.declarations if not IDENTIFIER.fullmatch(name)]
+        for pid, coverage in sorted(LEAN_COVERAGE.items())
+        if any(not IDENTIFIER.fullmatch(name) for name in coverage.declarations)
+    }
+    assert not malformed, f"these are not Lean identifiers: {malformed}"
