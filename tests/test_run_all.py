@@ -24,6 +24,7 @@ from src.nomos.experiments.drift_lab import DriftLab
 from src.nomos.experiments.grid_world import GridWorld
 from src.nomos.experiments.temptation_bank import TemptationBank
 from src.nomos.identity.core import IdentityCore
+from src.nomos.runner import ALL_STRATEGIES
 from src.nomos.tee.watchdog import DeadlockBreaker
 
 
@@ -277,7 +278,8 @@ _SCENARIO_BUILDERS = {
     DeadlockMaze: lambda speaker: DeadlockMaze(speaker, DeadlockBreaker(threshold_cycles=5)),
 }
 
-_STRATEGIES = ["governance", "monolithic_rl", "random", "static_masking", "veto_only"]
+_STRATEGIES = ALL_STRATEGIES
+"""The strategy list the CLI runs, taken from the runner so it cannot drift."""
 
 _SEEDED_STRATEGIES = frozenset({"random"})
 """Strategies that draw on the seed themselves, through ``_get_baseline``."""
