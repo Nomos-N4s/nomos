@@ -11,7 +11,7 @@ description: "Random seed protocol, hyperparameters, environment setup, and repr
 
 ## D.1 Random Seed Protocol
 
-Seeds 0 through 19 are used for the 20-seed benchmark suite. Each seed is applied independently per strategy-scenario pair.
+Seeds 0 through 19 are run for every strategy-scenario pair in the benchmark suite.
 
 | Run | Seed |
 |-----|------|
@@ -20,7 +20,9 @@ Seeds 0 through 19 are used for the 20-seed benchmark suite. Each seed is applie
 | ... | ... |
 | 20 | 19 |
 
-**Generation procedure:** Seeds are sequential integers passed to `np.random.seed()` and `random.Random(seed)`. The `_run_scenario` function in `run_all.py` creates a fresh experiment instance per seed per strategy.
+**Generation procedure:** Seeds are sequential integers. `_run_scenario` in `run_all.py` builds a fresh scenario instance per seed per strategy, and passes the seed to the constructor when the scenario declares `ExperimentScenario.SEEDED`; `_get_baseline` passes it to `RandomBaseline` for the `random` arm. Both are `random.Random(seed)` instances. There is no `np.random` call anywhere under `src/nomos/benchmarks/` or in the four scenario modules — NumPy is used only for plotting — and nothing in the suite touches the global `random` module state.
+
+**What a seed reaches:** GridWorld generates its grid from it, so its four arms run twenty different worlds. The `random` strategy draws its choice from it wherever the agenda offers more than one proposal. TemptationBank, DriftLab and DeadlockMaze contain no RNG, take no seed, and are deterministic by design: their twenty runs are twenty identical repeats, not twenty samples. `REPRODUCIBILITY.md` § Seed Strategy gives the per-cell breakdown and what it means for the published standard deviations and bootstrap intervals.
 
 **Reproducibility guarantee:** Because the Speaker is fully algorithmic (no neural networks, no sampling), a fixed seed produces identical results across runs and platforms.
 
@@ -74,6 +76,7 @@ Full list in `pyproject.toml` and `uv.lock`.
 | Loan reward | 10.0 |
 | Loan penalty | -15.0 |
 | Loan duration | 10 steps |
+| Seed | none — deterministic scenario |
 
 **Description:** Agent manages a resource account. Can "work" for steady reward or take "loans" with high immediate reward but delayed penalty. Tests whether Parliament voluntarily issues a self-banning Ulysses Contract on loans.
 
@@ -84,6 +87,7 @@ Full list in `pyproject.toml` and `uv.lock`.
 | Drift rate | 0.001 per step |
 | Integrity coherence | 0.95 |
 | Reward (harmful) | 5.0 (decays with drift) |
+| Seed | none — deterministic scenario |
 
 **Description:** Agent classifies text under a slowly shifting reward function. Measures identity drift distance with and without the Identity Layer.
 
@@ -94,6 +98,7 @@ Full list in `pyproject.toml` and `uv.lock`.
 | Deadlock breaker threshold | 5 cycles |
 | Initial quorum | 0.5 |
 | Tightened quorum | 0.9 |
+| Seed | none — deterministic scenario |
 
 **Description:** Deliberately creates a governance deadlock by over-tightening quorum, then tests whether the deadlock breaker fires and restores genesis baseline.
 
@@ -150,7 +155,7 @@ explicitly rather than left to look like a matched comparison.
 | Analysis | Method | Interpretation |
 |----------|--------|----------------|
 | Central tendency | Mean per strategy-scenario across seeds | Higher = better |
-| Dispersion | Standard deviation across seeds | Lower = more consistent |
+| Dispersion | Standard deviation across seeds | Lower = more consistent; 0.0 on a deterministic pair (D.1) means repeats, not agreement |
 | Confidence interval | Bootstrap 95% CI (10,000 resamples) | Non-overlapping = significant |
 | Effect size | Cohen's d with 95% CI via Delta method (governance vs each baseline) | \|d\| > 0.8 = large |
 | Non-parametric test | Mann-Whitney U (exact p-value when max n ≤ 8, asymptotic otherwise) | p < α indicates rank-based difference |
