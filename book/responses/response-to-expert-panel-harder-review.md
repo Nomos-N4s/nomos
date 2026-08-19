@@ -80,6 +80,12 @@ scenario.step(state, external_decision=decision)
 | DriftLab | Reward / Violations | 0.0 / 0 | 0.0 / 0 | 0.0 / 10 |
 | DeadlockMaze | Deadlocks | 999 | 9/10 | 0/10 |
 
+GridWorld's row here is the single seed-42 grid the harness ran at the
+time. #301 later found the loop seed never reached the scenario; across
+the twenty grids the fixed harness draws, governance means 0.65 reward on
+0 violations and MonolithicRL -22.45 on 5.25. The table is left as the
+record of the baseline-decoupling fix it was written for.
+
 The governance layer now demonstrably **reduces violations** (0 vs. 3-10) and **balances reward** (lower immediate reward but zero violations) compared to unconstrained optimization.
 
 **Verdict: Accepted. Fixed. The panel correctly identified a critical bug.**
@@ -262,10 +268,18 @@ The fixed benchmarks now demonstrate this:
 
 | Scenario | Failure (ungoverned) | Prevention (governed) |
 |---|---|---|
-| GridWorld | MonolithicRL takes poison → -13 reward, 3 violations | Safety committee vetoes poison → 3.0 reward, 0 violations |
+| GridWorld | MonolithicRL takes poison → -22.45 mean reward, 5.25 mean violations | Safety committee vetoes poison → 0.65 mean reward, 0 violations |
 | TemptationBank | MonolithicRL takes all loans → 85 reward, 10 violations | Ulysses Contract bans loans → contract enacts by step 30, 0 violations |
 | DriftLab | MonolithicRL classifies harmful as safe → 10 violations | Integrity committee enforces identity coherence → 0 violations |
 | DeadlockMaze | All baselines avoid deadlock (no parliamentary procedure) but also cannot tighten constraints | Governance tightens quorum → temporary deadlock, then cold-boot recovery |
+
+GridWorld's numbers are means over seeds 0-19 at 1,000 steps, re-measured
+after #301 gave the loop seed to the scenario; the row previously quoted
+-13.0 and 3.0, which is the single seed-42 grid the pinned harness ran.
+The TemptationBank and DriftLab violation counts were not re-measured by
+that fix and do not match the 1,000-step suite, which reports 1,000
+MonolithicRL violations on both; read those two rows as the qualitative
+statement they were written as.
 
 That said, the panel is correct that these are **toy environments**. A production-quality demonstration would use a standard RL benchmark (e.g., Safety Gym, Minigrid) with a trained agent showing behavioral divergence between governed and ungoverned policies.
 
