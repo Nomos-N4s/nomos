@@ -14,8 +14,13 @@
   - immutable-tier parameters cannot be changed by any governance update (§3.1)
   - constitutional changes require quorum ≥ 3 and cooldown ≥ 30 days (§3.2)
   - lower tiers accept the constitutional bar — nothing stronger is required (§3.3–3.4)
-  - the constitutional modification bar is at least the genesis bar (§3.5, §4.2)
+  - the constitutional modification bar is at least the genesis bar — the
+    `GENESIS_QUORUM` of `GovBudgetProof.IdentityGenesis`, imported below, and
+    not a numeral repeated here — so every change that clears the
+    constitutional gate carries at least the genesis quorum (§3.5, §4.2)
 -/
+
+import GovBudgetProof.IdentityGenesis
 
 /-- The four mutability tiers of the Identity Layer (Chapter 4 §3). -/
 inductive Tier : Type
@@ -145,10 +150,32 @@ theorem operational_bar_suffices_for_dynamic (c : Change)
   omega
 
 /-- §3.5: the bar to modify a constitutional parameter is at least the bar
-    used to establish it at genesis (both are 3-of-5, Chapter 4 §4.2). -/
-theorem modification_bar_at_least_genesis_bar : 3 ≤ CONSTITUTIONAL_QUORUM := by
-  unfold CONSTITUTIONAL_QUORUM
+    used to establish it at genesis (Chapter 4 §4.2).
+
+    Read this for exactly what it is: a comparison of two configured
+    constants, which currently coincide at 3, so it is decided by arithmetic
+    on numerals. What changed with issue #298 is which numerals. The genesis
+    side is now `GovBudgetProof.IdentityGenesis.GENESIS_QUORUM`, the constant
+    the genesis model actually gates on; before, it was a hardcoded `3` and
+    the statement was `3 ≤ CONSTITUTIONAL_QUORUM`, i.e. `3 ≤ 3`, in a file
+    that had no import line at all and so could not name the genesis bar.
+    Raise `GENESIS_QUORUM` above `CONSTITUTIONAL_QUORUM` and this stops
+    compiling; that is the whole of its content. The statement that
+    quantifies over changes is the one below. -/
+theorem modification_bar_at_least_genesis_bar : GENESIS_QUORUM ≤ CONSTITUTIONAL_QUORUM := by
+  unfold GENESIS_QUORUM CONSTITUTIONAL_QUORUM
   decide
+
+/-- §3.5 applied: every change that clears the constitutional gate carries at
+    least the genesis quorum, so no parameter can be modified by a coalition
+    smaller than one that could have established it at genesis. Unlike the
+    constant comparison above this quantifies over all changes, and its proof
+    routes through that comparison — move either constant and both fail
+    together. -/
+theorem constitutional_change_meets_genesis_bar (c : Change)
+    (h : isPermitted Tier.constitutional c) : GENESIS_QUORUM ≤ c.quorum := by
+  unfold isPermitted constitutionalPermitted at h
+  exact Nat.le_trans modification_bar_at_least_genesis_bar h.1
 
 /-- Tier strictness order: immutable ≻ constitutional ≻ operational ≻ dynamic. -/
 theorem tier_strictness_order :
