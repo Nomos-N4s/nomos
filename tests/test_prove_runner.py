@@ -4,10 +4,11 @@ import os
 import sys
 import tempfile
 
-from src.nomos.prove.predictions import PredictionResult
+from src.nomos.prove.predictions import LEAN_COVERAGE, LeanStatus, PredictionResult
 from src.nomos.prove.runner import (
     export_json,
     filter_by_chapter,
+    lean_coverage_tally,
     main,
     print_summary,
     run_all,
@@ -141,3 +142,58 @@ class TestMain:
             sys.stdout = sys.__stdout__
         output = captured.getvalue()
         assert "1/1" in output or "P05" in output
+
+
+class TestLeanCoverageReporting:
+    """The runner must not let a reader take a passing assert for a proof."""
+
+    def _summary(self):
+        results = run_all()
+        captured = io.StringIO()
+        sys.stdout = captured
+        try:
+            print_summary(results)
+        finally:
+            sys.stdout = sys.__stdout__
+        return captured.getvalue()
+
+    def test_every_prediction_line_carries_its_lean_status(self):
+        output = self._summary()
+        for pid, coverage in LEAN_COVERAGE.items():
+            assert f"Lean: {coverage.status.value}" in output, (
+                f"P{pid:02d}'s status is missing from the summary"
+            )
+
+    def test_named_theorems_reach_the_summary(self):
+        output = self._summary()
+        for coverage in LEAN_COVERAGE.values():
+            for name in coverage.declarations:
+                assert name in output
+
+    def test_summary_says_the_asserts_are_python(self):
+        output = self._summary()
+        assert "verified by Python asserts" in output
+        assert "No Lean proof is checked by this run" in output
+
+    def test_tally_counts_the_map(self):
+        results = run_all()
+        tally = lean_coverage_tally(results)
+        for status in LeanStatus:
+            expected = sum(1 for c in LEAN_COVERAGE.values() if c.status is status)
+            assert f"{expected} {status.value}" in tally
+        assert tally in self._summary()
+
+    def test_tally_of_nothing_is_empty(self):
+        assert lean_coverage_tally([]) == ""
+
+    def test_export_carries_the_coverage(self):
+        results = run_all()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "results.json")
+            export_json(results, path)
+            with open(path) as f:
+                data = json.load(f)
+        for entry in data["predictions"]:
+            coverage = LEAN_COVERAGE[entry["id"]]
+            assert entry["lean_status"] == coverage.status.value
+            assert entry["lean_declarations"] == list(coverage.declarations)
