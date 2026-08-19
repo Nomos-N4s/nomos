@@ -96,8 +96,12 @@ def _declaration_body(name: str) -> tuple[Path, str]:
     pytest.fail(f"no Lean declaration named {name!r} in {LEAN_ROOT}")
 
 
-def _lean_probe(commands: list[str], what: str) -> str:
+def _lean_probe(commands: list[str], what: str, extra_imports: tuple[str, ...] = ()) -> str:
     """Build the corpus and return what Lean prints for ``commands``.
+
+    ``extra_imports`` are added after ``import GovBudgetProof`` for probes that
+    need modules the corpus itself does not import -- ``Lean`` in particular,
+    for probes that inspect the environment rather than a named declaration.
 
     Skipped when the pinned toolchain is absent; the Lean CI job runs this with
     the toolchain installed.
@@ -117,7 +121,8 @@ def _lean_probe(commands: list[str], what: str) -> str:
     )
     assert build.returncode == 0, f"lake build failed:\n{build.stdout}\n{build.stderr}"
 
-    probe = "\n".join(["import GovBudgetProof", *commands])
+    imports = [f"import {module}" for module in ("GovBudgetProof", *extra_imports)]
+    probe = "\n".join([*imports, *commands])
     with tempfile.TemporaryDirectory() as directory:
         probe_path = Path(directory) / "Probe.lean"
         probe_path.write_text(probe + "\n", encoding="utf-8")
