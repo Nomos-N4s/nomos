@@ -209,6 +209,15 @@ def test_no_proof_closes_by_a_native_decision() -> None:
     against known spellings, not against the bug class: a spelling not listed
     above would still slip past it.
 
+    The bug class is guarded by the sweep in
+    ``test_lean_corpus_declares_no_axioms_of_its_own``, which reads the
+    elaborated environment and so does not care how the tactic is spelled.
+    This scan is still needed alongside it for the one case that sweep cannot
+    see: an anonymous ``example`` leaves no constant in the environment, so a
+    native decision inside one is invisible to any axiom check. Four of the
+    occurrences #300 removed were in ``example`` blocks. This scan also runs
+    without a Lean toolchain, where the sweep skips.
+
     Comments are blanked out first, so prose naming a tactic -- including the
     module note in ``IdentityGenesis.lean`` that tells future editors not to
     reintroduce it -- does not trip the guard.
