@@ -163,6 +163,36 @@ theorem bindingDigest_ne_of_valid_commitments_and_hash_ne (b b' : ActionBinding)
   simp only [bindingDigest, MIX, hb, hb', hLink]
   omega
 
+/-- The limit of the three lemmas above, proved rather than assumed: each
+    field reaches the digest **in isolation**, but the digest does not
+    separate records. `MIX * bindingHash` and `prevHash` are added at the same
+    stride, so raising one of the two by `MIX` while lowering the other by one
+    cancels out. The two witnesses below carry the *same* implementation
+    string, so no property of `hashImpl` — collision-resistance, injectivity,
+    anything — can rule the collision out: it holds for every hash. -/
+theorem bindingDigest_collides_for_some_distinct_bindings (s : String) :
+    ∃ x y : ActionBinding,
+      x ≠ y ∧ bindingDigest hashImpl x = bindingDigest hashImpl y := by
+  refine ⟨{ implementation := s, bindingHash := 1, prevHash := 0 },
+          { implementation := s, bindingHash := 0, prevHash := MIX }, ?_, ?_⟩
+  · intro hEq
+    injection hEq with _ hCommit _
+    exact absurd hCommit (by decide)
+  · simp only [bindingDigest, MIX]
+
+/-- Therefore "distinct records get distinct digests" is not an assumption a
+    reader may grant: it is refutable, for every `hashImpl`. Anything proved
+    from it would be vacuous — the hypothesis also proves `0 = 1` — so no
+    theorem in this file carries it, and the order- and tamper-sensitivity
+    results below are conditional on the two records at hand having distinct
+    digests instead. -/
+theorem bindingDigest_is_not_collision_free :
+    ¬ ∀ x y : ActionBinding,
+        bindingDigest hashImpl x = bindingDigest hashImpl y → x = y := by
+  intro hCollisionFree
+  rcases bindingDigest_collides_for_some_distinct_bindings hashImpl "" with ⟨x, y, hne, hEq⟩
+  exact hne (hCollisionFree x y hEq)
+
 /-- Auxiliary: the fold accumulator is determined by the fold result — equal
     roots over the same suffix force equal accumulators, because the combine
     step `acc ↦ MIX * acc + d` is injective in `acc` (`MIX ≠ 0`). -/
