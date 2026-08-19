@@ -13,7 +13,10 @@
   - §6.1: TEE.verify_binding(action_index) — REJECT("binding violation")
     when runtime_hash != genesis_hash, ACCEPT otherwise. This check
     prevents the Vector-Space Compression Subversion (Phase 5.2,
-    Attack 2).
+    Attack 2). `verifyRuntime` takes that genesis_hash as its own
+    argument, supplied from the signed manifest: the proposed binding
+    record is not passed to it, so no claim carried by the batch can
+    reach the verdict (issue #298).
 
   We prove the three claims of issue #193:
   1. Chain invariant: each binding carries the hash of the previous
@@ -523,54 +526,94 @@ theorem invalid_chain_can_share_a_root_with_a_valid_one (sa sb : String) :
     simp only [List.foldl_cons, List.foldl_nil, GENESIS_HASH, MIX]
     omega
 
-/-- §6.1: TEE.verify_binding — the runtime implementation hash is compared
-    against the committed binding hash. -/
-def verifyRuntime (runtime : String) (b : ActionBinding) : Bool :=
-  decide (hashImpl runtime = b.bindingHash)
+/-- §6.1: TEE.verify_binding — the runtime implementation is read, hashed,
+    and compared against the GENESIS COMMITMENT for the action index. That
+    commitment reaches the TEE from the signed genesis manifest (§4.1) and is
+    passed here as a separate argument; the proposed binding record is not an
+    argument at all, so nothing the batch carries can reach the verdict.
 
-/-- §6.1 ACCEPT path: an implementation matching the committed hash passes
-    binding verification. -/
-theorem verify_accepts_matching_implementation (runtime : String) (b : ActionBinding)
-    (h : hashImpl runtime = b.bindingHash) : verifyRuntime hashImpl runtime b = true := by
+    Before issue #298 this took the proposed `ActionBinding` and compared
+    against `b.bindingHash` — the record's own claim about itself — while the
+    doc-comment said the TEE does not trust that claim. -/
+def verifyRuntime (runtime : String) (genesisHash : Nat) : Bool :=
+  decide (hashImpl runtime = genesisHash)
+
+/-- §6.1 ACCEPT path: a runtime implementation hashing to the genesis
+    commitment passes binding verification. -/
+theorem verify_accepts_runtime_matching_genesis (runtime : String) (genesisHash : Nat)
+    (h : hashImpl runtime = genesisHash) :
+    verifyRuntime hashImpl runtime genesisHash = true := by
   unfold verifyRuntime
   simp [h]
 
-/-- §6.1 REJECT path: an implementation whose runtime hash differs from the
-    committed hash is rejected with a binding violation, exactly as
+/-- §6.1 REJECT path: a runtime implementation whose hash differs from the
+    genesis commitment is rejected with a binding violation, exactly as
     TEE.verify_binding specifies. -/
-theorem verify_rejects_changed_implementation (runtime : String) (b : ActionBinding)
-    (hChanged : hashImpl runtime ≠ hashImpl b.implementation)
-    (hCommitted : b.bindingHash = hashImpl b.implementation) :
-    verifyRuntime hashImpl runtime b = false := by
+theorem verify_rejects_runtime_off_genesis (runtime : String) (genesisHash : Nat)
+    (h : hashImpl runtime ≠ genesisHash) :
+    verifyRuntime hashImpl runtime genesisHash = false := by
   unfold verifyRuntime
-  by_cases hEq : hashImpl runtime = b.bindingHash
-  · exact False.elim (hChanged (by rw [hCommitted] at hEq; exact hEq))
-  · simp [hEq]
+  simp [h]
 
-/-- Channel for §2.1: TEE independently recomputes the hash at batch time
-    rather than trusting the proposed binding's own claim. -/
-theorem tee_recomputes_hash_independently (runtime : String) (b : ActionBinding) :
-    verifyRuntime hashImpl runtime b = decide (hashImpl runtime = b.bindingHash) := by
-  rfl
+/-- §2.1 in the shape the chapter states it: the manifest committed the hash
+    of the implementation bound at this index, the code now running hashes
+    differently, so the batch is rejected. -/
+theorem verify_rejects_swapped_implementation (runtime : String) (b : ActionBinding)
+    (genesisHash : Nat) (hGenesis : genesisHash = hashImpl b.implementation)
+    (hChanged : hashImpl runtime ≠ hashImpl b.implementation) :
+    verifyRuntime hashImpl runtime genesisHash = false :=
+  verify_rejects_runtime_off_genesis hashImpl runtime genesisHash
+    (by rw [hGenesis]; exact hChanged)
 
-/-- A benign binding passes verification when the runtime implementation is
-    the one it commits to. The commitment enters as a `BindingValid`
-    hypothesis, so the example asserts the relation between the literal `11`
-    and `hashImpl "benign_impl"` instead of evaluating it. -/
-example (hBenign : BindingValid hashImpl
+/-- The check §6.1 does NOT authorise, defined so that the difference can be
+    proved rather than asserted: comparing the runtime hash against the hash
+    the proposed binding carries. -/
+def verifyAgainstOwnClaim (runtime : String) (b : ActionBinding) : Bool :=
+  decide (hashImpl runtime = b.bindingHash)
+
+/-- Why §6.1 supplies the genesis hash separately, as a theorem instead of a
+    doc-comment. Whenever the running code is off genesis there is a proposed
+    binding — carrying whatever implementation string the batch likes — that
+    the claim-based check accepts and the genesis-anchored check rejects: the
+    forger commits to the hash of the code they are actually running.
+
+    This is what `tee_recomputes_hash_independently` was meant to say and did
+    not. That theorem read `verifyRuntime ... b = decide (hashImpl runtime =
+    b.bindingHash)` and was closed by `rfl`, restating the definition; and its
+    right-hand side was the binding's own claim, the very thing its
+    doc-comment said the TEE refuses to trust. -/
+theorem forged_binding_passes_own_claim_but_fails_genesis
+    (runtime : String) (genesisHash : Nat) (impl : String)
+    (hOffGenesis : hashImpl runtime ≠ genesisHash) :
+    ∃ b : ActionBinding, b.implementation = impl ∧
+      verifyAgainstOwnClaim hashImpl runtime b = true ∧
+      verifyRuntime hashImpl runtime genesisHash = false := by
+  refine ⟨{ implementation := impl, bindingHash := hashImpl runtime, prevHash := 0 },
+          rfl, ?_, ?_⟩
+  · unfold verifyAgainstOwnClaim
+    simp
+  · exact verify_rejects_runtime_off_genesis hashImpl runtime genesisHash hOffGenesis
+
+/-- A benign implementation passes verification when the genesis manifest
+    committed its hash. The commitment enters as a `BindingValid` hypothesis
+    on the genesis record, so the example asserts the relation between the
+    literal `11` and `hashImpl "benign_impl"` instead of evaluating it. -/
+example (hGenesis : BindingValid hashImpl
       { implementation := "benign_impl", bindingHash := 11, prevHash := 0 }) :
-    verifyRuntime hashImpl "benign_impl"
-      { implementation := "benign_impl", bindingHash := 11, prevHash := 0 } = true :=
-  verify_accepts_matching_implementation hashImpl _ _ hBenign.symm
+    verifyRuntime hashImpl "benign_impl" 11 = true :=
+  verify_accepts_runtime_matching_genesis hashImpl _ _ hGenesis.symm
 
 /-- Swapping the runtime implementation for one that hashes differently makes
-    the rejected action index log a binding violation. -/
-example (hBenign : BindingValid hashImpl
+    the rejected action index log a binding violation. The verdict is taken
+    against the genesis commitment `11`, not against anything the swapped
+    batch carries. -/
+example (hGenesis : BindingValid hashImpl
       { implementation := "benign_impl", bindingHash := 11, prevHash := 0 })
     (hSwapped : hashImpl "evil_impl" ≠ hashImpl "benign_impl") :
-    verifyRuntime hashImpl "evil_impl"
-      { implementation := "benign_impl", bindingHash := 11, prevHash := 0 } = false :=
-  verify_rejects_changed_implementation hashImpl _ _ hSwapped hBenign
+    verifyRuntime hashImpl "evil_impl" 11 = false :=
+  verify_rejects_swapped_implementation hashImpl "evil_impl"
+    { implementation := "benign_impl", bindingHash := 11, prevHash := 0 } 11
+    hGenesis hSwapped
 
 /-- Tampering with a bound action's past implementation changes the root of
     its chain ('benign_impl' → 'tampered_impl'). Each record carries its own
