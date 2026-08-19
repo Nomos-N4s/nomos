@@ -14,9 +14,11 @@
     when runtime_hash != genesis_hash, ACCEPT otherwise. This check
     prevents the Vector-Space Compression Subversion (Phase 5.2,
     Attack 2). `verifyRuntime` takes that genesis_hash as its own
-    argument, supplied from the signed manifest: the proposed binding
-    record is not passed to it, so no claim carried by the batch can
-    reach the verdict (issue #298).
+    argument and the proposed binding record is not an argument at all,
+    so the verdict is a function of `(runtime, genesisHash)` alone: the
+    FUNCTION cannot read the proposed record (issue #298). Where its
+    caller obtained `genesisHash` is a separate matter — see the
+    disclosure below.
 
   We prove the three claims of issue #193:
   1. Chain invariant: each binding carries the hash of the previous
@@ -37,6 +39,21 @@
      is the same lossiness the tamper results are conditional on. "Equal
      binding sequences give equal roots" is congruence — true of every
      function on lists — and is deliberately not stated here.
+
+  WHERE `genesisHash` COMES FROM IS NOT MODELLED (issue #298). That the
+  commitment reaches the TEE from the signed genesis manifest of §4.1 is an
+  assumption of this model and not a theorem of it: no declaration in this
+  file relates `genesisHash` to `GovBudgetProof.IdentityGenesis` or to any
+  manifest, and the file has no `import` line at all. A caller may hand
+  `verifyRuntime` the proposed record's own claim, and at that argument
+  `verifyRuntime hashImpl runtime b.bindingHash` IS
+  `verifyAgainstOwnClaim hashImpl runtime b` — the check §6.1 does not
+  authorise. The `example` following `verifyAgainstOwnClaim` closes that
+  identity by `rfl`, so the limit is checked here rather than asserted.
+  What the corpus does carry is the consequence of getting the argument
+  right: `forged_binding_passes_own_claim_but_fails_genesis` exhibits, for
+  every `hashImpl`, a binding the claim-based check accepts and the
+  genesis-anchored check rejects.
 
   THE HASH IS UNINTERPRETED (issue #299). `hashImpl` is a section variable
   of type `String -> Nat`, not a definition, so every declaration inside
@@ -527,10 +544,13 @@ theorem invalid_chain_can_share_a_root_with_a_valid_one (sa sb : String) :
     omega
 
 /-- §6.1: TEE.verify_binding — the runtime implementation is read, hashed,
-    and compared against the GENESIS COMMITMENT for the action index. That
-    commitment reaches the TEE from the signed genesis manifest (§4.1) and is
-    passed here as a separate argument; the proposed binding record is not an
-    argument at all, so nothing the batch carries can reach the verdict.
+    and compared against a commitment for the action index that is passed
+    here as a separate argument. The proposed binding record is not an
+    argument at all, so the verdict is a function of `(runtime, genesisHash)`
+    alone and this function cannot read the record. It cannot check where its
+    caller got `genesisHash` either: that the commitment comes from the
+    signed genesis manifest (§4.1) is an assumption of the model — see the
+    header disclosure and the `rfl` witness after `verifyAgainstOwnClaim`.
 
     Before issue #298 this took the proposed `ActionBinding` and compared
     against `b.bindingHash` — the record's own claim about itself — while the
