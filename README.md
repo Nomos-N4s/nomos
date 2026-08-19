@@ -79,6 +79,14 @@ Benchmark coverage:              4 scenarios × 5 strategies (19 valid combinati
 Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual risks acknowledged
 ```
 
+Those theorems — 102 of them across seven modules, machine-checked with no
+`sorry`, no axiom of the corpus's own and no Mathlib — are properties of Lean
+models of the protocol, not of `src/nomos/`: nothing extracts the models from
+the Python and no refinement argument connects the two, so the implementation
+is tested rather than verified
+([Chapter 5 §7](book/chapter-05/05-related-work.md#7-where-to-attack-this-chapter),
+[Scope and limits](book/formal-verification-lean.md#scope-and-limits)).
+
 ## Quick Start
 
 ```bash
