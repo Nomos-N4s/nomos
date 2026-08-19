@@ -122,6 +122,15 @@ column comes from the DriftLab command in [DriftLab Identity
 Drift](#driftlab-identity-drift) below, run at `--seeds 20`, because the
 CSV carries no drift column.
 
+The CSV also carries a 95% bootstrap interval per cell (10,000 resamples
+from a `random.Random(42)`, so it is reproducible). Only the six sampling
+combinations have an interval wider than a point: GridWorld Governance
+[0.30, 1.05], MonolithicRL [-27.80, -17.10], Random [-41.20, -28.40] and
+VetoOnly [0.30, 1.05]; TemptationBank Random [1984.70, 1994.50]; DriftLab
+Random [2602.22, 2641.92]. For the other thirteen the interval is the mean
+twice over, because resampling twenty copies of one number returns that
+number.
+
 GridWorld's `governance` and `veto_only` arms return identical rewards on
 every seed, which is why those two cells match. They part company on
 deadlocks — steps where no proposal cleared the vote and the Speaker's
