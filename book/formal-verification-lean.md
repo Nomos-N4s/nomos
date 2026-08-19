@@ -37,11 +37,15 @@ Concretely, five links a reader might assume exist do not:
   native decision tactic and no module declares an axiom of its own (the two
   halves of the #300 guard, one a source scan, one a sweep of the elaborated
   environment); that `votePasses` is decided by computation and the
-  governance-cycle invariant rests on that decision procedure; and that the
+  governance-cycle invariant rests on that decision procedure; that the
   falsification results are derived from the tier model rather than restated
-  beside it. All eight read Lean. None executes governance code from
-  `src/nomos/`, and nothing anywhere runs a Lean decision and a Python one
-  over the same input and compares them.
+  beside it; and that the prediction coverage map below names only
+  declarations the corpus really has, and that the table and the README
+  figures published from that map still agree with it. Every one of them
+  reads the Lean sources or the prose that names them; the coverage guards
+  also import the map from `src/nomos/prove/predictions.py`, but only to read
+  it. None executes governance code from `src/nomos/`, and nothing anywhere
+  runs a Lean decision and a Python one over the same input and compares them.
 - **No shared identifiers.** Outside `gov-budget-proof/`, Lean names appear
   only in prose: `processProposal` in Chapter 5, and `quorumCount` in the
   docstrings of `src/nomos/identity/keys.py` and `tests/test_keys.py`, which
@@ -154,9 +158,9 @@ integrity hash chains — have no prediction pointing at them at all.
 
 The table is rendered from `LEAN_COVERAGE` in
 `src/nomos/prove/predictions.py`, which carries the per-row reasoning that
-does not fit in a cell. Two tests in `tests/test_lean_claims.py` keep the
-three artefacts together: one fails if any name above is not declared in
-`gov-budget-proof/`, the other fails if this table and that map disagree.
+does not fit in a cell. `tests/test_lean_claims.py` keeps the two in step: a
+name above that `gov-budget-proof/` does not declare fails there, and so does
+this table disagreeing with the map it is rendered from.
 
 ## Building the proofs
 
