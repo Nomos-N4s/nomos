@@ -6,6 +6,10 @@
     tallies alone
   - A ballot that clears the unanimity bar of the identity class clears the
     lower bars too
+  - The falsification counter is bounded by the proposals presented, ignores
+    proposals filed by other members and proposals at or above the compliance
+    threshold, and increments by exactly one on the member's own
+    sub-threshold proposals
   - Budget halving preserves b ≥ 1 when starting from b ≥ 1
   - The falsification parameters are *declared* to sit at the immutable tier
     of `GovBudgetProof.IdentityTiers`, and a governance step gated on that
@@ -176,6 +180,56 @@ def falsificationCount (member : String) (proposals : List TrackedProposal) : Na
 theorem falsification_count_empty (member : String) :
     falsificationCount member [] = 0 := by
   simp [falsificationCount]
+
+/-- The counter cannot exceed the evidence: a member is charged with at most
+    one falsification per proposal on the ledger, whoever filed it. This is
+    the bound that `0 ≤ falsificationCount …` never gave — that one held of
+    every `Nat` and so of every counter, correct or not. -/
+theorem falsification_count_le_proposals (member : String)
+    (proposals : List TrackedProposal) :
+    falsificationCount member proposals ≤ proposals.length := by
+  unfold falsificationCount
+  exact List.length_filter_le _ _
+
+/-- A proposal at or above the compliance threshold is not a falsification and
+    does not move the counter. Together with the two lemmas below this pins
+    what the counter counts: it is not merely non-negative, it moves on
+    exactly one kind of proposal. -/
+theorem compliant_proposal_not_counted (member : String) (p : TrackedProposal)
+    (proposals : List TrackedProposal)
+    (hCompliant : TAG_COMPLIANCE_THRESHOLD ≤ p.integrityScore) :
+    falsificationCount member (p :: proposals) = falsificationCount member proposals := by
+  unfold falsificationCount isFalsification
+  have hNot : ¬ (p.integrityScore < TAG_COMPLIANCE_THRESHOLD) := Nat.not_lt.mpr hCompliant
+  simp [hNot]
+
+/-- A proposal filed by somebody else never lands on this member's counter,
+    whatever its integrity score. -/
+theorem foreign_proposal_not_counted (member : String) (p : TrackedProposal)
+    (proposals : List TrackedProposal) (hOther : p.memberId ≠ member) :
+    falsificationCount member (p :: proposals) = falsificationCount member proposals := by
+  unfold falsificationCount
+  simp [hOther]
+
+/-- The counter does move on the proposals it is meant to catch: the member's
+    own sub-threshold proposal adds exactly one, never more. -/
+theorem own_falsification_increments_count (member : String) (p : TrackedProposal)
+    (proposals : List TrackedProposal) (hOwn : p.memberId = member)
+    (hViolating : p.integrityScore < TAG_COMPLIANCE_THRESHOLD) :
+    falsificationCount member (p :: proposals)
+      = falsificationCount member proposals + 1 := by
+  unfold falsificationCount isFalsification
+  simp [hOwn, hViolating]
+
+/-- `isFalsification` is a threshold test and behaves like one: falsification
+    is downward closed in the integrity score, so the only way out of it is to
+    raise the score to the compliance threshold. An arbitrary
+    `Nat → Bool` flag would not satisfy this. -/
+theorem lower_integrity_is_still_a_falsification (lo hi : Nat) (hle : lo ≤ hi)
+    (hHigh : isFalsification hi = true) : isFalsification lo = true := by
+  unfold isFalsification at hHigh ⊢
+  simp only [decide_eq_true_eq] at hHigh ⊢
+  omega
 
 /-
   Budget Halving
