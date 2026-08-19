@@ -136,8 +136,8 @@ theorem tee_rejects_two : teeVerifies [GenesisKey.k1, GenesisKey.k2] = false :=
   decide_eq_false two_signatures_insufficient
 
 /-- The TEE accepts a three-signature manifest. -/
-theorem tee_accepts_three : teeVerifies [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] = true := by
-  native_decide
+theorem tee_accepts_three : teeVerifies [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] = true :=
+  decide_eq_true three_signatures_sufficient
 
 /-- The TEE ignores duplicates: k1 signing twice still counts once. -/
 theorem tee_rejects_duplicate_alone : teeVerifies [GenesisKey.k1, GenesisKey.k1] = false := by
