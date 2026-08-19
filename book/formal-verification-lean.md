@@ -31,11 +31,17 @@ Concretely, five links a reader might assume exist do not:
   own `BudgetState` and `processProposal`; `src/nomos/speaker.py` implements
   the same gate as `_apply_budgets`. The two were written independently.
 - **No differential test.** The `lean-build` CI job compiles the proofs and
-  runs `tests/test_lean_claims.py`, which checks the corpus against itself —
-  that headlined theorem names are declared, that no proof term reaches a
-  classical axiom, that no module declares an axiom of its own. It never
-  executes governance code from `src/nomos/`, and nothing anywhere runs a Lean
-  decision and a Python one over the same input and compares them.
+  runs the eight checks in `tests/test_lean_claims.py`, which hold the corpus
+  to its own claims: that every headlined theorem name is really declared;
+  that no proof term reaches a classical axiom; that no proof is closed by a
+  native decision tactic and no module declares an axiom of its own (the two
+  halves of the #300 guard, one a source scan, one a sweep of the elaborated
+  environment); that `votePasses` is decided by computation and the
+  governance-cycle invariant rests on that decision procedure; and that the
+  falsification results are derived from the tier model rather than restated
+  beside it. All eight read Lean. None executes governance code from
+  `src/nomos/`, and nothing anywhere runs a Lean decision and a Python one
+  over the same input and compares them.
 - **No shared identifiers.** Outside `gov-budget-proof/`, Lean names appear
   only in prose: `processProposal` in Chapter 5, and `quorumCount` in the
   docstrings of `src/nomos/identity/keys.py` and `tests/test_keys.py`, which
