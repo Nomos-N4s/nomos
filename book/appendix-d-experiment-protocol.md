@@ -22,7 +22,7 @@ Seeds 0 through 19 are run for every strategy-scenario pair in the benchmark sui
 
 **Generation procedure:** Seeds are sequential integers. `_run_scenario` in `run_all.py` builds a fresh scenario instance per seed per strategy, and passes the seed to the constructor when the scenario declares `ExperimentScenario.SEEDED`; `_get_baseline` passes it to `RandomBaseline` for the `random` arm. Both are `random.Random(seed)` instances. There is no `np.random` call anywhere under `src/nomos/benchmarks/` or in the four scenario modules — NumPy is used only for plotting — and nothing in the suite touches the global `random` module state.
 
-**What a seed reaches:** GridWorld generates its grid from it, so its four arms run twenty different worlds. The `random` strategy draws its choice from it wherever the agenda offers more than one proposal. TemptationBank, DriftLab and DeadlockMaze contain no RNG, take no seed, and are deterministic by design: their twenty runs are twenty identical repeats, not twenty samples. `REPRODUCIBILITY.md` § Seed Strategy gives the per-cell breakdown and what it means for the published standard deviations and bootstrap intervals.
+**What a seed reaches:** GridWorld generates its grid from it, so its four arms run twenty different worlds. The `random` strategy draws its choice from it wherever the agenda offers more than one proposal. TemptationBank, DriftLab and DeadlockMaze contain no RNG and take no seed, so the scenario itself replays one trajectory: their `governance`, `monolithic_rl`, `static_masking` and `veto_only` arms are twenty identical repeats rather than twenty samples. Their `random` arms are not — the seed reaches `RandomBaseline` whatever the scenario does, so TemptationBank/`random` and DriftLab/`random` draw twenty samples and their published standard deviations are real. DeadlockMaze/`random` is the exception among the three: that scenario puts a single proposal on the agenda, and a random chooser has nothing to choose between. `REPRODUCIBILITY.md` § Seed Strategy gives the per-cell breakdown and what it means for the published standard deviations and bootstrap intervals.
 
 **Reproducibility guarantee:** Because the Speaker is fully algorithmic (no neural networks, no sampling), a fixed seed produces identical results across runs and platforms.
 
@@ -155,7 +155,7 @@ explicitly rather than left to look like a matched comparison.
 | Analysis | Method | Interpretation |
 |----------|--------|----------------|
 | Central tendency | Mean per strategy-scenario across seeds | Higher = better |
-| Dispersion | Standard deviation across seeds | Lower = more consistent; 0.0 on a deterministic pair (D.1) means repeats, not agreement |
+| Dispersion | Standard deviation across seeds | Lower = more consistent; 0.0 on a deterministic cell means repeats, not agreement. Deterministic is a property of the cell, not the scenario — D.1 gives the per-arm breakdown |
 | Confidence interval | Bootstrap 95% CI (10,000 resamples) | Non-overlapping = significant |
 | Effect size | Cohen's d with 95% CI via Delta method (governance vs each baseline) | \|d\| > 0.8 = large |
 | Non-parametric test | Mann-Whitney U (exact p-value when max n ≤ 8, asymptotic otherwise) | p < α indicates rank-based difference |
