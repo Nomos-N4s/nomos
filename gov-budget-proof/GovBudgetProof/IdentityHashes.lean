@@ -571,6 +571,18 @@ theorem verify_rejects_swapped_implementation (runtime : String) (b : ActionBind
 def verifyAgainstOwnClaim (runtime : String) (b : ActionBinding) : Bool :=
   decide (hashImpl runtime = b.bindingHash)
 
+/-- A LIMITATION, not a guarantee. `verifyRuntime` cannot READ the proposed
+    record, but nothing stops a caller from HANDING it the record's own
+    claim, and at that argument the two checks are the same function: `rfl`
+    closes the identity. So the separation of the two checks is a discipline
+    about what the caller supplies, never a property of `verifyRuntime`
+    itself, and the provenance of `genesisHash` is an assumption of this
+    model rather than a theorem of it. -/
+example (runtime : String) (b : ActionBinding) :
+    verifyRuntime hashImpl runtime b.bindingHash
+      = verifyAgainstOwnClaim hashImpl runtime b :=
+  rfl
+
 /-- Why §6.1 supplies the genesis hash separately, as a theorem instead of a
     doc-comment. Whenever the running code is off genesis there is a proposed
     binding — carrying whatever implementation string the batch likes — that
