@@ -11,40 +11,89 @@
   - Phase 4: only a fully cleared binding is appended to the ontology.
 
   We prove:
-  - properties measured in the buffer are validated by independent monitors
-    before any extension can happen
+  - properties measured in the buffer are validated by the independent
+    monitors before any extension can happen: clearance requires approvals
+    from `MONITOR_COUNT` DISTINCT monitors of the roster, and duplicates
+    never count twice
+  - Phase 3 is the same 3-of-5 external multisig the genesis manifest is
+    held to: the audit gate is `GENESIS_QUORUM ≤ quorumCount signatures`,
+    imported from `GovBudgetProof.IdentityGenesis` rather than restated, so
+    two key holders can no more clear a buffer extension than they can
+    bootstrap genesis
   - extensions from the buffer never mutate the base ontology directly:
     base ontology changes require the core (Constitutional-tier) mutability
     path
   - a failed validation leaves the base ontology unchanged — no partial
     application
+
+  Before issue #298 the monitors and the key holders were three `Bool`
+  fields: `MONITOR_COUNT` was declared and then never mentioned outside its
+  own theorem `1 ≤ MONITOR_COUNT`, and the "external 3-of-5 key-holder
+  audit" of Phase 3 was a single `auditedByKeyholders : Bool`. Nothing in
+  the module counted anybody.
 -/
+
+import GovBudgetProof.IdentityGenesis
 
 /-- The base ontology: strings standing for the immutable action namespace O
     (Chapter 4 §2.1). Buffer extensions may append to it, never modify it. -/
 def baseOntology : List String :=
   ["identity_commit", "checkpoint", "withdraw"]
 
-/-- An extension candidate sitting in the isolation buffer (§5.2 Phase 2–3). -/
+/-- The independent monitors observing the sandbox (§5.2 Phase 2). Named
+    individually so that "an independent monitor validated it" can be counted
+    rather than asserted by a flag. -/
+inductive Monitor : Type
+  | m1
+  | m2
+  | m3
+  deriving DecidableEq
+
+/-- The monitor roster: the N independent monitors of §5.2 Phase 2. -/
+def monitorRoster : List Monitor :=
+  [Monitor.m1, Monitor.m2, Monitor.m3]
+
+/-- Number of independent monitors observing the buffer (§5.2 Phase 2), and
+    the number of distinct approvals a candidate needs. -/
+def MONITOR_COUNT : Nat := 3
+
+/-- The constant and the roster are the same three monitors. Without this the
+    bar could drift away from the set of monitors that exist. -/
+theorem monitor_roster_has_monitor_count : monitorRoster.length = MONITOR_COUNT := rfl
+
+/-- Whether a monitor has approved: their name occurs in the approval list. -/
+def hasApproved (m : Monitor) (approvals : List Monitor) : Bool :=
+  approvals.any (fun k => decide (k = m))
+
+/-- The number of DISTINCT roster monitors that approved. Duplicates never
+    count twice — the same shape as `IdentityGenesis.quorumCount`, and for
+    the same reason: one monitor repeating itself is not independent
+    observation. -/
+def approvalCount (approvals : List Monitor) : Nat :=
+  (monitorRoster.filter (fun m => hasApproved m approvals)).length
+
+/-- An extension candidate sitting in the isolation buffer (§5.2 Phase 2–3).
+    The monitor approvals and the key-holder signatures are lists, not flags:
+    both gates are counted. -/
 structure BufferedExtension where
   candidate : String
   measuredByMonitor : Bool
-  validatedByMonitor : Bool
-  auditedByKeyholders : Bool
+  monitorApprovals : List Monitor
+  keyholderSignatures : List GenesisKey
 
-/-- Number of independent monitors observing the buffer (§5.2 Phase 2). -/
-def MONITOR_COUNT : Nat := 3
+/-- §5.2 Phase 2 gate: `MONITOR_COUNT` distinct monitors approved. -/
+def monitorsValidated (ext : BufferedExtension) : Bool :=
+  MONITOR_COUNT ≤ approvalCount ext.monitorApprovals
 
-/-- §5.2 Phase 2: the buffer must be observed by at least one independent
-    monitor. -/
-theorem monitor_coverage_at_least_one : 1 ≤ MONITOR_COUNT := by
-  unfold MONITOR_COUNT
-  decide
+/-- §5.2 Phase 3 gate: the external key-holder audit, decided by the very
+    quorum count the genesis manifest is held to (`IdentityGenesis`). -/
+def keyholdersAudited (ext : BufferedExtension) : Bool :=
+  GENESIS_QUORUM ≤ quorumCount ext.keyholderSignatures
 
 /-- §5.2 Phase 2–3: all three gates — sandbox measurement, independent-monitor
     validation, and the external 3-of-5 key-holder audit. -/
 def clearedCheck (ext : BufferedExtension) : Bool :=
-  ext.measuredByMonitor && ext.validatedByMonitor && ext.auditedByKeyholders
+  ext.measuredByMonitor && monitorsValidated ext && keyholdersAudited ext
 
 /-- The clearance proposition: `clearedCheck ext = true`. -/
 def isCleared (ext : BufferedExtension) : Prop :=
@@ -55,30 +104,85 @@ def isCleared (ext : BufferedExtension) : Prop :=
 def extendFromBuffer (ext : BufferedExtension) : List String :=
   if clearedCheck ext then baseOntology ++ [ext.candidate] else baseOntology
 
-/-- §5.2 Phase 2: no extension is applied unless an independent monitor
-    measured and validated the candidate's properties in the sandbox. -/
+/-- The approval count cannot exceed the roster: no list of approvals, however
+    long or however repetitive, counts more monitors than exist. -/
+theorem approval_count_bounded_by_roster (approvals : List Monitor) :
+    approvalCount approvals ≤ MONITOR_COUNT := by
+  unfold approvalCount MONITOR_COUNT
+  have h := List.length_filter_le (fun m => hasApproved m approvals) monitorRoster
+  rw [show monitorRoster.length = 3 by unfold monitorRoster; rfl] at h
+  exact h
+
+/-- §5.2 Phase 2: no extension is applied unless the candidate was measured in
+    the sandbox and `MONITOR_COUNT` distinct monitors approved it. This is
+    what `MONITOR_COUNT` now buys; the constant used to appear only in
+    `1 ≤ MONITOR_COUNT`. -/
 theorem extension_requires_monitor_validation (ext : BufferedExtension)
-    (h : isCleared ext) : ext.measuredByMonitor ∧ ext.validatedByMonitor := by
-  unfold isCleared clearedCheck at h
+    (h : isCleared ext) :
+    ext.measuredByMonitor ∧ MONITOR_COUNT ≤ approvalCount ext.monitorApprovals := by
+  unfold isCleared clearedCheck monitorsValidated at h
   simp [Bool.and_eq_true] at h
   exact ⟨h.1.1, h.1.2⟩
 
-/-- §5.2 Phase 2: a measured but unvalidated candidate is never cleared,
-    regardless of any other flags. -/
+/-- §5.2 Phase 2: too few distinct approvals and the candidate is never
+    cleared, whatever else it carries. -/
 theorem unvalidated_extension_never_cleared (ext : BufferedExtension)
-    (h : ¬ ext.validatedByMonitor) : ¬ isCleared ext := by
+    (h : approvalCount ext.monitorApprovals < MONITOR_COUNT) : ¬ isCleared ext := by
   intro hc
-  unfold isCleared clearedCheck at hc
-  simp [Bool.and_eq_true] at hc
-  exact h hc.1.2
+  exact absurd (extension_requires_monitor_validation ext hc).2 (Nat.not_le.mpr h)
 
-/-- §5.2 Phase 3: no extension is applied without the external 3-of-5
-    key-holder audit. -/
+/-- §5.2 Phase 2: a single monitor cannot stand in for the roster by signing
+    repeatedly — the duplicate is counted once. -/
+theorem duplicate_approval_counts_once (m : Monitor) : approvalCount [m, m] = 1 := by
+  unfold approvalCount monitorRoster hasApproved
+  cases m <;> decide
+
+/-- §5.2 Phase 2: two monitors, distinct or not, never reach the bar. -/
+theorem two_monitor_approvals_insufficient (a b : Monitor) :
+    ¬ MONITOR_COUNT ≤ approvalCount [a, b] := by
+  unfold MONITOR_COUNT approvalCount monitorRoster hasApproved
+  cases a <;> cases b <;> decide
+
+/-- The bar is reachable — `MONITOR_COUNT` is not set above what the roster
+    can supply, so the theorems that assume clearance are not assuming
+    something impossible. -/
+theorem full_roster_clears_the_monitor_gate :
+    MONITOR_COUNT ≤ approvalCount monitorRoster := by
+  unfold MONITOR_COUNT approvalCount monitorRoster hasApproved
+  decide
+
+/-- What clearance means for each monitor individually: with the roster the
+    size of the bar, `MONITOR_COUNT` distinct approvals is unanimity, so every
+    monitor on the roster approved. -/
+theorem every_monitor_must_approve (approvals : List Monitor)
+    (h : MONITOR_COUNT ≤ approvalCount approvals) (m : Monitor) :
+    hasApproved m approvals = true := by
+  unfold MONITOR_COUNT approvalCount monitorRoster at h
+  by_cases h1 : hasApproved Monitor.m1 approvals = true <;>
+    by_cases h2 : hasApproved Monitor.m2 approvals = true <;>
+      by_cases h3 : hasApproved Monitor.m3 approvals = true <;>
+        simp [List.filter, h1, h2, h3] at h ⊢ <;>
+          cases m <;> simp [h1, h2, h3]
+
+/-- §5.2 Phase 3: no extension is applied without the external key-holder
+    audit, and the audit is the genesis quorum — `GENESIS_QUORUM` distinct
+    key holders out of the five, counted by `IdentityGenesis.quorumCount`. -/
 theorem extension_requires_external_audit (ext : BufferedExtension)
-    (h : isCleared ext) : ext.auditedByKeyholders := by
-  unfold isCleared clearedCheck at h
+    (h : isCleared ext) : GENESIS_QUORUM ≤ quorumCount ext.keyholderSignatures := by
+  unfold isCleared clearedCheck keyholdersAudited at h
   simp [Bool.and_eq_true] at h
   exact h.2
+
+/-- §5.2 Phase 3 + §4.4: two key holders cannot clear a buffer extension, for
+    the same reason they cannot bootstrap genesis. The proof consumes
+    `IdentityGenesis.any_two_signatures_insufficient`, so the two modules are
+    joined in the proof term and not merely in the prose. -/
+theorem two_keyholder_signatures_never_clear (candidate : String) (measured : Bool)
+    (approvals : List Monitor) (a b : GenesisKey) :
+    ¬ isCleared { candidate := candidate, measuredByMonitor := measured,
+                  monitorApprovals := approvals, keyholderSignatures := [a, b] } := by
+  intro hc
+  exact any_two_signatures_insufficient a b (extension_requires_external_audit _ hc)
 
 /-- §5.2 Phase 2–3: without full clearance the base ontology is unchanged. -/
 theorem failed_validation_leaves_base_unchanged (ext : BufferedExtension)
@@ -130,21 +234,38 @@ theorem candidate_never_replaces_base_entry (ext : BufferedExtension) :
   unfold extendFromBuffer
   by_cases hc : clearedCheck ext = true <;> simp [hc, baseOntology, List.take, List.length]
 
-/-- Fully measured, validated, and audited candidate is appended. -/
+/-- Measured, approved by the whole monitor roster, and audited by three of
+    the five key holders: the candidate is appended. -/
 example : extendFromBuffer
       { candidate := "safe_action", measuredByMonitor := true,
-        validatedByMonitor := true, auditedByKeyholders := true }
+        monitorApprovals := monitorRoster,
+        keyholderSignatures := [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] }
     = baseOntology ++ ["safe_action"] := by
   apply cleared_extension_appends_candidate
-  simp [isCleared, clearedCheck]
+  unfold isCleared clearedCheck monitorsValidated keyholdersAudited
+    approvalCount monitorRoster hasApproved MONITOR_COUNT
+    quorumCount genesisKeys hasSigned GENESIS_QUORUM
+  decide
 
-/-- A candidate that failed monitor validation leaves the base ontology
-    untouched. -/
+/-- Two monitors out of three is short of the Phase 2 bar, so the base
+    ontology is untouched — even with a full key-holder audit. -/
 example : extendFromBuffer
       { candidate := "risky_action", measuredByMonitor := true,
-        validatedByMonitor := false, auditedByKeyholders := true }
+        monitorApprovals := [Monitor.m1, Monitor.m2],
+        keyholderSignatures := [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] }
     = baseOntology := by
   apply failed_validation_leaves_base_unchanged
-  intro hc
-  unfold isCleared clearedCheck at hc
-  simp at hc
+  apply unvalidated_extension_never_cleared
+  unfold MONITOR_COUNT approvalCount monitorRoster hasApproved
+  decide
+
+/-- Two key holders out of five is short of the Phase 3 bar, so the base
+    ontology is untouched — even with the whole monitor roster behind the
+    candidate. -/
+example : extendFromBuffer
+      { candidate := "risky_action", measuredByMonitor := true,
+        monitorApprovals := monitorRoster,
+        keyholderSignatures := [GenesisKey.k1, GenesisKey.k2] }
+    = baseOntology := by
+  apply failed_validation_leaves_base_unchanged
+  exact two_keyholder_signatures_never_clear _ _ _ _ _
