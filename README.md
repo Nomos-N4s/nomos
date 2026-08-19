@@ -76,6 +76,7 @@ Lean 4 theorems proven:          budget_invariant_holds, budget_preserves_positi
                                  falsification_params_unchanged_at_immutable_tier
 Reference implementation:        ~2,800 lines · 50+ files · 10 subpackages
 Benchmark coverage:              4 scenarios × 5 strategies (19 valid combinations) × 20 seeds × 1,000 steps
+                                 most of those combinations repeat rather than sample — see below
 Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual risks acknowledged
 ```
 
@@ -86,6 +87,14 @@ the Python and no refinement argument connects the two, so the implementation
 is tested rather than verified
 ([Chapter 5 §7](book/chapter-05/05-related-work.md#7-where-to-attack-this-chapter),
 [Scope and limits](book/formal-verification-lean.md#scope-and-limits)).
+
+Those twenty seeds are twenty runs, not twenty independent observations.
+Only GridWorld draws its world from the seed, and only the `random`
+baseline draws its choices from it, so most of the grid returns the same
+number twenty times — a standard deviation of 0.0 there means exact
+repeats, not agreement between samples. Which combinations sample and
+which repeat is listed in
+[REPRODUCIBILITY.md § Seed Strategy](REPRODUCIBILITY.md#seed-strategy).
 
 ## Quick Start
 
