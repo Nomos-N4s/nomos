@@ -15,6 +15,25 @@
   - three distinct signatures succeed
   - signatures are idempotent: double-signing never counts twice, so
     duplicates can never inflate a signature list to quorum
+
+  AXIOM DISCIPLINE (issue #300). The three `teeVerifies` theorems at the end
+  of this file used to close by `native_decide`. On the pinned toolchain
+  (`lean-toolchain` = leanprover/lean4:v4.32.1) that tactic does not run in
+  the kernel: it asserts the compiled evaluation as a fresh opaque axiom,
+  `<theorem>._native.native_decide.ax_1_1`, one per declaration. `teeVerifies`
+  is by definition the `decide` of `genesisAccepted`, so each Bool theorem is
+  now a term proof off the `Prop` sibling above it — `decide_eq_false` or
+  `decide_eq_true` applied to a lemma the kernel already checked — and
+  `#print axioms` reports "does not depend on any axioms" for all six. Do not
+  reintroduce `native_decide` here: the signature lists are tiny and plain
+  `decide` is a kernel computation.
+
+  Three declarations in this file are not axiom-free, and none of them is a
+  TEE theorem: `any_three_distinct_signatures_sufficient` and
+  `double_signing_never_increases_quorum` depend on `propext` and `Quot.sound`,
+  and `quorumCount_bounded_by_five` on `propext`, all of them through `simp`.
+  Those are Lean's standard structural axioms; no declaration here depends on
+  `Classical.choice`.
 -/
 
 /-- The five genesis key holders (§4.2 Phase 1 step 3). -/
