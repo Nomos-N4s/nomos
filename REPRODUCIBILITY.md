@@ -76,8 +76,12 @@ Read them as exact values, not as twenty samples that happened to agree.
 
 Until #301 the loop seed was written into each report's metadata and
 handed to no scenario at all, while GridWorld's constructor kwargs pinned
-it to 42. Every standard deviation, bootstrap interval and `n` published
-before that fix described twenty repeats of a single run.
+it to 42. Every cell but two therefore published a standard deviation,
+bootstrap interval and `n` taken over twenty repeats of a single run.
+The exceptions are the `random` arms on TemptationBank and DriftLab: the
+baseline drew from the loop seed then exactly as it does now, so those
+two were genuine 20-draw statistics, and the table below republishes
+their figures unchanged by the fix.
 
 ## Output
 
