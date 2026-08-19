@@ -239,10 +239,10 @@ theorem bindingDigest_is_not_collision_free :
     of the record, and the collision above is impossible. The hypotheses are
     what the name says and nothing weaker — `MIX` is 31, so this holds only
     of records whose committed hash and link are single "digits" in base
-    `MIX`. A `BindingValid` record commits `hashImpl b.implementation`, and a
-    real hash's outputs are not below 31, so this lemma does NOT apply to the
-    bindings the chapter is about; it is here to locate the failure, not to
-    repair it. -/
+    `MIX`. A `BindingValid` record commits `hashImpl b.implementation`, and no
+    hash worth the name has its range confined to `0..30`, so this lemma does
+    NOT apply to the bindings the chapter is about; it is here to locate the
+    failure, not to repair it. -/
 theorem bindingDigest_eq_iff_fields_eq_of_fields_lt_MIX (b b' : ActionBinding)
     (hCommit : b.bindingHash < MIX) (hLink : b.prevHash < MIX)
     (hCommit' : b'.bindingHash < MIX) (hLink' : b'.prevHash < MIX) :
@@ -357,9 +357,10 @@ theorem chain_root_swap_invisible_for_some_distinct_bindings (s : String) :
     separates are safe. They are not. For any two strings the hash tells
     apart there are records committing to them — each satisfying
     `BindingValid`, i.e. each carrying the true runtime hash of its own
-    implementation — whose swap the root does not see. The forger pays for
-    the difference between the two implementation hashes in the link field,
-    which the packing adds at a stride the difference can exceed.
+    implementation — whose swap the root does not see. For a `BindingValid`
+    record the digest is `(MIX * MIX + MIX) * hashImpl implementation +
+    prevHash`, and `prevHash` is unbounded, so the forger simply pays the
+    difference between the two implementation hashes out of the link field.
 
     This is the precise sense in which collision-resistance of `hashImpl`
     does not lift to the digest: `hSep` is exactly what a collision-resistant
