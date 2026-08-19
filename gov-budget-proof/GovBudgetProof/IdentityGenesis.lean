@@ -132,8 +132,8 @@ def teeVerifies (signatures : List GenesisKey) : Bool :=
   GENESIS_QUORUM ≤ quorumCount signatures
 
 /-- The TEE rejects a two-signature manifest. -/
-theorem tee_rejects_two : teeVerifies [GenesisKey.k1, GenesisKey.k2] = false := by
-  native_decide
+theorem tee_rejects_two : teeVerifies [GenesisKey.k1, GenesisKey.k2] = false :=
+  decide_eq_false two_signatures_insufficient
 
 /-- The TEE accepts a three-signature manifest. -/
 theorem tee_accepts_three : teeVerifies [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] = true := by
