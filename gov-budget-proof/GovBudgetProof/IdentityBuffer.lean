@@ -40,7 +40,15 @@
   `GovBudgetProof.IdentityTiers`, which this module does not import, and no
   statement below so much as mentions a tier. That the extension protocol
   is the only way into the base ontology is an assumption of the model, not
-  a theorem of it.
+  a theorem of it. Fourth, both gates count IDENTITIES and neither is bound
+  to `candidate`. `monitorApprovals` and `keyholderApprovals` record who
+  approved, not what they approved: there is no signature object, no
+  commitment to the candidate, and no verification step, so the same three
+  key holders clear every extension they are listed against. What is proved
+  is that three DISTINCT roster holders must be listed, which is strictly
+  more than the `Bool` it replaced and strictly less than an audit bound to
+  the extension. Closing that gap needs a signature-over-commitment model,
+  which is not attempted here.
 
   Before issue #298 the monitors and the key holders were three `Bool`
   fields: `MONITOR_COUNT` was declared and then never mentioned outside its
@@ -94,13 +102,15 @@ def approvalCount (approvals : List Monitor) : Nat :=
   (monitorRoster.filter (fun m => hasApproved m approvals)).length
 
 /-- An extension candidate sitting in the isolation buffer (§5.2 Phase 2–3).
-    The monitor approvals and the key-holder signatures are lists, not flags:
-    both gates are counted. -/
+    The monitor approvals and the key-holder approvals are lists of
+    identities, not flags: both gates are counted rather than asserted.
+    Neither list is bound to `candidate` — see the fourth limit in the module
+    header. -/
 structure BufferedExtension where
   candidate : String
   measuredByMonitor : Bool
   monitorApprovals : List Monitor
-  keyholderSignatures : List GenesisKey
+  keyholderApprovals : List GenesisKey
 
 /-- §5.2 Phase 2 gate: `MONITOR_COUNT` distinct monitors approved. -/
 def monitorsValidated (ext : BufferedExtension) : Bool :=
@@ -109,7 +119,7 @@ def monitorsValidated (ext : BufferedExtension) : Bool :=
 /-- §5.2 Phase 3 gate: the external key-holder audit, decided by the very
     quorum count the genesis manifest is held to (`IdentityGenesis`). -/
 def keyholdersAudited (ext : BufferedExtension) : Bool :=
-  GENESIS_QUORUM ≤ quorumCount ext.keyholderSignatures
+  GENESIS_QUORUM ≤ quorumCount ext.keyholderApprovals
 
 /-- §5.2 Phase 2–3: all three gates — sandbox measurement, independent-monitor
     validation, and the external 3-of-5 key-holder audit. -/
@@ -189,7 +199,7 @@ theorem every_monitor_must_approve (approvals : List Monitor)
     audit, and the audit is the genesis quorum — `GENESIS_QUORUM` distinct
     key holders out of the five, counted by `IdentityGenesis.quorumCount`. -/
 theorem extension_requires_external_audit (ext : BufferedExtension)
-    (h : isCleared ext) : GENESIS_QUORUM ≤ quorumCount ext.keyholderSignatures := by
+    (h : isCleared ext) : GENESIS_QUORUM ≤ quorumCount ext.keyholderApprovals := by
   unfold isCleared clearedCheck keyholdersAudited at h
   simp [Bool.and_eq_true] at h
   exact h.2
@@ -198,10 +208,10 @@ theorem extension_requires_external_audit (ext : BufferedExtension)
     the same reason they cannot bootstrap genesis. The proof consumes
     `IdentityGenesis.any_two_signatures_insufficient`, so the two modules are
     joined in the proof term and not merely in the prose. -/
-theorem two_keyholder_signatures_never_clear (candidate : String) (measured : Bool)
+theorem two_keyholder_approvals_never_clear (candidate : String) (measured : Bool)
     (approvals : List Monitor) (a b : GenesisKey) :
     ¬ isCleared { candidate := candidate, measuredByMonitor := measured,
-                  monitorApprovals := approvals, keyholderSignatures := [a, b] } := by
+                  monitorApprovals := approvals, keyholderApprovals := [a, b] } := by
   intro hc
   exact any_two_signatures_insufficient a b (extension_requires_external_audit _ hc)
 
@@ -260,7 +270,7 @@ theorem candidate_never_replaces_base_entry (ext : BufferedExtension) :
 example : extendFromBuffer
       { candidate := "safe_action", measuredByMonitor := true,
         monitorApprovals := monitorRoster,
-        keyholderSignatures := [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] }
+        keyholderApprovals := [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] }
     = baseOntology ++ ["safe_action"] := by
   apply cleared_extension_appends_candidate
   unfold isCleared clearedCheck monitorsValidated keyholdersAudited
@@ -273,7 +283,7 @@ example : extendFromBuffer
 example : extendFromBuffer
       { candidate := "risky_action", measuredByMonitor := true,
         monitorApprovals := [Monitor.m1, Monitor.m2],
-        keyholderSignatures := [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] }
+        keyholderApprovals := [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] }
     = baseOntology := by
   apply failed_validation_leaves_base_unchanged
   apply unvalidated_extension_never_cleared
@@ -286,7 +296,7 @@ example : extendFromBuffer
 example : extendFromBuffer
       { candidate := "risky_action", measuredByMonitor := true,
         monitorApprovals := monitorRoster,
-        keyholderSignatures := [GenesisKey.k1, GenesisKey.k2] }
+        keyholderApprovals := [GenesisKey.k1, GenesisKey.k2] }
     = baseOntology := by
   apply failed_validation_leaves_base_unchanged
-  exact two_keyholder_signatures_never_clear _ _ _ _ _
+  exact two_keyholder_approvals_never_clear _ _ _ _ _
