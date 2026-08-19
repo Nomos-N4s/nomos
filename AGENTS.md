@@ -97,7 +97,7 @@ Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration
 - `book/responses/response-to-review-panel.md`: all 5 phases of review responses (accepts all three Phase 5.2 fixes)
 - `book/responses/response-to-expert-panel-harder-review.md`: response to second harder review (baseline bug fix, 11-point rebuttal)
 - `book/formal-verification-lean.md`: Lean 4 proof inventory — all five Identity Layer modules plus build instructions
-- `gov-budget-proof/GovBudgetProof.lean`: Lean 4 manifest importing Basic, BudgetEnforcement, VoteAndFalsification, and the five Identity modules
+- `gov-budget-proof/GovBudgetProof.lean`: Lean 4 manifest importing BudgetEnforcement, VoteAndFalsification, and the five Identity modules
 - `gov-budget-proof/GovBudgetProof/IdentityTiers.lean`: tier mutability rules (Ch4 §3)
 - `gov-budget-proof/GovBudgetProof/IdentityGenesis.lean`: 3-of-5 multisig genesis (Ch4 §4)
 - `gov-budget-proof/GovBudgetProof/IdentityBuffer.lean`: sandboxed isolation buffer protocol (Ch4 §5.2)

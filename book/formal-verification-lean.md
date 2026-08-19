@@ -22,13 +22,12 @@ request runs the `lean-build` job (`lake build`), so a broken proof blocks a mer
 | Module | Proves | Source |
 |---|---|---|
 | `GovBudgetProof.lean` | Manifest importing all modules below | `gov-budget-proof/` |
-| `Basic.lean` | Core definitions (budget, thresholds) | `gov-budget-proof/GovBudgetProof/` |
 | `BudgetEnforcement.lean` | Budget/threshold enforcement invariants (issues #43/#44) | `gov-budget-proof/GovBudgetProof/` |
 | `VoteAndFalsification.lean` | Vote-threshold determinism, falsification counting and budget halving; falsification parameters declared immutable-tier and unchanged by a governance step gated on that tier | `gov-budget-proof/GovBudgetProof/` |
-| `IdentityTiers.lean` | Tier mutability rules — [Chapter 4, Sec 3](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
+| `IdentityTiers.lean` | Tier mutability rules, and the constitutional modification bar stated against the imported `GENESIS_QUORUM` — [Chapter 4, Sec 3](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityGenesis.lean` | Genesis 3-of-5 multisig bootstrapping — [Chapter 4, Sec 4](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
-| `IdentityBuffer.lean` | Sandboxed isolation buffer protocol — [Chapter 4, Sec 5.2](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
-| `IdentityHashes.lean` | Runtime integrity hash chains over an uninterpreted hash; the root separates two bindings exactly as far as it separates their digests, and the digest packing is proved to collide, so tamper evidence is conditional on the two records having different digests — a claim about the digests that collision-resistance of the hash does not deliver — [Chapter 4, Sec 2.1 and 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
+| `IdentityBuffer.lean` | Sandboxed isolation buffer protocol; monitor approvals and the external key-holder audit are counted rather than flagged, the audit gate reusing the genesis 3-of-5 quorum — [Chapter 4, Sec 5.2](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
+| `IdentityHashes.lean` | Runtime integrity hash chains over an uninterpreted hash; the root separates two bindings exactly as far as it separates their digests, and the digest packing is proved to collide, so tamper evidence is conditional on the two records having different digests — a claim about the digests that collision-resistance of the hash does not deliver; TEE.verify_binding takes the genesis commitment as its own argument, so nothing the proposed binding claims about itself reaches the verdict — [Chapter 4, Sec 2.1 and 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 | `IdentityCoherence.lean` | Coherence threshold guard; below-threshold actions are rejected without mutating identity state — [Chapter 4, Sec 6.1](/book/chapter-04/04-identity-layer) | `gov-budget-proof/GovBudgetProof/` |
 
 ## Building the proofs
