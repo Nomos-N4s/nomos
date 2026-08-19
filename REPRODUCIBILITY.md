@@ -263,7 +263,16 @@ cd gov-budget-proof
 lake build
 ```
 
-Expected output: 12/12 built successfully (Lean 4).
+Expected output: `Build completed successfully (20 jobs).` (Lean 4, toolchain
+pinned in `gov-budget-proof/lean-toolchain`).
+
+What this reproduces is that **the proofs compile**: every theorem in
+`gov-budget-proof/` is re-checked by the Lean kernel, with no `sorry` and no
+axiom declared by the corpus. It does not verify the reference implementation.
+Nothing extracts the Lean model from `src/nomos/`, and no refinement argument
+connects the two, so a green `lake build` says nothing about `speaker.py`. See
+[Scope and limits](book/formal-verification-lean.md#scope-and-limits) and
+[Chapter 5 §7](book/chapter-05/05-related-work.md#7-where-to-attack-this-chapter).
 
 ## Versioning
 
