@@ -131,14 +131,23 @@ theorem quorumCount_bounded_by_five (signatures : List GenesisKey) :
 def teeVerifies (signatures : List GenesisKey) : Bool :=
   GENESIS_QUORUM ≤ quorumCount signatures
 
-/-- The TEE rejects a two-signature manifest. -/
+/-- The TEE rejects the two-signature manifest `[k1, k2]`. This is the Bool
+    image of `two_signatures_insufficient` at that one list, not a claim about
+    every pair; the quantified statement is `any_two_signatures_insufficient`,
+    which is a Prop and has no Bool counterpart here. -/
 theorem tee_rejects_two : teeVerifies [GenesisKey.k1, GenesisKey.k2] = false :=
   decide_eq_false two_signatures_insufficient
 
-/-- The TEE accepts a three-signature manifest. -/
+/-- The TEE accepts the three-signature manifest `[k1, k2, k3]`. This is the
+    Bool image of `three_signatures_sufficient` at that one list, not a claim
+    about every triple; the quantified statement is
+    `any_three_distinct_signatures_sufficient`. -/
 theorem tee_accepts_three : teeVerifies [GenesisKey.k1, GenesisKey.k2, GenesisKey.k3] = true :=
   decide_eq_true three_signatures_sufficient
 
-/-- The TEE ignores duplicates: k1 signing twice still counts once. -/
+/-- The TEE rejects a manifest that k1 signed twice and nobody else signed.
+    It says that duplicate list fails the quorum check — not that the count is
+    exactly one, which is `duplicate_signature_counts_once`, nor that appending
+    a duplicate never helps, which is `double_signing_never_increases_quorum`. -/
 theorem tee_rejects_duplicate_alone : teeVerifies [GenesisKey.k1, GenesisKey.k1] = false :=
   decide_eq_false (double_signing_cannot_reach_quorum_alone GenesisKey.k1)
