@@ -48,9 +48,10 @@ class DriftLab(ExperimentScenario):
     and current identity vectors.
 
     The scenario is deterministic: the drift schedule and the agenda are
-    fixed functions of the step index and nothing in the run draws a random
-    number, so the trajectory is settled once the strategy is. It therefore
-    takes no seed — see :attr:`~.base.ExperimentScenario.SEEDED`.
+    fixed functions of the step index and the scenario draws no random
+    number of its own. It therefore takes no seed — see
+    :attr:`~.base.ExperimentScenario.SEEDED`. A strategy may still draw one:
+    the random baseline picks between the two proposals from the loop seed.
 
     Args:
         speaker: The governance Speaker instance.
@@ -66,8 +67,11 @@ class DriftLab(ExperimentScenario):
 
     #: Deterministic. Drift advances 0.001 per step, the agenda is the same
     #: two proposals every step, and the reward is the executed proposal's
-    #: ``expected_reward``, so every seed replays one trajectory. The scenario
-    #: used to construct a ``random.Random(seed)`` it never consulted.
+    #: ``expected_reward``, so the scenario itself contributes no
+    #: seed-dependence and every arm but ``random`` replays one trajectory.
+    #: That arm does vary: the random baseline draws from the loop seed and
+    #: the agenda gives it two proposals to choose between. The scenario used
+    #: to construct a ``random.Random(seed)`` it never consulted.
     SEEDED: ClassVar[bool] = False
 
     def __init__(self, speaker: SpeakerStateMachine, identity: IdentityCore):

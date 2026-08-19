@@ -45,7 +45,10 @@ class TemptationBank(ExperimentScenario):
 
     #: Deterministic. The agenda, the rewards, and the ten-step loan timer are
     #: fixed constants and nothing in the scenario draws a random number, so
-    #: every seed replays the same trajectory. TemptationBank exists to show
+    #: the scenario itself contributes no seed-dependence and every arm but
+    #: ``random`` replays the same trajectory. That arm does vary: the random
+    #: baseline draws from the loop seed and the agenda gives it three
+    #: proposals to choose between. TemptationBank exists to show
     #: the Parliament voting itself a Ulysses Contract; noise added to that
     #: would change what the demonstration measures.
     SEEDED: ClassVar[bool] = False
