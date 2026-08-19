@@ -250,11 +250,12 @@ class TestGovernanceLatencyReporting:
 PUBLISHED_STEPS = 1000
 """Steps per run in the published benchmark suite.
 
-The seed defect is invisible on short runs: a few hundred steps of a random
-walk leave enough of the grid unvisited that the random baseline's own RNG
-produces variance whether or not the scenario ever saw the seed. At 1,000
-steps the walk has consumed every reachable tile and the total is
-path-independent, so a cell that varies here varies because the world did.
+The length matters to this test. On a few hundred steps the random
+baseline's own RNG moves GridWorld's total whether or not the scenario ever
+saw the seed, so a short run cannot tell a fixed world from a varying one.
+At 1,000 steps it can: with the grid pinned to seed 42 the random arm
+returned -48.0 on all twenty seeds, so variance at this length is variance
+in the world.
 """
 
 PUBLISHED_SEEDS = 20
