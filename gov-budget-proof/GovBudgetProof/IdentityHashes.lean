@@ -23,8 +23,9 @@
   2. Tamper evidence: replacing a binding changes the chain root —
      conditional on the replacement changing that binding's DIGEST, carried
      as an explicit hypothesis named in every theorem that needs it. That
-     hypothesis is strictly stronger than collision-resistance of the hash
-     and is not implied by it —
+     hypothesis is about the two records' digests; it is a different claim
+     from collision-resistance of the hash, and collision-resistance does
+     not deliver it —
      `chain_root_swap_invisible_for_two_valid_bindings` is the
      counterexample.
   3. Determinism: chain roots are a function of the binding sequence —
