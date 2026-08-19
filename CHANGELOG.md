@@ -8,6 +8,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [1.2.0](https://github.com/Nomos-N4s/nomos/compare/v1.1.0...v1.2.0) (2026-08-19)
+
+
+### Features
+
+* **lean:** count monitors and key holders in the isolation buffer ([7b2407c](https://github.com/Nomos-N4s/nomos/commit/7b2407ca72c234102e6590986718d5e33a5845e4))
+* **lean:** prove what the falsification counter actually counts ([bdb5170](https://github.com/Nomos-N4s/nomos/commit/bdb51709d78feee7326477ab18f659da9d86db57))
+* **lean:** state the genesis bar with the genesis constant ([f530734](https://github.com/Nomos-N4s/nomos/commit/f530734e757da521861fc1568fe617f6bf50ecbb))
+
+
+### Bug Fixes
+
+* **lean:** anchor TEE binding verification to the genesis commitment ([c78661d](https://github.com/Nomos-N4s/nomos/commit/c78661d24d69ecbc485d71db2424d06c98995373))
+* **lean:** prove tee_accepts_three off its Prop sibling ([366461f](https://github.com/Nomos-N4s/nomos/commit/366461f574e22b57874f229cda70e0b94ec0d6e0))
+* **lean:** prove tee_rejects_duplicate_alone off its Prop sibling ([c07a50f](https://github.com/Nomos-N4s/nomos/commit/c07a50f7f5fb0757d1e6c69ca7cdb5ebf774c99d))
+* **lean:** prove tee_rejects_two off its Prop sibling ([54d9ba9](https://github.com/Nomos-N4s/nomos/commit/54d9ba9c585845fac4f5ae5ea1fedac46612657f))
+* **lean:** prove the genesis TEE theorems without native_decide axioms ([42fa39d](https://github.com/Nomos-N4s/nomos/commit/42fa39d1d0a5fad67cff9bfcde9d6349b7305488))
+* **lean:** replace the domain-free theorems with statements that constrain the model ([7206a5b](https://github.com/Nomos-N4s/nomos/commit/7206a5b2cd3fddba5b2e44e43a15f4a0e5e7c303))
+* **test:** scan Lean source instead of regexing out its comments ([b2b0643](https://github.com/Nomos-N4s/nomos/commit/b2b0643c0c13910589521cae30a1667b4f4d5a21))
+
+
+### Documentation
+
+* **book:** correct the proof-module count after Basic.lean removal ([0f10432](https://github.com/Nomos-N4s/nomos/commit/0f10432b4a1390c6d88f9dfb187c9a4bca1f5c2d))
+* **book:** record that Basic.lean was deleted, not documented ([810411b](https://github.com/Nomos-N4s/nomos/commit/810411b80a593f9b6058a908720633d3e9ee7ab4))
+* **book:** scope the TEE inventory row to what the signature carries ([1b1109f](https://github.com/Nomos-N4s/nomos/commit/1b1109fdd979d4132e14eba6c8d63dd64913c67d))
+* correct the Lean module inventories after issue [#298](https://github.com/Nomos-N4s/nomos/issues/298) ([8b25df6](https://github.com/Nomos-N4s/nomos/commit/8b25df6e809266c237250407308777778341dd48))
+* **lean:** name the checks that enforce the genesis axiom discipline ([bec5d0a](https://github.com/Nomos-N4s/nomos/commit/bec5d0adbab9cd6f609e2ac14bcd92deda3d2a6b))
+* **lean:** name the genesis-hash provenance as an assumption ([9f5e8f2](https://github.com/Nomos-N4s/nomos/commit/9f5e8f2a247ceb8a60beedefad90e371366997b3))
+* **lean:** name the real source of quorumCount_bounded_by_five's propext ([084a94c](https://github.com/Nomos-N4s/nomos/commit/084a94c4eebe67d3cd560f770a243416b52d6b71))
+* **lean:** name the three limits of the new buffer model ([bb55fb7](https://github.com/Nomos-N4s/nomos/commit/bb55fb70428328e343e84c6cfcb23c7fa2294ef1))
+* **lean:** record the genesis file's axiom discipline in its header ([754d66d](https://github.com/Nomos-N4s/nomos/commit/754d66d406b8a9e5b7dfa949af82b6ba970ee2c3))
+* **lean:** say the buffer gates count identities, not signatures ([3aa6c8e](https://github.com/Nomos-N4s/nomos/commit/3aa6c8e819aeb669d2a02f2205f76c50501041d4))
+* **lean:** say which manifest each TEE theorem is about ([115b903](https://github.com/Nomos-N4s/nomos/commit/115b903d888994cde3405876be071613470a671c))
+* **lean:** scope the buffer's base-ontology claim to extendFromBuffer ([e68aeaf](https://github.com/Nomos-N4s/nomos/commit/e68aeaf594b6bdeaaf632feff3e3b12644ed6e45))
+* **test:** attribute the example-block native_decide uses to [#299](https://github.com/Nomos-N4s/nomos/issues/299) ([340b051](https://github.com/Nomos-N4s/nomos/commit/340b051a1b1e25f23a7a2d4d4313fde61afb14d8))
+* **test:** say why both native-decision guards are needed ([d245ab5](https://github.com/Nomos-N4s/nomos/commit/d245ab5d342becb474a656e0596b18159f20f4d5))
+
 ## [1.1.0](https://github.com/Nomos-N4s/nomos/compare/v1.0.0...v1.1.0) (2026-08-19)
 
 
