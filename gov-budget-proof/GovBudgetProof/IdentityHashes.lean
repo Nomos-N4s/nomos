@@ -594,6 +594,17 @@ theorem forged_binding_passes_own_claim_but_fails_genesis
     simp
   · exact verify_rejects_runtime_off_genesis hashImpl runtime genesisHash hOffGenesis
 
+/-- The hypothesis of the theorem above is satisfied for every `hashImpl`, so
+    the forgery it exhibits is a real case and not an empty one: a genesis
+    commitment one above the runtime hash is off genesis whatever the hash
+    does. -/
+example (runtime impl : String) :
+    ∃ b : ActionBinding, b.implementation = impl ∧
+      verifyAgainstOwnClaim hashImpl runtime b = true ∧
+      verifyRuntime hashImpl runtime (hashImpl runtime + 1) = false :=
+  forged_binding_passes_own_claim_but_fails_genesis hashImpl runtime
+    (hashImpl runtime + 1) impl (by omega)
+
 /-- A benign implementation passes verification when the genesis manifest
     committed its hash. The commitment enters as a `BindingValid` hypothesis
     on the genesis record, so the example asserts the relation between the
