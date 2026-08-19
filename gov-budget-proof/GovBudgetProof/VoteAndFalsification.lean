@@ -4,8 +4,8 @@
   From Chapter 2 (§2.4–2.5) and Chapter 4 (§7.2):
   - Vote resolution is constructively decidable, and is determined by the
     tallies alone
-  - Threshold comparison is consistent across decision classes
-  - Falsification counts are non-negative and correct
+  - A ballot that clears the unanimity bar of the identity class clears the
+    lower bars too
   - Budget halving preserves b ≥ 1 when starting from b ≥ 1
   - The falsification parameters are *declared* to sit at the immutable tier
     of `GovBudgetProof.IdentityTiers`, and a governance step gated on that
@@ -78,11 +78,6 @@ theorem vote_outcome_computes (votes : List Vote) (d : DecisionClass) :
 theorem vote_resolution_total (votes : List Vote) (d : DecisionClass) :
     votePasses votes d ∨ ¬ votePasses votes d :=
   Decidable.em (votePasses votes d)
-
-/-- Consistency: equal vote lists produce the same outcome. -/
-theorem vote_threshold_consistent (v1 v2 : List Vote) (d : DecisionClass)
-    (h : v1 = v2) : votePasses v1 d ↔ votePasses v2 d := by
-  subst h; rfl
 
 /-- Determinism: the outcome is a function of the tallies alone. Two ballot
     lists with the same weighted sum and the same total weight resolve the
@@ -177,21 +172,10 @@ structure TrackedProposal where
 def falsificationCount (member : String) (proposals : List TrackedProposal) : Nat :=
   (proposals.filter λ p => p.memberId = member && isFalsification p.integrityScore).length
 
-/-- Falsification count is non-negative. -/
-theorem falsification_count_nonneg (member : String) (proposals : List TrackedProposal) :
-    0 ≤ falsificationCount member proposals :=
-  Nat.zero_le _
-
 /-- A member with no proposals has zero falsifications. -/
 theorem falsification_count_empty (member : String) :
     falsificationCount member [] = 0 := by
   simp [falsificationCount]
-
-/-- Every proposal is either a falsification or not. -/
-theorem falsification_or_not (integrityScore : Nat) :
-    (isFalsification integrityScore) ∨ ¬ (isFalsification integrityScore) := by
-  unfold isFalsification
-  apply Classical.em
 
 /-
   Budget Halving
