@@ -175,6 +175,16 @@ class TestLeanCoverageReporting:
         assert "verified by Python asserts" in output
         assert "No Lean proof is checked by this run" in output
 
+    def test_the_banner_names_what_did_the_passing(self):
+        """The banner is the line a reader quotes, so it carries the label too.
+
+        ``12/12 PASS`` under a bare "Formal Prediction Verification" is the
+        conflation #305 is about, and a footer 50 lines down does not undo it.
+        """
+        output = self._summary()
+        assert "Formal Prediction Tests (Python)" in output
+        assert "Formal Prediction Verification" not in output
+
     def test_tally_counts_the_map(self):
         """The tally agrees with LEAN_COVERAGE, status by status.
 
