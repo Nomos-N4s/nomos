@@ -191,7 +191,7 @@ The fixed benchmarks now show meaningful differentiation across 4 scenarios × 5
 | *All strategies produce identical results* | **Fixed.** See section 1.2 — strategies now diverge |
 | *4 scenarios insufficient for generality* | Acknowledged. More scenarios planned (partial observability, multi-agent, continuous control) |
 | *1,000 steps too short for drift/deadlock* | The deadlock maze triggers deadlock within ~10 steps by design. DriftLab uses a continuous drift rate — longer runs won't change the qualitative result |
-| *No variance/std=0 everywhere* | The scenarios are deterministic for reproducibility. Stochastic variants would add variance but reduce debuggability |
+| *No variance/std=0 everywhere* | The scenarios are deterministic for reproducibility. Stochastic variants would add variance but reduce debuggability. **Update (2026-08-19, #301):** half right. GridWorld was always seeded and always meant to vary; the benchmark harness stored the loop seed in the report metadata and never gave it to the scenario, so its twenty runs repeated one grid. Fixed — GridWorld now varies across seeds. The other three scenarios hold no RNG and are genuinely deterministic; they are now documented as such instead of being counted as twenty replicates |
 | *Formal predictions are unit tests* | The 12 predictions are **executable specifications** — they validate that the code matches the formal definitions in Chapters 2-4. They were never intended as behavioral predictions |
 
 **Verdict: Partially valid. The identical-results bug is fixed. More diverse scenarios and stochastic variants are genuine gaps.**
