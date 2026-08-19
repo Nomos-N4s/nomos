@@ -37,6 +37,8 @@ DECL_START = re.compile(
     r"(?:theorem|lemma|instance|def|abbrev|example|structure|inductive)\b"
 )
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
+BLOCK_COMMENT = re.compile(r"/-.*?-/", re.DOTALL)
+LINE_COMMENT = re.compile(r"--.*")
 LEAN_TIMEOUT_SECONDS = 600
 VOTE_DECLARATIONS = (
     "decidableVotePasses",
@@ -169,6 +171,43 @@ def test_headline_and_vote_declarations_depend_on_no_classical_axiom() -> None:
             f"its dependencies, which holds for any Prop and so claims nothing "
             f"about the model it names"
         )
+
+
+def _source_without_comments(path: Path) -> str:
+    """Return the file's text with comments blanked out, line numbers preserved."""
+
+    def blank(match: re.Match[str]) -> str:
+        return "".join(c if c.isspace() else " " for c in match.group(0))
+
+    return LINE_COMMENT.sub(blank, BLOCK_COMMENT.sub(blank, path.read_text(encoding="utf-8")))
+
+
+def test_no_proof_closes_by_native_decide() -> None:
+    """No proof in the corpus is closed by ``native_decide`` (issue #300).
+
+    On the pinned toolchain ``native_decide`` does not reduce in the kernel: it
+    asserts the compiled evaluation as a fresh opaque axiom per declaration,
+    named ``<theorem>._native.native_decide.ax_1_1``. That name contains no
+    ``Classical.``, so the axiom-base test above cannot see it -- a declaration
+    could rest on an unchecked compiler assertion and still pass there. Hence
+    this separate source check.
+
+    Comments are blanked out first, so prose naming the tactic -- including the
+    module note in ``IdentityGenesis.lean`` that tells future editors not to
+    reintroduce it -- does not trip the guard.
+    """
+    used = [
+        f"{path.relative_to(REPO_ROOT).as_posix()}:{number}"
+        for path in _lean_sources()
+        for number, line in enumerate(_source_without_comments(path).splitlines(), 1)
+        if "native_decide" in line
+    ]
+    assert not used, (
+        f"native_decide closes a proof at {used}: on the pinned toolchain it "
+        f"asserts the evaluation as an opaque axiom instead of checking it, so "
+        f"the declaration rests on the compiler rather than on the kernel. Use "
+        f"decide, or a term proof off the Prop sibling"
+    )
 
 
 def test_vote_passes_has_a_decidable_instance() -> None:
