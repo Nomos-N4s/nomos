@@ -28,8 +28,12 @@
      not deliver it —
      `chain_root_swap_invisible_for_two_valid_bindings` is the
      counterexample.
-  3. Determinism: chain roots are a function of the binding sequence —
-     equal sequences always yield equal roots.
+  3. Determinism, at the strength the model actually has: the chain root is
+     a function of the DIGEST sequence, not of the binding sequence. Equal
+     digest sequences give equal roots even where the bindings differ, which
+     is the same lossiness the tamper results are conditional on. "Equal
+     binding sequences give equal roots" is congruence — true of every
+     function on lists — and is deliberately not stated here.
 
   THE HASH IS UNINTERPRETED (issue #299). `hashImpl` is a section variable
   of type `String -> Nat`, not a definition, so every declaration inside
@@ -394,11 +398,60 @@ theorem chain_root_swap_invisible_for_two_valid_bindings (s t : String)
       simp only [bindingDigest, MIX]
       omega
 
-/-- Claim 3 (determinism): the chain root is a function of the binding
-    sequence — equal sequences give equal roots. -/
-theorem chain_root_deterministic (bs bs' : List ActionBinding) (h : bs = bs') :
+/-- Auxiliary: the fold over bindings is the fold over their digests, at every
+    accumulator. -/
+theorem foldl_mix_eq_foldl_over_digests (bs : List ActionBinding) :
+    ∀ acc : Nat,
+      bs.foldl (fun acc b => MIX * acc + bindingDigest hashImpl b) acc
+        = (bs.map (bindingDigest hashImpl)).foldl (fun acc d => MIX * acc + d) acc := by
+  induction bs with
+  | nil => intro acc; rfl
+  | cons b rest ih =>
+      intro acc
+      simp only [List.foldl_cons, List.map_cons]
+      exact ih (MIX * acc + bindingDigest hashImpl b)
+
+/-- Claim 3 (determinism), stated at the strength this model has: the chain
+    root factors through the per-binding digests. The root reads the digest
+    list and nothing else about the records — which is why every tamper and
+    ordering result in this file carries a hypothesis about digests rather
+    than about bindings, and why the digest collisions proved above are
+    collisions of the root too. -/
+theorem chain_root_reads_only_the_digests (bs : List ActionBinding) :
+    chainRoot hashImpl bs
+      = (bs.map (bindingDigest hashImpl)).foldl (fun acc d => MIX * acc + d) GENESIS_HASH := by
+  unfold chainRoot
+  exact foldl_mix_eq_foldl_over_digests hashImpl bs GENESIS_HASH
+
+/-- Determinism in the form a caller can use: two chains that agree digest by
+    digest have the same root.
+
+    This replaces `chain_root_deterministic`, which assumed `bs = bs'` and was
+    closed by `rw [h]` — congruence, true of every function on lists and so
+    saying nothing about chains, digests or hashes. The hypothesis here is
+    strictly weaker than list equality and is satisfied by chains that are not
+    equal: `chain_root_agrees_on_some_distinct_chains` exhibits a pair, for
+    every `hashImpl`. -/
+theorem chain_root_eq_of_digests_eq (bs bs' : List ActionBinding)
+    (hDigests : bs.map (bindingDigest hashImpl) = bs'.map (bindingDigest hashImpl)) :
     chainRoot hashImpl bs = chainRoot hashImpl bs' := by
-  rw [h]
+  rw [chain_root_reads_only_the_digests hashImpl bs,
+      chain_root_reads_only_the_digests hashImpl bs', hDigests]
+
+/-- The hypothesis of `chain_root_eq_of_digests_eq` is satisfiable by chains
+    that are NOT equal, so that theorem is not list equality wearing a
+    different name. Read the other way it is the negative half of claim 3:
+    equal roots do not mean equal chains, for any `hashImpl` whatsoever. -/
+theorem chain_root_agrees_on_some_distinct_chains (s : String) :
+    ∃ bs bs' : List ActionBinding,
+      bs ≠ bs' ∧ bs.map (bindingDigest hashImpl) = bs'.map (bindingDigest hashImpl) ∧
+        chainRoot hashImpl bs = chainRoot hashImpl bs' := by
+  rcases bindingDigest_collides_for_some_distinct_bindings hashImpl s with ⟨x, y, hne, hEq⟩
+  refine ⟨[x], [y], ?_, ?_, ?_⟩
+  · intro h
+    exact hne (by injection h)
+  · simp [hEq]
+  · exact chain_root_eq_of_digests_eq hashImpl [x] [y] (by simp [hEq])
 
 /-- Chain validity and the chain root, joined — before issue #299 the two
     identifier sets were disjoint and no theorem related them. Re-pointing
