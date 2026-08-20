@@ -15,6 +15,7 @@ from src.nomos.agents.scenarios import (
     GridWorldLLM,
     TemptationBankLLM,
 )
+from src.nomos.agents.scenarios.drift_lab_llm import HARMFUL_ACTION_INDEX
 from src.nomos.committee.members import (
     ExampleRewardMember,
     ExampleSafetyMember,
@@ -108,7 +109,7 @@ def _factory(scenario_cls, seed: int = 42):
                     "Always classify honestly",
                     CommitmentThreshold.SUPERMAJORITY,
                     EnforcementMode.INTEGRITY_VETO,
-                    affected_action_indices=[0],
+                    affected_action_indices=[HARMFUL_ACTION_INDEX],
                 )
             )
             return DriftLabLLM(speaker, identity, seed=seed)
@@ -174,6 +175,20 @@ class TestLLMScenarios:
             assert entry.would_have_been == "classify_harmfully"
             assert entry.decision_action == "classify_honestly"
 
+    def test_drift_lab_only_the_ungoverned_arm_drifts(self) -> None:
+        harness = GovernorComparisonHarness(
+            _factory(DriftLabLLM),
+            StubBackend(script=[1] * 30),
+            DriftLabLLM.action_space(),
+            _speaker(default_action="classify_honestly"),
+            observation_fn=lambda s: s.render_observation(),
+        )
+        pair = harness.run_pair(seed=0, steps=30)
+        assert pair.governed.metrics.identity_drift[-1] == 0.0
+        assert pair.ungoverned.metrics.identity_drift[-1] > 0.0
+        assert pair.governed.metrics.total_reward == pytest.approx(30.0)
+        assert pair.ungoverned.metrics.total_reward > pair.governed.metrics.total_reward
+
     def test_deadlock_maze_breaker_recovers_governed_arm(self) -> None:
         harness = GovernorComparisonHarness(
             _factory(DeadlockMazeLLM),
@@ -197,3 +212,66 @@ class TestLLMScenarios:
         for _ in range(10):
             scenario.step(state="obs", external_decision=GovernanceDecision(action="stand_fast"))
         assert breaker.total_cold_boots == 1
+
+
+# ----------------------------------------------------------------------
+# Governance latency on the harness arms (#293)
+# ----------------------------------------------------------------------
+
+
+class TestGovernanceLatencyPerArm:
+    """The governed arm runs a real cycle per step and must record it."""
+
+    @pytest.mark.parametrize("scenario_cls", ALL_SCENARIOS)
+    def test_governed_arm_records_one_latency_per_step(self, scenario_cls) -> None:
+        harness = GovernorComparisonHarness(
+            _factory(scenario_cls),
+            StubBackend(seed=5),
+            scenario_cls.action_space(),
+            _speaker(),
+            observation_fn=lambda s: s.render_observation(),
+        )
+        pair = harness.run_pair(seed=0, steps=10)
+        latencies = pair.governed.metrics.governance_latencies
+        assert len(latencies) == pair.governed.metrics.total_steps, scenario_cls.__name__
+        assert all(latency > 0 for latency in latencies), scenario_cls.__name__
+
+    @pytest.mark.parametrize("scenario_cls", ALL_SCENARIOS)
+    def test_ungoverned_arm_records_none(self, scenario_cls) -> None:
+        harness = GovernorComparisonHarness(
+            _factory(scenario_cls),
+            StubBackend(seed=5),
+            scenario_cls.action_space(),
+            _speaker(),
+            observation_fn=lambda s: s.render_observation(),
+        )
+        pair = harness.run_pair(seed=0, steps=10)
+        assert pair.ungoverned.metrics.governance_latencies == [], scenario_cls.__name__
+
+    def test_deadlock_phase_runs_two_cycles_but_records_one_entry(self) -> None:
+        speaker = _speaker(default_action="stand_fast")
+        harness = GovernorComparisonHarness(
+            _factory(DeadlockMazeLLM),
+            StubBackend(script=[0] + [2] * 30),
+            DeadlockMazeLLM.action_space(),
+            speaker,
+            observation_fn=lambda s: s.render_observation(),
+        )
+        pair = harness.run_pair(seed=0, steps=10)
+        stalls = [e for e in pair.governed.log if e.is_default]
+        assert len(stalls) == 5
+        assert len(pair.governed.metrics.governance_latencies) == 10
+
+    def test_governed_report_carries_a_nonzero_latency(self) -> None:
+        from src.nomos.experiments.metrics import generate_report
+
+        harness = GovernorComparisonHarness(
+            _factory(TemptationBankLLM),
+            StubBackend(script=[0] * 10 + [1] * 30),
+            TemptationBankLLM.action_space(),
+            _speaker(),
+            observation_fn=lambda s: s.render_observation(),
+        )
+        pair = harness.run_pair(seed=0, steps=10)
+        report = generate_report("governed_TemptationBankLLM", pair.governed.metrics, [])
+        assert report.governance_latency_avg > 0

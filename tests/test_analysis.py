@@ -420,12 +420,25 @@ class TestComputeEffectSizes:
                 reports.append(r)
         aggregates = aggregate_reports(reports)
         es = compute_effect_sizes(aggregates, reports)
-        assert len(es) == 4
+        assert {e["governance_vs"] for e in es} == {"random", "monolithic_rl"}
         for entry in es:
             assert 0.0 <= entry["p_value_raw"] <= 1.0
             assert entry["p_value_corrected"] >= entry["p_value_raw"]
             assert entry["p_value_holm"] >= entry["p_value_raw"]
             assert entry["p_value_holm"] <= entry["p_value_corrected"]
+
+    def test_baseline_without_runs_yields_no_row(self):
+        reports = []
+        for strategy in ["governance", "random"]:
+            for i in range(5):
+                r = _make_report(f"{strategy}_n", 50.0 + i)
+                r.metadata["strategy"] = strategy
+                r.metadata["scenario"] = "GridWorld"
+                reports.append(r)
+        aggregates = aggregate_reports(reports)
+        es = compute_effect_sizes(aggregates, reports)
+        assert [e["governance_vs"] for e in es] == ["random"]
+        assert all(e["n_baseline"] > 0 for e in es)
 
     def test_empty_reports(self):
         es = compute_effect_sizes([], [])
@@ -511,3 +524,58 @@ class TestRunAnalysis:
             result = run_analysis([], output_dir=tmp)
             assert result["aggregates"] == []
             assert result["effect_sizes"] == []
+
+
+class TestGovernanceLatencyExport:
+    """The measured latency must survive the exporters (#293)."""
+
+    def _reports(self, *latencies):
+        reports = []
+        for i, latency in enumerate(latencies):
+            r = _make_report(f"r{i}", 50.0)
+            r.governance_latency_avg = latency
+            reports.append(r)
+        return reports
+
+    def test_aggregate_means_the_per_seed_latencies(self):
+        aggregates = aggregate_reports(self._reports(0.004, 0.006))
+        assert aggregates[0].mean_governance_latency == 0.005
+
+    def test_baseline_reports_aggregate_to_zero(self):
+        aggregates = aggregate_reports(self._reports(0.0, 0.0))
+        assert aggregates[0].mean_governance_latency == 0.0
+
+    def test_summary_csv_carries_the_latency_column(self):
+        import csv
+
+        aggregates = aggregate_reports(self._reports(0.000025))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "summary.csv")
+            export_summary_csv(aggregates, path)
+            with open(path, newline="") as f:
+                header, row = list(csv.reader(f))
+
+        assert header[-1] == "mean_governance_latency_seconds"
+        assert float(row[-1]) == 0.000025
+
+    def test_results_json_carries_the_latency_field(self):
+        import json
+
+        aggregates = aggregate_reports(self._reports(0.000025))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "results.json")
+            export_results_json([], aggregates, [], [], path)
+            with open(path) as f:
+                data = json.load(f)
+
+        assert data["aggregates"][0]["mean_governance_latency_seconds"] == 0.000025
+
+    def test_run_analysis_publishes_a_nonzero_latency(self):
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_analysis(self._reports(0.004, 0.006), output_dir=tmp)
+            with open(result["results_json"]) as f:
+                data = json.load(f)
+
+        assert data["aggregates"][0]["mean_governance_latency_seconds"] == 0.005

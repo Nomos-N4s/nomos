@@ -17,8 +17,10 @@ Real-world analogy:
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from ..models import GovernanceDecision, Proposal
 from ..speaker import SpeakerStateMachine
@@ -56,7 +58,11 @@ class ExperimentMetrics:
         veto_count: Total number of vetoes applied.
         falsification_count: Number of formal-predicate falsifications.
         identity_drift: Per-step cosine distance from the identity vector.
-        governance_latencies: Per-step governance cycle duration (seconds).
+        governance_latencies: Time spent inside the governance cycles a
+            step ran (seconds), excluding proposal generation, reward,
+            and environment transition. One entry per step that ran at
+            least one cycle, so a run whose decisions all come from an
+            external baseline records none.
     """
 
     total_steps: int = 0
@@ -88,10 +94,27 @@ class ExperimentScenario(ABC):
             that runs the governance cycle.
     """
 
+    #: Action names a fixed rule-based filter forbids in this scenario.
+    #:
+    #: This is the blocklist the benchmark runner hands to
+    #: :class:`~..benchmarks.baselines.StaticMasking`, the ablation arm that
+    #: asks whether a fixed rule can match the Parliament's adaptive vetoing.
+    #: Only actions whose harm is a property of the *action* belong here. An
+    #: action that is harmful in some world states and benign in others cannot
+    #: be expressed by a name-level filter, so it must not be listed.
+    #:
+    #: An empty blocklist therefore means the static-masking ablation is not
+    #: expressible for this scenario. It is not a default to be left unset:
+    #: with nothing blocked ``StaticMasking`` degenerates into
+    #: :class:`~..benchmarks.baselines.MonolithicRL`, so the runner skips the
+    #: arm instead of publishing the same numbers under a second name.
+    STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
+
     def __init__(self, speaker: SpeakerStateMachine):
         self.speaker = speaker
         self.metrics = ExperimentMetrics()
         self._history: list[StepResult] = []
+        self._latency_window_open: bool = False
 
     @abstractmethod
     def reset(self):
@@ -191,6 +214,40 @@ class ExperimentScenario(ABC):
     # Public API — do not override
     # ------------------------------------------------------------------
 
+    @contextmanager
+    def governance_latency_window(self) -> Iterator[None]:
+        """Record the governance-cycle time spent inside the block.
+
+        The figure is read off the Speaker's own counters rather than
+        timed around the block, so it covers the governance cycles
+        alone and not the surrounding scenario work. One entry is
+        appended to ``metrics.governance_latencies`` if at least one
+        cycle ran inside the block, and none otherwise.
+
+        Re-entrant: a nested window is a no-op, so a caller that runs
+        the cycle itself and hands the result to :meth:`step` as
+        ``external_decision`` opens one window around both and still
+        gets exactly one entry for the step.
+
+        Yields:
+            ``None``. The entry, if any, is appended on exit.
+        """
+        if self._latency_window_open:
+            yield
+            return
+
+        cycles_before = self.speaker.cycle_count
+        seconds_before = self.speaker.cycle_seconds_total
+        self._latency_window_open = True
+        try:
+            yield
+        finally:
+            self._latency_window_open = False
+            if self.speaker.cycle_count > cycles_before:
+                self.metrics.governance_latencies.append(
+                    self.speaker.cycle_seconds_total - seconds_before
+                )
+
     def step(
         self,
         state: Any,
@@ -203,6 +260,12 @@ class ExperimentScenario(ABC):
         Centralized bookkeeping: appends to history, updates metrics.
         Delegates to ``_run_step()`` for scenario-specific logic.
 
+        The step runs inside :meth:`governance_latency_window`, so a
+        step whose cycle runs in ``_run_step()`` records its latency
+        here and a step that runs no cycle at all (``external_decision``
+        supplied by a baseline) records none. A caller that runs the
+        cycle itself opens the window earlier and is credited there.
+
         Args:
             state: The current world state.
             decision_class: Classification for the governance cycle
@@ -213,11 +276,12 @@ class ExperimentScenario(ABC):
         Returns:
             A :class:`StepResult` with the decision, next state, and reward.
         """
-        result = self._run_step(
-            state,
-            decision_class=decision_class,
-            external_decision=external_decision,
-        )
+        with self.governance_latency_window():
+            result = self._run_step(
+                state,
+                decision_class=decision_class,
+                external_decision=external_decision,
+            )
 
         self._history.append(result)
         self.metrics.total_steps += 1

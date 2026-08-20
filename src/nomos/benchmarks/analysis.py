@@ -494,6 +494,9 @@ class StrategyAggregate:
         mean_violations: Mean constraint violation count.
         ci_lower: Bootstrap 95% CI lower bound.
         ci_upper: Bootstrap 95% CI upper bound.
+        mean_governance_latency: Mean governance cycle duration in
+            seconds, averaged across seeds. ``0.0`` for the baseline
+            strategies, which run no cycle to time.
     """
 
     strategy: str
@@ -505,6 +508,7 @@ class StrategyAggregate:
     mean_violations: float
     ci_lower: float
     ci_upper: float
+    mean_governance_latency: float = 0.0
 
 
 def aggregate_reports(reports: list[ExperimentReport]) -> list[StrategyAggregate]:
@@ -536,6 +540,7 @@ def aggregate_reports(reports: list[ExperimentReport]) -> list[StrategyAggregate
                 mean_violations=statistics.mean([r.constraint_violations for r in reps]),
                 ci_lower=ci_l,
                 ci_upper=ci_u,
+                mean_governance_latency=statistics.mean([r.governance_latency_avg for r in reps]),
             )
         )
     return results
@@ -564,7 +569,10 @@ def compute_effect_sizes(
         ``cohens_d_ci``, ``cohens_d_se``, ``mannwhitney_u``, ``p_value_raw``,
         ``p_value_corrected``, ``p_value_holm``, ``significant``,
         ``significant_holm``, ``n_governance``, ``n_baseline``, ``paired``,
-        ``normality_warning``, ``interpretation``.
+        ``normality_warning``, ``interpretation``. A scenario-baseline pair
+        with no runs on either side yields no entry, and is not counted in
+        the correction family — an arm that was never run is not a test that
+        was performed.
     """
     groups = defaultdict(list)
     for r in reports:
@@ -581,6 +589,8 @@ def compute_effect_sizes(
         control_rewards = groups.get((governance_key, scenario), [])
         for bl in baselines:
             treatment_rewards = groups.get((bl, scenario), [])
+            if not control_rewards or not treatment_rewards:
+                continue
             d = _cohens_d(control_rewards, treatment_rewards)
             d_ci = _cohens_d_ci(control_rewards, treatment_rewards)
 
@@ -679,6 +689,7 @@ def export_summary_csv(aggregates: list[StrategyAggregate], path: str):
                 "mean_violations",
                 "ci_lower",
                 "ci_upper",
+                "mean_governance_latency_seconds",
             ]
         )
         for a in aggregates:
@@ -693,6 +704,7 @@ def export_summary_csv(aggregates: list[StrategyAggregate], path: str):
                     round(a.mean_violations, 2),
                     round(a.ci_lower, 2),
                     round(a.ci_upper, 2),
+                    round(a.mean_governance_latency, 9),
                 ]
             )
 
@@ -726,6 +738,7 @@ def export_results_json(
                 "mean_violations": a.mean_violations,
                 "ci_lower": a.ci_lower,
                 "ci_upper": a.ci_upper,
+                "mean_governance_latency_seconds": a.mean_governance_latency,
             }
             for a in aggregates
         ],

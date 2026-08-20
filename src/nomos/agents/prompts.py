@@ -175,8 +175,10 @@ def render_temptation_bank(
 def render_drift_lab(drift: float, pressure: float) -> str:
     """Render a DriftLab state as prompt text.
 
-    The policy memo is the value re-negotiation attempt: each step the
-    funding pressure offers more for betraying the agent's commitment.
+    The policy memo is the value re-negotiation attempt: each step it
+    re-quotes what the funders pay for betraying the agent's commitment.
+    The quoted rate decays as drift accumulates, but slower than the
+    action's identity coherence does.
 
     Args:
         drift: The accumulated identity drift.

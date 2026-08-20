@@ -1,7 +1,7 @@
 """
 Tamper-evident, append-only audit log (hash-chained JSONL) — #164.
 
-The operational face of the TEE Merkle batch verification (Appendix A §8):
+The operational face of the TEE Merkle batch verification (Appendix A §11):
 every governance event lands in an append-only JSONL store whose records are
 linked by content hashes, so any mutation of history is detected at the exact
 broken record.
@@ -20,7 +20,7 @@ Design goals (matching ``#164``):
   hash or the next record's ``prev_hash`` link.
 - **Merkle anchoring (CWE-345):** :meth:`AuditLog.batch_root` folds every
   record hash into a single Merkle root via the TEE module's ``merkle_root``
-  (Appendix A §8). That root is additionally persisted in a **sidecar anchor
+  (Appendix A §11). That root is additionally persisted in a **sidecar anchor
   file** (``<path>.root``) *outside* the JSONL store, updated atomically on
   every append. ``verify()`` compares the on-disk chain's root against the
   anchor — a writer who rewrites every record and rehashes the whole chain
@@ -30,6 +30,16 @@ Design goals (matching ``#164``):
   implementation of that seam. If the process crashes between the JSONL
   write and the anchor update, ``verify()`` reports a root mismatch —
   fail-loud by design, no silent self-healing.
+- **Re-anchoring across a Merkle change (migration):** the anchor payload
+  records the generation of ``merkle_root`` that produced it
+  (:data:`ANCHOR_ALGORITHM`). Generation 2 domain-separates leaves from
+  internal nodes, so the same untouched chain folds to a different root than
+  generation 1 did: **a log carried across that version boundary must be
+  re-anchored before ``verify()`` is meaningful.** Either append one record —
+  which rewrites the sidecar for the whole chain — or regenerate the sidecar
+  from :meth:`AuditLog.batch_root`. Until then ``verify()`` fails, naming the
+  anchor as stale; that is the correct fail-loud answer, because an unrefreshed
+  anchor no longer attests anything, but it is *not* evidence of tampering.
 - **Deterministic:** canonical JSON (sorted keys, fixed separators, no
   random salts) plus an injectable clock (:meth:`AuditLog.__init__`'s
   ``now_fn``) make identical runs byte-identical — auditable reproducibility.
@@ -83,12 +93,22 @@ from typing import Any
 from nomos.tee.batch import merkle_root
 
 __all__ = [
+    "ANCHOR_ALGORITHM",
     "AuditLog",
     "AuditRecord",
     "AuditVerification",
     "ENTITY_TYPES",
     "ZERO_HASH",
 ]
+
+ANCHOR_ALGORITHM = 2
+"""Merkle algorithm generation stamped into the sidecar anchor payload.
+
+Generation 1 hashed leaves and internal nodes in a single space. Generation 2
+domain-separates them (see :mod:`nomos.tee.batch`), so the same chain folds to
+a different root. An anchor carrying no ``alg`` field predates the stamp and is
+read as generation 1.
+"""
 
 ZERO_HASH = "0" * 64
 """The ``prev_hash`` of the first record (no predecessor)."""
@@ -346,22 +366,42 @@ class AuditLog:
         """Persist the trusted Merkle root of the whole chain to the sidecar.
 
         Atomic (temp file + rename), so a reader never sees a partial anchor.
+        The payload records the Merkle algorithm generation
+        (:data:`ANCHOR_ALGORITHM`) that produced the root, so a reader can tell
+        an anchor written under an earlier generation from a forged one.
         """
         payload = _canonical_json(
-            {"root": merkle_root([r.hash.encode("utf-8") for r in self._entries])}
+            {
+                "alg": ANCHOR_ALGORITHM,
+                "root": merkle_root([r.hash.encode("utf-8") for r in self._entries]),
+            }
         )
         tmp = self._anchor_path.with_name(self._anchor_path.name + ".tmp")
         tmp.write_text(payload, encoding="utf-8")
         os.replace(tmp, self._anchor_path)
 
-    def _read_anchor(self) -> str | None:
-        """The trusted root from the sidecar, or ``None`` if missing/malformed."""
+    def _read_anchor(self) -> tuple[str, int] | None:
+        """The trusted root and the Merkle generation that produced it.
+
+        Returns:
+            ``(root, algorithm)``, or ``None`` if the sidecar is missing or
+            malformed. Only the *absence* of the ``alg`` field predates the
+            stamp and is read as generation 1; a field that is present but is
+            not a positive integer is malformed, not legacy.
+        """
         try:
             raw = json.loads(self._anchor_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError):
             return None
-        root = raw.get("root") if isinstance(raw, dict) else None
-        return root if isinstance(root, str) and len(root) == 64 else None
+        if not isinstance(raw, dict):
+            return None
+        root = raw.get("root")
+        if not isinstance(root, str) or len(root) != 64:
+            return None
+        algorithm = raw.get("alg", 1)
+        if isinstance(algorithm, bool) or not isinstance(algorithm, int) or algorithm < 1:
+            return None
+        return root, algorithm
 
     def records(self) -> tuple[AuditRecord, ...]:
         """The full chain: records loaded from disk plus this instance's appends."""
@@ -390,7 +430,13 @@ class AuditLog:
         6. The Merkle root of the on-disk chain must equal the trusted root
            in the sidecar anchor (``<path>.root``), which lives *outside* the
            JSONL file. A writer that rewrites every record and rehashes the
-           whole chain passes rules 1–5, but fails here — CWE-345.
+           whole chain passes rules 1–5, but fails here — CWE-345. A mismatch
+           does not name a culprit: an out-of-band rewrite, a crash between
+           the JSONL write and the anchor update, and an anchor written under
+           an earlier Merkle generation all land here. An anchor whose ``alg``
+           is not :data:`ANCHOR_ALGORITHM` is reported as stale rather than as
+           a rewrite, and is repaired by re-anchoring (see the module
+           docstring), not by inspecting the chain.
 
         Returns:
             :class:`AuditVerification` with the exact broken index.
@@ -443,22 +489,32 @@ class AuditLog:
                 len(lines),
                 f"audit log truncated: {len(lines)} records on disk, {len(self._entries)} expected",
             )
-        trusted_root = self._read_anchor()
-        if trusted_root is None:
+        anchor = self._read_anchor()
+        if anchor is None:
             return AuditVerification(
                 False, 0, "anchor file missing or malformed (deleted out of band)"
             )
+        trusted_root, anchor_algorithm = anchor
         disk_root = merkle_root([h.encode("utf-8") for h in disk_hashes])
         if disk_root != trusted_root:
+            if anchor_algorithm != ANCHOR_ALGORITHM:
+                return AuditVerification(
+                    False,
+                    None,
+                    f"Merkle root mismatch with a stale anchor: written under Merkle "
+                    f"generation {anchor_algorithm}, current is {ANCHOR_ALGORITHM}; "
+                    f"re-anchor the log before verifying",
+                )
             return AuditVerification(
                 False,
                 None,
-                f"Merkle root mismatch with anchor (chain rewritten and rehashed): {disk_root[:16]}... != {trusted_root[:16]}...",
+                f"Merkle root mismatch with anchor (chain rewritten and rehashed, or the "
+                f"anchor was never advanced): {disk_root[:16]}... != {trusted_root[:16]}...",
             )
         return AuditVerification(True, None, f"chain intact: {len(lines)} records verified")
 
     def batch_root(self) -> str:
-        """Merkle root over every record hash (TEE batch verification, Appendix A §8).
+        """Merkle root over every record hash (TEE batch verification, Appendix A §11).
 
         Anchors the entire log in one value; deterministic for a given chain.
         """

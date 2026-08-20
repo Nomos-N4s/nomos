@@ -1,3 +1,5 @@
+import pytest
+
 from src.nomos.benchmarks.baselines import (
     MonolithicRL,
     RandomBaseline,
@@ -88,14 +90,13 @@ class TestStaticMasking:
         d = bl.decide(None, proposals)
         assert d.action == "safe"
 
-    def test_no_blocked_all_allowed(self):
-        bl = StaticMasking()
-        proposals = [
-            make_proposal("a", "x", expected_reward=1.0),
-            make_proposal("b", "y", expected_reward=10.0),
-        ]
-        d = bl.decide(None, proposals)
-        assert d.action == "y"
+    def test_empty_blocklist_rejected(self):
+        with pytest.raises(ValueError, match="non-empty blocklist"):
+            StaticMasking(blocked_actions=set())
+
+    def test_omitted_blocklist_rejected(self):
+        with pytest.raises(ValueError, match="non-empty blocklist"):
+            StaticMasking()
 
     def test_all_blocked_default(self):
         bl = StaticMasking(blocked_actions={"a", "b"})
@@ -108,12 +109,12 @@ class TestStaticMasking:
         assert d.action is None
 
     def test_empty_proposals_default(self):
-        bl = StaticMasking()
+        bl = StaticMasking(blocked_actions={"harmful"})
         d = bl.decide(None, [])
         assert d.is_default
 
     def test_name(self):
-        assert StaticMasking().name == "static_masking"
+        assert StaticMasking(blocked_actions={"harmful"}).name == "static_masking"
 
 
 class TestVetoOnly:
@@ -168,7 +169,7 @@ class TestAllBaselines:
         baselines = [
             MonolithicRL(),
             RandomBaseline(seed=0),
-            StaticMasking(),
+            StaticMasking(blocked_actions={"harmful"}),
             VetoOnly(),
         ]
         proposals = [make_proposal("a", "action", expected_reward=1.0, risk=0.1)]

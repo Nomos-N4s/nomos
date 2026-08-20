@@ -32,7 +32,12 @@ class ExperimentReport:
         veto_count: Total vetoes applied across all steps.
         final_identity_drift: Cosine distance of identity vector from
             its genesis state at the final step.
-        governance_latency_avg: Mean governance cycle duration (seconds).
+        governance_latency_avg: Mean per-step governance cycle duration
+            (seconds), covering the Speaker's cycle only — not proposal
+            generation or the environment transition. ``0.0`` means no
+            cycle ran, which is the honest reading for the baseline
+            strategies: they decide externally and have no governance
+            layer to time.
         metadata: Arbitrary key-value data (e.g. seed, strategy args).
     """
 

@@ -108,6 +108,53 @@ class TestContractRegistry:
         reg.tick_cycle()
         assert reg._cycle == 1
 
+    def test_tick_cycle_activates_contract_when_timelock_elapses(self):
+        reg = ContractRegistry()
+        c = UlyssesContract(
+            contract_id="c1", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=3,
+        )
+        c.enact()
+        reg.add(c)
+        for _ in range(2):
+            reg.tick_cycle()
+            assert c.state == ContractState.ENACTED
+            assert enforce_timelock(c, reg._cycle).compliant
+        reg.tick_cycle()
+        assert c.state == ContractState.ACTIVE
+        assert not enforce_timelock(c, reg._cycle).compliant
+        assert c.timelock_blocks == 3
+
+    def test_add_stamps_the_registry_cycle_as_proposal_cycle(self):
+        reg = ContractRegistry()
+        for _ in range(20):
+            reg.tick_cycle()
+        c = UlyssesContract(
+            contract_id="c1", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=5,
+        )
+        c.enact()
+        reg.add(c)
+        assert c.created_at_cycle == 20
+        assert c.unlock_at_cycle == 25
+        for _ in range(4):
+            reg.tick_cycle()
+            assert c.state == ContractState.ENACTED
+        reg.tick_cycle()
+        assert c.state == ContractState.ACTIVE
+
+    def test_add_honours_an_explicit_proposal_cycle(self):
+        reg = ContractRegistry()
+        for _ in range(20):
+            reg.tick_cycle()
+        c = UlyssesContract(
+            contract_id="c1", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=5,
+        )
+        reg.add(c, at_cycle=18)
+        assert c.created_at_cycle == 18
+        assert c.unlock_at_cycle == 23
+
     def test_revoked_not_active(self):
         reg = ContractRegistry()
         c = UlyssesContract(contract_id="c1", restricted_indices={0})
@@ -165,6 +212,60 @@ class TestEnforcement:
         )
         result = enforce_timelock(contract, 150)
         assert result.compliant is False
+
+    def test_timelock_anchored_to_creation_cycle(self):
+        contract = UlyssesContract(
+            contract_id="t", restricted_indices={0}, timelock_blocks=10,
+            created_at_cycle=100,
+        )
+        contract.enact()
+        assert contract.unlock_at_cycle == 110
+        assert enforce_timelock(contract, 109).compliant is True
+        assert enforce_timelock(contract, 110).compliant is False
+
+    def test_elapsed_timelock_distinguishable_from_no_timelock(self):
+        never_locked = UlyssesContract(contract_id="never", restricted_indices={0})
+        never_locked.enact()
+        elapsed = UlyssesContract(
+            contract_id="elapsed", restricted_indices={0}, timelock_blocks=10,
+        )
+        elapsed.enact()
+        for _ in range(10):
+            elapsed.tick()
+        never_result = enforce_timelock(never_locked, 10)
+        elapsed_result = enforce_timelock(elapsed, 10)
+        assert never_result.compliant is True
+        assert never_result.reason == "No timelock"
+        assert elapsed_result.compliant is False
+        assert "expired" in elapsed_result.reason
+        assert elapsed.timelock_blocks == 10
+
+    def test_stacked_enforcement_surfaces_elapsed_timelock(self):
+        contract = UlyssesContract(
+            contract_id="t", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=10,
+        )
+        contract.enact()
+        monitor = DistributedMonitor("m1", lambda i, ctx: True)
+        for _ in range(10):
+            contract.tick()
+        held = stacked_enforcement(contract, 0.5, [monitor], 0, None, 9)
+        assert held.compliant is True
+        elapsed = stacked_enforcement(contract, 0.5, [monitor], 0, None, 10)
+        assert elapsed.compliant is False
+        assert "expired" in elapsed.reason
+
+    def test_procedural_inertia_short_circuits_ahead_of_timelock(self):
+        contract = UlyssesContract(
+            contract_id="t", restricted_indices={0},
+            enforcement_mode="timelock", timelock_blocks=10,
+        )
+        contract.enact()
+        monitor = DistributedMonitor("m1", lambda i, ctx: True)
+        result = stacked_enforcement(contract, 1.0, [monitor], 0, None, 5)
+        assert result.compliant is False
+        assert result.reason == "Revocation threshold met"
+        assert enforce_timelock(contract, 5).compliant is True
 
     def test_stacked_enforcement_all_pass(self):
         contract = UlyssesContract(contract_id="t", restricted_indices={0})

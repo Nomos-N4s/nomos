@@ -8,6 +8,190 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [1.2.1](https://github.com/Nomos-N4s/nomos/compare/v1.2.0...v1.2.1) (2026-08-19)
+
+
+### Documentation
+
+* **book:** drop a check count that had already gone stale ([c40a01b](https://github.com/Nomos-N4s/nomos/commit/c40a01b498e9c3a9f7bc0d1a09312e2b32866e42))
+* cite a tracked file as the no-dependency evidence ([418b34a](https://github.com/Nomos-N4s/nomos/commit/418b34a0f87fe79b3445e07ac7a69bbb5b6ba71b))
+* say what the Lean corpus proves, and what it does not reach ([cd864ff](https://github.com/Nomos-N4s/nomos/commit/cd864ff7418dd07ae3896375a9cda8e93eeb1dd6))
+
+## [1.2.0](https://github.com/Nomos-N4s/nomos/compare/v1.1.0...v1.2.0) (2026-08-19)
+
+
+### Features
+
+* **lean:** count monitors and key holders in the isolation buffer ([7b2407c](https://github.com/Nomos-N4s/nomos/commit/7b2407ca72c234102e6590986718d5e33a5845e4))
+* **lean:** prove what the falsification counter actually counts ([bdb5170](https://github.com/Nomos-N4s/nomos/commit/bdb51709d78feee7326477ab18f659da9d86db57))
+* **lean:** state the genesis bar with the genesis constant ([f530734](https://github.com/Nomos-N4s/nomos/commit/f530734e757da521861fc1568fe617f6bf50ecbb))
+
+
+### Bug Fixes
+
+* **lean:** anchor TEE binding verification to the genesis commitment ([c78661d](https://github.com/Nomos-N4s/nomos/commit/c78661d24d69ecbc485d71db2424d06c98995373))
+* **lean:** prove tee_accepts_three off its Prop sibling ([366461f](https://github.com/Nomos-N4s/nomos/commit/366461f574e22b57874f229cda70e0b94ec0d6e0))
+* **lean:** prove tee_rejects_duplicate_alone off its Prop sibling ([c07a50f](https://github.com/Nomos-N4s/nomos/commit/c07a50f7f5fb0757d1e6c69ca7cdb5ebf774c99d))
+* **lean:** prove tee_rejects_two off its Prop sibling ([54d9ba9](https://github.com/Nomos-N4s/nomos/commit/54d9ba9c585845fac4f5ae5ea1fedac46612657f))
+* **lean:** prove the genesis TEE theorems without native_decide axioms ([42fa39d](https://github.com/Nomos-N4s/nomos/commit/42fa39d1d0a5fad67cff9bfcde9d6349b7305488))
+* **lean:** replace the domain-free theorems with statements that constrain the model ([7206a5b](https://github.com/Nomos-N4s/nomos/commit/7206a5b2cd3fddba5b2e44e43a15f4a0e5e7c303))
+* **test:** scan Lean source instead of regexing out its comments ([b2b0643](https://github.com/Nomos-N4s/nomos/commit/b2b0643c0c13910589521cae30a1667b4f4d5a21))
+
+
+### Documentation
+
+* **book:** correct the proof-module count after Basic.lean removal ([0f10432](https://github.com/Nomos-N4s/nomos/commit/0f10432b4a1390c6d88f9dfb187c9a4bca1f5c2d))
+* **book:** record that Basic.lean was deleted, not documented ([810411b](https://github.com/Nomos-N4s/nomos/commit/810411b80a593f9b6058a908720633d3e9ee7ab4))
+* **book:** scope the TEE inventory row to what the signature carries ([1b1109f](https://github.com/Nomos-N4s/nomos/commit/1b1109fdd979d4132e14eba6c8d63dd64913c67d))
+* correct the Lean module inventories after issue [#298](https://github.com/Nomos-N4s/nomos/issues/298) ([8b25df6](https://github.com/Nomos-N4s/nomos/commit/8b25df6e809266c237250407308777778341dd48))
+* **lean:** name the checks that enforce the genesis axiom discipline ([bec5d0a](https://github.com/Nomos-N4s/nomos/commit/bec5d0adbab9cd6f609e2ac14bcd92deda3d2a6b))
+* **lean:** name the genesis-hash provenance as an assumption ([9f5e8f2](https://github.com/Nomos-N4s/nomos/commit/9f5e8f2a247ceb8a60beedefad90e371366997b3))
+* **lean:** name the real source of quorumCount_bounded_by_five's propext ([084a94c](https://github.com/Nomos-N4s/nomos/commit/084a94c4eebe67d3cd560f770a243416b52d6b71))
+* **lean:** name the three limits of the new buffer model ([bb55fb7](https://github.com/Nomos-N4s/nomos/commit/bb55fb70428328e343e84c6cfcb23c7fa2294ef1))
+* **lean:** record the genesis file's axiom discipline in its header ([754d66d](https://github.com/Nomos-N4s/nomos/commit/754d66d406b8a9e5b7dfa949af82b6ba970ee2c3))
+* **lean:** say the buffer gates count identities, not signatures ([3aa6c8e](https://github.com/Nomos-N4s/nomos/commit/3aa6c8e819aeb669d2a02f2205f76c50501041d4))
+* **lean:** say which manifest each TEE theorem is about ([115b903](https://github.com/Nomos-N4s/nomos/commit/115b903d888994cde3405876be071613470a671c))
+* **lean:** scope the buffer's base-ontology claim to extendFromBuffer ([e68aeaf](https://github.com/Nomos-N4s/nomos/commit/e68aeaf594b6bdeaaf632feff3e3b12644ed6e45))
+* **test:** attribute the example-block native_decide uses to [#299](https://github.com/Nomos-N4s/nomos/issues/299) ([340b051](https://github.com/Nomos-N4s/nomos/commit/340b051a1b1e25f23a7a2d4d4313fde61afb14d8))
+* **test:** say why both native-decision guards are needed ([d245ab5](https://github.com/Nomos-N4s/nomos/commit/d245ab5d342becb474a656e0596b18159f20f4d5))
+
+## [1.1.0](https://github.com/Nomos-N4s/nomos/compare/v1.0.0...v1.1.0) (2026-08-19)
+
+
+### Features
+
+* **lean:** add the MIX multiplier and the per-binding digest ([4792837](https://github.com/Nomos-N4s/nomos/commit/4792837e97026ff847a2a5ad86688c4a00e8b633))
+* **lean:** decide the tier permission gate in the falsification module ([97e9f6e](https://github.com/Nomos-N4s/nomos/commit/97e9f6e9be573e16900af1c3e230fce81340c77f))
+* **lean:** exhibit an invalid chain sharing a root under every hash ([1d09e58](https://github.com/Nomos-N4s/nomos/commit/1d09e58358f1a9181d8b2642371d3f1f429c7b47))
+* **lean:** gate falsification parameter edits on the tier model ([82123b9](https://github.com/Nomos-N4s/nomos/commit/82123b97673052488aa739f4a252a15ee1c647b6))
+* **lean:** model the falsification parameters as a governed block ([2441b3d](https://github.com/Nomos-N4s/nomos/commit/2441b3d3483b7ed9ceea274b25731ed414d98cd4))
+* **lean:** pin where the digest packing is still injective ([690546f](https://github.com/Nomos-N4s/nomos/commit/690546fa30e1ce5675d0114db37df2d83f93f0da))
+* **lean:** prove chainRoot order sensitivity ([7b5292a](https://github.com/Nomos-N4s/nomos/commit/7b5292abf12499e5be2f31f301fca12b529b65bc))
+* **lean:** prove falsification params unchanged at the immutable tier ([b0b52d9](https://github.com/Nomos-N4s/nomos/commit/b0b52d9208ff1cfbcd4b5a7cdea40bab7fa5245f))
+* **lean:** prove the binding digest collides for distinct records ([fd842dd](https://github.com/Nomos-N4s/nomos/commit/fd842dd378aa54b8d213a61b7e0e1e70e5c176ab))
+* **lean:** prove the binding digest separates each record field ([5eed2db](https://github.com/Nomos-N4s/nomos/commit/5eed2db57f73b6a1eff78cc0fe2080753865c474))
+* **lean:** read the falsification bar off a parameter block ([1296d4a](https://github.com/Nomos-N4s/nomos/commit/1296d4a6d176d59aadb904fa5a31d715a4b45709))
+* **lean:** refute the general invalid-chain root claim ([ca946f7](https://github.com/Nomos-N4s/nomos/commit/ca946f7d0b0f4ed0b4f6924fb5b976be31322bef))
+* **lean:** relate IsValidChain to chainRoot via link forgery ([940dd42](https://github.com/Nomos-N4s/nomos/commit/940dd42aba32749c173269798639012ee76a5973))
+* **lean:** show the root cannot separate two self-consistent bindings ([b61ad9c](https://github.com/Nomos-N4s/nomos/commit/b61ad9cb4e22e7297ae60d319293e4fff376b365))
+* **lean:** tie the invariance to the declared parameter tier ([e759c9d](https://github.com/Nomos-N4s/nomos/commit/e759c9de4c9a4565afafe944659c3dde6014921e))
+
+
+### Bug Fixes
+
+* **lean:** commit bindingHash 13 for the tampered_impl example ([f37781f](https://github.com/Nomos-N4s/nomos/commit/f37781f4e98bd69d7af6a6fbc83d0bca56b3b3e7))
+* **lean:** make the identity hash chain a real commitment ([e267152](https://github.com/Nomos-N4s/nomos/commit/e267152abf96215326f67224ee2103cee6ecf997))
+* **lean:** prove falsification-parameter invariance against the tier model ([3c498f4](https://github.com/Nomos-N4s/nomos/commit/3c498f40e06e0de7231c463a7ede1b4f23ff6443))
+* **lean:** replace the vacuous collision-free swap theorem ([6fab310](https://github.com/Nomos-N4s/nomos/commit/6fab31014c8f8ad3c8c6cda342d3d62fc5217ce9))
+* **lean:** require BindingValid of a chain's terminal binding ([1751dd2](https://github.com/Nomos-N4s/nomos/commit/1751dd26ca2f3dcbf493e537786fc615acd39809))
+
+
+### Documentation
+
+* **book:** correct the IdentityHashes row in the Lean inventory ([daed677](https://github.com/Nomos-N4s/nomos/commit/daed67710d91eca794228f1a66032767578e954f))
+* **book:** describe what VoteAndFalsification actually proves ([018a43e](https://github.com/Nomos-N4s/nomos/commit/018a43eb586a7a409ab25c2a1d82360646d482ef))
+* **book:** qualify the IdentityHashes row in the Lean inventory ([ff9e218](https://github.com/Nomos-N4s/nomos/commit/ff9e21887793b6e717a865ac32a78483b8124e25))
+* **lean:** drop the false necessity claim on the immutable-tier gate ([78223be](https://github.com/Nomos-N4s/nomos/commit/78223bef8ce855496738cb6ea4c6626e153a4134))
+* **lean:** drop the unproved ordering between the two hypotheses ([4254bdc](https://github.com/Nomos-N4s/nomos/commit/4254bdc42b29773c1bfccda812926c7870c2e901))
+* **lean:** qualify what the digest and the root actually separate ([504504c](https://github.com/Nomos-N4s/nomos/commit/504504ccd1cb5c0bc3c54b5e41ba2b26c684dfb0))
+* **lean:** restate the IdentityHashes header assumptions ([c88ab59](https://github.com/Nomos-N4s/nomos/commit/c88ab598c9e8ca7941eba84b0c5505108bbb289f))
+* **lean:** say the falsification params are declared immutable-tier ([ed5cc88](https://github.com/Nomos-N4s/nomos/commit/ed5cc88359c340c92d98556874954340f864d9cf))
+* **lean:** say the tamper literals are illustrative, not pinned ([31d1cb0](https://github.com/Nomos-N4s/nomos/commit/31d1cb0ca28dc3dcdd03e76426df43f72beb3098))
+* **lean:** scope the uninterpreted-hash claim to the RuntimeHash section ([f6a3d0b](https://github.com/Nomos-N4s/nomos/commit/f6a3d0bd51b8e0edd6a1bc1c5082d3ccb1bc0268))
+* **lean:** sharpen the two caveats added with the collision lemmas ([6afddbc](https://github.com/Nomos-N4s/nomos/commit/6afddbc5566492a06a6f35082be2cdc72eaffd52))
+* **lean:** stop blaming hash degeneracy for the root collisions ([ac417cb](https://github.com/Nomos-N4s/nomos/commit/ac417cbbfc5682e13ad924b22cfec13bd06e1b94))
+* **readme:** headline the tier-derived falsification invariance ([c1189b4](https://github.com/Nomos-N4s/nomos/commit/c1189b40d03465aee66b00cf1d7fa90b1a1b9c53))
+
+## [1.0.0](https://github.com/Nomos-N4s/nomos/compare/v0.15.2...v1.0.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **audit:** merkle_root now domain-separates leaves from internal nodes, so every Merkle root it produces changes. Audit-log anchor sidecars (`<path>.root`) written by earlier releases no longer match their own untouched chain and must be regenerated — appending any record re-anchors the log, or the sidecar can be rewritten from AuditLog.batch_root().
+
+### Features
+
+* **benchmarks:** export mean governance latency in the analysis artifacts ([17d1a44](https://github.com/Nomos-N4s/nomos/commit/17d1a441a3c00eb68fc2f0f695841e3f95c4be8f))
+* **identity:** add restore_satisfaction to return commitments to genesis ([ca1e8ea](https://github.com/Nomos-N4s/nomos/commit/ca1e8eab58e745991ac1641680e8b76d443eff73))
+* **identity:** degrade commitment satisfaction when a violation is recorded ([cf8679e](https://github.com/Nomos-N4s/nomos/commit/cf8679ef5f824e845ca1ce05cf0d17fd1c4bc908))
+* **lean:** add a constructive Decidable instance for votePasses ([c6c98da](https://github.com/Nomos-N4s/nomos/commit/c6c98da843d039a8dfc6713fc883d051259ed644))
+* **lean:** prove vote resolution is determined by the tallies ([bbc6f39](https://github.com/Nomos-N4s/nomos/commit/bbc6f3910016ca713d2b732acbc1422ffeb644cc))
+* **speaker:** time every governance cycle with perf_counter ([96b140d](https://github.com/Nomos-N4s/nomos/commit/96b140d55428ff0c1210bcc788f47a8ff4c08914))
+* **tee:** add merkle_proof to generate positional sibling paths ([aa95dbb](https://github.com/Nomos-N4s/nomos/commit/aa95dbb3d190a1f885df3bd70993c45a06b16b89))
+
+
+### Bug Fixes
+
+* **agents:** feed the LLM DriftLab decision back into the identity core ([d268257](https://github.com/Nomos-N4s/nomos/commit/d26825759e862e2b9b20e784901b85b25957df63))
+* **agents:** pay the LLM DriftLab the executed action's expected reward ([cdfecf9](https://github.com/Nomos-N4s/nomos/commit/cdfecf9f9ba3551827890e973d9f201bdd7fe318))
+* **agents:** point the DriftLab commitment at the harmful action index ([4120b1c](https://github.com/Nomos-N4s/nomos/commit/4120b1c5dcf2c14fd5a608cef544c640f039f5cb))
+* **agents:** record governance latency on the harness governed arm ([c1e8f29](https://github.com/Nomos-N4s/nomos/commit/c1e8f294692391fdd260da03fd52c3451fdd309b))
+* **audit:** reject a malformed anchor generation instead of reading it as legacy ([321b864](https://github.com/Nomos-N4s/nomos/commit/321b8643d057de57dd88d3124889b19a8c7aab1d))
+* **audit:** report a stale anchor instead of accusing a rewrite ([b604a43](https://github.com/Nomos-N4s/nomos/commit/b604a43129843b58ed5eb6b06254791eb2c90f07))
+* **audit:** stamp the Merkle algorithm generation into the anchor ([298f05b](https://github.com/Nomos-N4s/nomos/commit/298f05b2fc2dad52ad2607a4cf3688b5036fcddc))
+* **benchmarks:** build the static_masking arm from the scenario blocklist ([c349d67](https://github.com/Nomos-N4s/nomos/commit/c349d67cd6afbc03f53714b95d50a9e9f6202e65))
+* **benchmarks:** draw no bar for a scenario-strategy pair that never ran ([8036f90](https://github.com/Nomos-N4s/nomos/commit/8036f9031d4bbcbe977be90dc6037927ec43d771))
+* **benchmarks:** drop effect-size rows for arms that were never run ([bab21e2](https://github.com/Nomos-N4s/nomos/commit/bab21e2388ada842c46f79e4df2a59050da55e84))
+* **benchmarks:** give static_masking a real per-scenario blocklist ([c01820c](https://github.com/Nomos-N4s/nomos/commit/c01820c398ab136ca35238f49e743bf4d1760ebb))
+* **benchmarks:** reject an empty StaticMasking blocklist ([5a5d56f](https://github.com/Nomos-N4s/nomos/commit/5a5d56f7a9a580210f9ac05efb517d44256431c1))
+* **benchmarks:** skip static_masking where no blocklist is expressible ([5f8633e](https://github.com/Nomos-N4s/nomos/commit/5f8633eae39a7d5c2c712ae18426fcb17ab55bae))
+* **contracts:** give timelock_blocks a single absolute semantics ([15a93f9](https://github.com/Nomos-N4s/nomos/commit/15a93f924607f608ef4661ba7c97570658576dc6))
+* **contracts:** resolve enforce_timelock against unlock_at_cycle ([e5cf43a](https://github.com/Nomos-N4s/nomos/commit/e5cf43a2212dfc13f11f048dcb5e5ab8d6bb4867))
+* **contracts:** stamp the proposal cycle when a contract is registered ([a240334](https://github.com/Nomos-N4s/nomos/commit/a240334b9f1be8929ab39a64ae9f5d6b55054389))
+* **contracts:** stop decrementing timelock_blocks in tick() ([784296c](https://github.com/Nomos-N4s/nomos/commit/784296c57a78da7f9174bf5e6d6f4a570916b624))
+* **contracts:** tick registered contracts from tick_cycle ([1e2e45e](https://github.com/Nomos-N4s/nomos/commit/1e2e45e97dbf41fd3a16b7032c58927cfce0a541))
+* **docs:** re-measure DriftLab StaticMasking after per-scenario blocklists ([dae3bd6](https://github.com/Nomos-N4s/nomos/commit/dae3bd68a398fff1b560743e6890de40a69b84e9))
+* **experiments:** feed the DriftLab decision back into the identity core ([0aec73a](https://github.com/Nomos-N4s/nomos/commit/0aec73a4afdbbd1bfd4043cc20c51a7e88c5e773))
+* **experiments:** measure the governance cycle instead of reporting 0.0 ([7d8ccf3](https://github.com/Nomos-N4s/nomos/commit/7d8ccf387cebde4bbf519c16229683f5b5cbd67f))
+* **experiments:** pay DriftLab the executed proposal's expected reward ([d67b2b3](https://github.com/Nomos-N4s/nomos/commit/d67b2b3ea0829bb82f2bb6610622c67d885647cb))
+* **experiments:** record governance latency on every step ([d85d0f1](https://github.com/Nomos-N4s/nomos/commit/d85d0f1fe06b6a8db04f8e5319e2125a2f113f8d))
+* **experiments:** restore the identity before snapshotting the reset baseline ([4265be2](https://github.com/Nomos-N4s/nomos/commit/4265be282664355335317714c7ddaafd1572eb94))
+* **experiments:** return exact zero cosine distance for identical vectors ([04fbbc4](https://github.com/Nomos-N4s/nomos/commit/04fbbc485b6e81eb54da0bb6f34ab87179a2d6f8))
+* **identity:** calibrate violation severity to the benchmark run length ([b712d9c](https://github.com/Nomos-N4s/nomos/commit/b712d9c840e3d32313af5c05c0ddf8fc880df8b1))
+* **identity:** derive the identity vector from commitments so drift can move ([7dcc835](https://github.com/Nomos-N4s/nomos/commit/7dcc8350ef713611babf777b7fc21a28c33b86c3))
+* **lean:** replace the excluded-middle vote theorem with a decidable instance ([9e4fe70](https://github.com/Nomos-N4s/nomos/commit/9e4fe7086f17f579baf0cf275a438d0694b8d941))
+* **lean:** replace vote_resolution_deterministic with a constructive proof ([b2ed926](https://github.com/Nomos-N4s/nomos/commit/b2ed9265a34f1e3022e41010a054198a3eda1cd5))
+* **lean:** restate governance_cycle_invariant over the decision procedure ([5e82326](https://github.com/Nomos-N4s/nomos/commit/5e82326c4523e21ab2f9a0e78ce38a14a5276bc0))
+* **prove:** rebase pred_07_timelock on absolute timelock semantics ([9199612](https://github.com/Nomos-N4s/nomos/commit/9199612252a1e39cef266916e509779dc73cc192))
+* **tee:** combine proof siblings by position, not sorted order ([286d26a](https://github.com/Nomos-N4s/nomos/commit/286d26a678c16f4bc4a2963476790823926ef114))
+* **tee:** domain-separate Merkle leaves from internal nodes ([99f113d](https://github.com/Nomos-N4s/nomos/commit/99f113db050f28e53da7d3f9574f288218c3461f))
+* **tee:** generate Merkle proofs and verify them by position ([04ec07d](https://github.com/Nomos-N4s/nomos/commit/04ec07d1052e7bae4a275f34abdbda3bccac9602))
+
+
+### Documentation
+
+* **agents:** say what governance_latencies holds per arm ([e1ec39b](https://github.com/Nomos-N4s/nomos/commit/e1ec39be128ed3655e6f6f281867cce38f96cea5))
+* **audit:** document re-anchoring a log across the Merkle change ([c50468f](https://github.com/Nomos-N4s/nomos/commit/c50468f178e2b81e0dd3342eaaecc9599f136782))
+* **benchmarks:** keep runtime_ms and distinguish it from governance latency ([23d57da](https://github.com/Nomos-N4s/nomos/commit/23d57da9bea722cced2f2319ef930d4119a2e53a))
+* **benchmarks:** name the unit gap between runtime_ms and latency ([0a8c533](https://github.com/Nomos-N4s/nomos/commit/0a8c5336a9ec5b86613cb648fb588fca35795247))
+* **book:** record where the static masking blocklist comes from ([5d04048](https://github.com/Nomos-N4s/nomos/commit/5d04048b30fd57dc110630ec75869c5b61e603fb))
+* cite the Appendix A sections that actually describe the claims ([12ef6a6](https://github.com/Nomos-N4s/nomos/commit/12ef6a6f37aa661a238fc07c0bce278f75ed5945))
+* **contracts:** anchor timelock_blocks wording to created_at_cycle ([34593ee](https://github.com/Nomos-N4s/nomos/commit/34593ee99e479c39af6666c469b8fd634fb6c60f))
+* **contracts:** correct what an elapsed timelock means in the stack ([8e4095a](https://github.com/Nomos-N4s/nomos/commit/8e4095a2d87b0464670125796df18fe5ff6605f1))
+* **contracts:** drop the false "ACTIVE exactly when expired" claim ([a07dfa7](https://github.com/Nomos-N4s/nomos/commit/a07dfa7a09e7c32be9f7d374441af4d1f4d11e07))
+* **contracts:** say the cooling-off window opens at proposal ([a34d8ea](https://github.com/Nomos-N4s/nomos/commit/a34d8ea92b071599fe19b4760c8d5edf752cb9e9))
+* correct the remaining published DriftLab figures ([d7f7dcd](https://github.com/Nomos-N4s/nomos/commit/d7f7dcd8d464ed843ec568a4fd97046d51d167bc))
+* correct the run count to 380 now GridWorld skips static_masking ([541179f](https://github.com/Nomos-N4s/nomos/commit/541179fb581577c2583069a46e71b68e26598449))
+* **experiments:** drop the Identity-Layer attribution from _run_step ([6e7f47c](https://github.com/Nomos-N4s/nomos/commit/6e7f47c2267b4aeab3b526ba8bc148e20e888f53))
+* **experiments:** say the DriftLab harmful reward decays, not grows ([4429970](https://github.com/Nomos-N4s/nomos/commit/4429970bc5d4141c092010e385fef88e20ee3321))
+* **experiments:** say what governance_latency_avg does and does not cover ([121bd98](https://github.com/Nomos-N4s/nomos/commit/121bd986cbf071731293bb7ef9386004cd978bc1))
+* **identity:** stop calling the identity vector fixed in chapter 4 ([c14ee86](https://github.com/Nomos-N4s/nomos/commit/c14ee86d31f8a65aeb2686b5cf0fc9cdf7619f0f))
+* **identity:** stop claiming the Integrity member reads the identity vector ([631e2e9](https://github.com/Nomos-N4s/nomos/commit/631e2e93982cbebc27a767f2b48f9cbc59abcf1b))
+* **lean:** correct the vote-resolution bullet in the module header ([c757b8e](https://github.com/Nomos-N4s/nomos/commit/c757b8eefbd9cd6832312b980b63b86ef40e9294))
+* **lean:** name Classical.em as the axiom the vote proof avoids ([6cc009f](https://github.com/Nomos-N4s/nomos/commit/6cc009f8edfdb90e39000049c8a883f5e9bfa1fa))
+* **lean:** stop calling the cycle invariant's vote conjunct a correctness proof ([3be48a5](https://github.com/Nomos-N4s/nomos/commit/3be48a5fecb1f9acaaf60c0c18fa0ff0a122cb94))
+* **models:** stop claiming GovernanceContext.identity_vector is read ([2fe0103](https://github.com/Nomos-N4s/nomos/commit/2fe0103a2c9dedf885d6c5d201ddae45c0d95c4b))
+* **prove:** restate prediction 7 in absolute timelock terms ([3bf52f6](https://github.com/Nomos-N4s/nomos/commit/3bf52f6ca4cf98b0e24f28ec78ffa0f5053b0dcb))
+* **readme:** headline the vote theorem that constrains the model ([5ff3bf1](https://github.com/Nomos-N4s/nomos/commit/5ff3bf1dacc8b324589d35d3f8be3bb6ce6c3a0e))
+* **readme:** headline the vote theorem that has content ([cc8b8cc](https://github.com/Nomos-N4s/nomos/commit/cc8b8cc0f42a907e8608546950c81810f95bbd2f))
+* report DeadlockMaze static masking as inaction, not gridlock ([a9eafbc](https://github.com/Nomos-N4s/nomos/commit/a9eafbca774bd3fa7415355f268c5630a3eff306))
+* **reproducibility:** credit agenda ordering, not the Identity Layer, for 0.0 drift ([d772c88](https://github.com/Nomos-N4s/nomos/commit/d772c88d799845875b2b8b66b242c483aaa28367))
+* **reproducibility:** fill the StaticMasking row from a real run ([32a1393](https://github.com/Nomos-N4s/nomos/commit/32a13932365aacb46465b399c5c4f7be49e3d94d))
+* **reproducibility:** point drift verification at the per-run report line ([057df3c](https://github.com/Nomos-N4s/nomos/commit/057df3ce9af1da43a466d3ffd351853e646dbcb1))
+* **reproducibility:** publish the invocation that produced the DriftLab table ([d7d196b](https://github.com/Nomos-N4s/nomos/commit/d7d196b34075a56339e85ee36b0cd74e5b118e87))
+* **reproducibility:** record the measured DriftLab benchmark numbers ([09f137c](https://github.com/Nomos-N4s/nomos/commit/09f137cb9d83eb8ae84547510c1b265590fde6f5))
+* **tee:** qualify when sorting sibling pairs rejects honest paths ([cdac60e](https://github.com/Nomos-N4s/nomos/commit/cdac60ecb3229eccb7c1ea98cffa09eec1271f2d))
+
 ## [0.15.2](https://github.com/Nomos-N4s/nomos/compare/v0.15.1...v0.15.2) (2026-08-18)
 
 

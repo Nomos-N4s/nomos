@@ -317,8 +317,8 @@ graph TB
     end
 
     subgraph Drift[DriftLab]
-        DR_GOV[GOV: 0 reward<br/>0 violations]
-        DR_MONO[MONO: 0 reward<br/>0 violations]
+        DR_GOV[GOV: 1000 reward<br/>0 violations<br/>0.0 identity drift]
+        DR_MONO[MONO: 4249 reward<br/>1000 violations<br/>0.165 identity drift]
     end
 
     subgraph Deadlock[DeadlockMaze]

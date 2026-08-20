@@ -43,13 +43,14 @@
 - **Neo4j integration**: `Neo4jBackend` in `src/nomos/ontology/neo4j_backend.py` is fully wired into the Streamlit dashboard. When `NEO4J_URI` is present in `.env`, the dashboard auto-detects and uses Neo4j Aura for persistent ontology storage and decision logging. Falls back to `MemoryBackend` otherwise. Decision logging records each replayed step's scores, vetoes, and metadata as ontology entities. (Issue #21 — Integrated into dashboard per Option A.)
 
 - **Phase D: AI Agent Validation completed** (epic #145, all of #138–#144 closed 2026-08-01): PydanticAI/OpenRouter adapter, governed-vs-ungoverned harness, 4 LLM-native scenarios, metrics/reports, trace viewer, repro+CI smoke, 12-prediction cross-validation.
-- **Benchmark results** (4 scenarios × 5 strategies × 20 seeds × 1,000 steps = 400 runs, 6.3s wall-clock):
+- **Benchmark results** (19 scenario-strategy combinations × 20 seeds × 1,000 steps = 380 runs, 6.3s wall-clock; GridWorld has no `static_masking` arm — see REPRODUCIBILITY.md):
   - GridWorld: 3.0 reward, 0 violations across all strategies — sparsity limits poison encounters
   - TemptationBank: 1998.0 reward, 0 violations — ban_loans contract enacts by step 30, steady 2/step thereafter
-  - DriftLab: 0 reward, 0 violations — identity coherence wins via higher priority tag
+  - DriftLab: 1000.0 reward, 0 violations, 0.0 identity drift — identity coherence wins via higher priority tag; MonolithicRL reaches 4249.25 reward on 1,000 violations and 0.1647 drift. The reward and drift columns were structural zeros until #294; these come from a DriftLab-only re-run at 1,000 steps (deterministic for every strategy but Random, so the 2-seed values are the 20-seed means)
   - DeadlockMaze: 999 deadlocks — tighten_quorum passes, deadlock breaker fires, but cycle repeats
   - **Note**: All old benchmark runs were invalidated by the baseline-decoupling bug. Re-ran with fix — benchmarks now show meaningful strategy differentiation. Full outputs: `results/benchmark_results.json`, `results/benchmark_summary.csv`, `results/figures/`
-- **Lean 4 formalization of the Identity Layer completed** (epic #69 closed 2026-08-10): five proof modules in `gov-budget-proof/` — IdentityTiers (Ch4 §3), IdentityGenesis (Ch4 §4), IdentityBuffer (Ch4 §5.2), IdentityHashes (Ch4 §2.1/§6.1), IdentityCoherence (Ch4 §6.1). Merged to main via stacked PRs #195–#199 (stack #200, main `f56efa4`); all CI green with `lean-build` enforced on every PR. Inventory page: `book/formal-verification-lean.md`.
+- **Lean 4 formalization of the Identity Layer completed** (epic #69 closed 2026-08-10): five *Identity Layer* proof modules in `gov-budget-proof/` — IdentityTiers (Ch4 §3), IdentityGenesis (Ch4 §4), IdentityBuffer (Ch4 §5.2), IdentityHashes (Ch4 §2.1/§6.1), IdentityCoherence (Ch4 §6.1). Merged to main via stacked PRs #195–#199 (stack #200, main `f56efa4`); all CI green with `lean-build` enforced on every PR. Inventory page: `book/formal-verification-lean.md`.
+- **Lean corpus, current state** (after adversarial-audit epic #287): seven proof modules plus the manifest — the five above, BudgetEnforcement and VoteAndFalsification; `Basic.lean` was deleted by #298 as an unused `lake new` template. 102 theorems, zero `sorry`, zero axioms declared by the corpus, no Mathlib or other dependency; `lake build` reports 20 jobs. **Nothing mechanically connects any of it to `src/nomos/`** — no extraction, no refinement argument, no differential test — so a green `lean-build` means the proofs compile, not that the implementation is verified (#297). Never call the *implementation* verified — `lean-build` never runs `src/nomos/`. It does verify the Lean model: the kernel re-checks every theorem, and the job then enforces no classical axiom, no corpus-declared axiom and no native decision, so "CI verifies the Lean model" is a true sentence and "CI verifies Nomos" is not. The badge reads "proofs build" because the badge is about the build. The calibrated statement lives in `book/formal-verification-lean.md` § Scope and limits and `book/chapter-05/05-related-work.md` §7.
 
 ### Active
 - **Track A done (2026-08-11)**: #181 (auto-refresh → #75) and #182 (health endpoints → #163) both merged; Track J probe prerequisite unlocked.
@@ -96,8 +97,8 @@ Phase E (enterprise-readiness): plugin architecture = #173, real TEE integration
 - `book/appendix-a/tee-isolation.md`: TEE threat model, hardware watchdog, constant-time, Merkle-tree batching, single-enclave architecture, deadlock breaker
 - `book/responses/response-to-review-panel.md`: all 5 phases of review responses (accepts all three Phase 5.2 fixes)
 - `book/responses/response-to-expert-panel-harder-review.md`: response to second harder review (baseline bug fix, 11-point rebuttal)
-- `book/formal-verification-lean.md`: Lean 4 proof inventory — all five Identity Layer modules plus build instructions
-- `gov-budget-proof/GovBudgetProof.lean`: Lean 4 manifest importing Basic, BudgetEnforcement, VoteAndFalsification, and the five Identity modules
+- `book/formal-verification-lean.md`: Lean 4 proof inventory — the seven proof modules plus the manifest, a "Scope and limits" section on what the proofs are *not* about, and build instructions
+- `gov-budget-proof/GovBudgetProof.lean`: Lean 4 manifest importing BudgetEnforcement, VoteAndFalsification, and the five Identity modules
 - `gov-budget-proof/GovBudgetProof/IdentityTiers.lean`: tier mutability rules (Ch4 §3)
 - `gov-budget-proof/GovBudgetProof/IdentityGenesis.lean`: 3-of-5 multisig genesis (Ch4 §4)
 - `gov-budget-proof/GovBudgetProof/IdentityBuffer.lean`: sandboxed isolation buffer protocol (Ch4 §5.2)

@@ -19,8 +19,8 @@ Appendix A and covers:
 - **Hardware trust anchors**: Intel SGX, AMD SEV-SNP, Arm TrustZone
 - **Single-enclave architecture** with multi-enclave consensus addendum
 - **Hardware watchdog** for deadlock detection and cold-boot recovery (§A.9.5)
-- **Constant-time execution** to mitigate timing side channels (§A.8)
-- **Merkle-tree batch verification** for integrity proofs (§A.6)
+- **Constant-time execution** to mitigate timing side channels (§A.10)
+- **Merkle-tree batch verification** for integrity proofs (§A.11)
 
 ### Known Residual Risks
 
