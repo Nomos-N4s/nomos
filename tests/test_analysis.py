@@ -1,9 +1,12 @@
 import math
 import os
+import re
 import tempfile
+from pathlib import Path
 
 from src.nomos.benchmarks.analysis import (
     _MIN_REPORTABLE_P,
+    _WILCOXON_EXACT_MAX_N,
     StrategyAggregate,
     _bonferroni_correct,
     _bootstrap_ci,
@@ -819,3 +822,38 @@ class TestWilcoxonSignedRank:
         assert result["method"] == "normal"
         assert result["n_pairs"] == 30
         assert 0.0 < result["p_value"] < 1e-6
+
+
+APPENDIX_D = Path(__file__).parent.parent / "book" / "appendix-d-experiment-protocol.md"
+
+
+class TestPublishedStatisticsClaims:
+    """Appendix D.5 spells out the record and the method; hold it to the code.
+
+    Both claims are hand-maintained prose about a machine-generated record,
+    which is exactly the kind of sentence that goes stale beneath its subject.
+    """
+
+    @staticmethod
+    def _appendix_text():
+        return APPENDIX_D.read_text(encoding="utf-8")
+
+    def test_the_documented_record_keys_are_the_emitted_ones(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        sentence = next(
+            line
+            for line in self._appendix_text().splitlines()
+            if line.startswith("Each entry returned by `compute_effect_sizes()` includes:")
+        )
+        documented = set(re.findall(r"`([a-z_]+)`", sentence)) - {"compute_effect_sizes()"}
+        assert documented == set(entry)
+
+    def test_the_documented_exact_wilcoxon_cutoff_is_the_code_constant(self):
+        cutoff = re.search(
+            r"exact null distribution up to (\d+) non-zero differences", self._appendix_text()
+        )
+        assert cutoff, "Appendix D.5 no longer states the Wilcoxon exact cutoff"
+        assert int(cutoff.group(1)) == _WILCOXON_EXACT_MAX_N
