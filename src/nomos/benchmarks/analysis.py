@@ -61,6 +61,24 @@ def _bootstrap_ci(
     return (means[lower_idx], means[upper_idx - 1])
 
 
+def _pooled_sd(control: list[float], treatment: list[float]) -> float:
+    """Pooled standard deviation of two samples.
+
+    Args:
+        control: First group; at least two observations.
+        treatment: Second group; at least two observations.
+
+    Returns:
+        The pooled SD.  Exactly ``0.0`` when neither group varies -- a
+        deterministic cell, where every reported spread is a repeat
+        rather than a measurement.
+    """
+    n1, n2 = len(control), len(treatment)
+    v1 = statistics.variance(control)
+    v2 = statistics.variance(treatment)
+    return math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2))
+
+
 def _cohens_d(control: list[float], treatment: list[float]) -> float:
     """Compute Cohen's d effect size between two groups.
 
@@ -84,10 +102,7 @@ def _cohens_d(control: list[float], treatment: list[float]) -> float:
         return math.nan
     m1 = statistics.mean(control)
     m2 = statistics.mean(treatment)
-    v1 = statistics.variance(control)
-    v2 = statistics.variance(treatment)
-    n1, n2 = len(control), len(treatment)
-    pooled = math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2))
+    pooled = _pooled_sd(control, treatment)
     if pooled == 0:
         return 0.0 if m1 == m2 else math.nan
     return (m1 - m2) / pooled
@@ -103,11 +118,13 @@ def _cohens_d_ci(control: list[float], treatment: list[float], ci: float = 0.95)
 
     Returns:
         Dict with keys ``d``, ``ci_lower``, ``ci_upper``, ``se_d``.  Every
-        value is ``nan`` when :func:`_cohens_d` is undefined for the pair --
-        fewer than 2 observations in a group, or zero pooled spread across
-        differing means.  There is no interval around an undefined point
-        estimate, and reporting ``0.0`` for one implies a measurement that
-        was never made.
+        value is ``nan`` when there is no interval to report: fewer than 2
+        observations in a group, or a pooled standard deviation of exactly
+        zero.  A zero pooled SD removes the interval even where it leaves
+        the point estimate at ``0.0`` -- the standard error below is the
+        large-sample approximation for ``d``, which presumes a measured
+        spread, and quoting it over identical repeats asserts sampling
+        uncertainty that was never observed.
     """
     n1, n2 = len(control), len(treatment)
     undefined = {"d": math.nan, "ci_lower": math.nan, "ci_upper": math.nan, "se_d": math.nan}
@@ -115,7 +132,7 @@ def _cohens_d_ci(control: list[float], treatment: list[float], ci: float = 0.95)
         return undefined
 
     d = _cohens_d(control, treatment)
-    if math.isnan(d):
+    if math.isnan(d) or _pooled_sd(control, treatment) == 0:
         return undefined
     se = math.sqrt((n1 + n2) / (n1 * n2) + d * d / (2.0 * (n1 + n2 - 2)))
     if se == 0:
@@ -808,6 +825,9 @@ def compute_effect_sizes(
             d = _cohens_d(control_rewards, treatment_rewards)
             d_ci = _cohens_d_ci(control_rewards, treatment_rewards)
             d_defined = not math.isnan(d)
+            # A d of 0.0 over two identical constants is real; the interval
+            # around it is not, so the two are gated separately.
+            ci_defined = not math.isnan(d_ci["se_d"])
             if d_defined:
                 interpretation = (
                     "large"
@@ -854,9 +874,9 @@ def compute_effect_sizes(
                     "mean_diff": mean_governance - mean_baseline,
                     "cohens_d": round(d, 3) if d_defined else None,
                     "cohens_d_ci": (
-                        [d_ci["ci_lower"], d_ci["ci_upper"]] if d_defined else [None, None]
+                        [d_ci["ci_lower"], d_ci["ci_upper"]] if ci_defined else [None, None]
                     ),
-                    "cohens_d_se": d_ci["se_d"] if d_defined else None,
+                    "cohens_d_se": d_ci["se_d"] if ci_defined else None,
                     "mannwhitney_u": u_stat,
                     "p_value_raw": p_raw,
                     "n_governance": len(control_rewards),
