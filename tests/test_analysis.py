@@ -331,6 +331,45 @@ class TestDetectRewardHacking:
         assert _detect_reward_hacking([]) == []
 
 
+class TestCumulativeSeriesRaisesNoEpisodes:
+    """A cumulative series must not read as a sequence of reward spikes (#304).
+
+    Before the fix the benchmark producer wrote running totals under the
+    per-step ``reward``/``violations`` keys. Both defects below are
+    properties of that series, not of any agent behaviour.
+    """
+
+    @staticmethod
+    def _cumulative(per_step_reward, steps=40):
+        """A cumulative series: running reward total, monotone violation counter."""
+        return [
+            {
+                "step": i,
+                "reward": per_step_reward * (i + 1),
+                "violations": i + 1,
+            }
+            for i in range(steps)
+        ]
+
+    def test_declining_cumulative_series_yields_no_episodes(self):
+        # Every step violates (the counter never returns to zero) and the
+        # running total falls, so the 1.5x test fires on a negative baseline.
+        assert _detect_reward_hacking(self._cumulative(-13.0)) == []
+
+    def test_flat_negative_plateau_yields_no_episodes(self):
+        # The shape that produced most of the bogus episodes: a run whose
+        # cumulative reward stops moving. -13.0 > -13.0 * 1.5 is true, so a
+        # perfectly flat series used to report a "spike" of size 0.0.
+        records = [{"step": i, "reward": -13.0, "violations": i + 1} for i in range(30)]
+        assert _detect_reward_hacking(records) == []
+
+    def test_no_episode_is_ever_exported_with_a_non_positive_spike(self):
+        # The headline number of an episode has to say something happened.
+        for per_step in (-13.0, -1.0, 0.0, 1.0, 7.5):
+            for episode in _detect_reward_hacking(self._cumulative(per_step)):
+                assert episode["reward_spike"] > 0, (per_step, episode)
+
+
 class TestAggregateReports:
     def test_single_report(self):
         reports = [_make_report("test", 100.0)]
