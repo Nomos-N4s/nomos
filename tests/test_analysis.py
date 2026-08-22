@@ -769,6 +769,31 @@ class TestSeedKeyedPairing:
         assert entry["wilcoxon_p"] == 2.0 / 2**4
 
 
+class TestWilcoxonPairCounts:
+    """The p-value rests on the surviving pairs, so the record says how many."""
+
+    def test_dropped_ties_are_visible_on_the_record(self):
+        seeds = list(range(20))
+        governance = [5.0] * 12 + [5.0 + k for k in range(1, 9)]
+        reports = _cell("governance", "S", governance, seeds=seeds)
+        reports += _cell("random", "S", [5.0] * 20, seeds=seeds)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["n_governance"] == 20
+        assert entry["wilcoxon_n_pairs"] == 8
+        assert entry["wilcoxon_n_zero_diffs"] == 12
+        assert entry["wilcoxon_p"] == 2.0 / 2**8
+
+    def test_an_unpaired_comparison_reports_no_counts(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0], seeds=[0, 1, 2, 3])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0], seeds=[7, 8, 9, 10])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["paired"] is False
+        assert entry["wilcoxon_n_pairs"] is None
+        assert entry["wilcoxon_n_zero_diffs"] is None
+
+
 class TestWilcoxonSignedRank:
     @staticmethod
     def _brute_force(diffs):
