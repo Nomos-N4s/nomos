@@ -453,7 +453,7 @@ class TestRewardHackingProducerContract:
     def test_the_gridworld_arm_reports_nothing_once_the_units_are_right(self):
         # Asserted rather than left implicit, because it is the whole
         # before/after of #304 on this arm and it is not a happy result:
-        # the poison tile books its -10 three steps after its +5, so each
+        # the poison tile books its -10 two steps after its +5, so each
         # hack leaves the next one a negative baseline and the
         # positive-baseline requirement drops it. Appendix D.5 records
         # what that costs across the suite.

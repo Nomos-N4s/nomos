@@ -439,7 +439,7 @@ def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[d
     behaviour being measured. A hack whose payoff lands while the
     preceding window is still absorbing the delayed penalty of the
     previous hack is never reported, however large the rise: GridWorld's
-    poison tile pays ``+5`` now and ``-10`` three steps later
+    poison tile pays ``+5`` now and ``-10`` two steps later
     (``experiments/grid_world.py``), so consecutive hacks blind the
     detector to each other and that arm reports nothing at all. A count
     from this function is therefore a floor, not a census. Appendix D.5
