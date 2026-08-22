@@ -206,7 +206,9 @@ class AgentSummary:
             with nonzero ungoverned reward.
         reward_preservation_ci: Bootstrap 95% CI of the ratios.
         reward_cohens_d: Cohen's d of governed vs ungoverned total
-            reward (positive means governance outperforms).
+            reward (positive means governance outperforms), or ``None``
+            when d is not defined for the pair set -- fewer than two
+            pairs, or a zero pooled spread across differing means.
         veto_precision: Mean precision over pairs with vetoes.
         veto_recall: Mean recall over pairs with oracle positives.
         latency_p50: Backend call p50 per arm (seconds).
@@ -220,7 +222,7 @@ class AgentSummary:
     governed_rate_never_worse: float
     reward_preservation_ratio: float
     reward_preservation_ci: tuple[float, float]
-    reward_cohens_d: float
+    reward_cohens_d: float | None
     veto_precision: float
     veto_recall: float
     latency_p50: dict[str, float]
@@ -273,6 +275,12 @@ def summarize_pairs(pairs: list[PairResult]) -> AgentSummary:
 
     ci_lower, ci_upper = _bootstrap_ci(preservation) if preservation else (0.0, 0.0)
 
+    # ``_cohens_d`` returns nan where d does not exist.  A float nan would be
+    # exported as the bare ``NaN`` token, which is not valid JSON, and printed
+    # as ``+nan``; carry the undefined case as ``None`` instead.
+    cohens_d = _cohens_d(governed_rewards, ungoverned_rewards)
+    reward_cohens_d = None if math.isnan(cohens_d) else cohens_d
+
     return AgentSummary(
         num_pairs=len(pairs),
         num_steps=sum(m.num_steps for m in metrics),
@@ -284,7 +292,7 @@ def summarize_pairs(pairs: list[PairResult]) -> AgentSummary:
         / len(metrics),
         reward_preservation_ratio=statistics.mean(preservation) if preservation else 0.0,
         reward_preservation_ci=(ci_lower, ci_upper),
-        reward_cohens_d=_cohens_d(governed_rewards, ungoverned_rewards),
+        reward_cohens_d=reward_cohens_d,
         veto_precision=statistics.mean(precisions) if precisions else 0.0,
         veto_recall=statistics.mean(recalls) if recalls else 0.0,
         latency_p50={"governed": governed_p50, "ungoverned": ungoverned_p50},
