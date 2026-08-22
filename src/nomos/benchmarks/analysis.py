@@ -246,6 +246,119 @@ def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
     return (round(u, 2), p)
 
 
+#: Largest number of non-zero pair differences for which the Wilcoxon
+#: signed-rank null distribution is enumerated exactly.  Above it the normal
+#: approximation is used, matching the conventional cut-off.
+_WILCOXON_EXACT_MAX_N = 25
+
+
+def _wilcoxon_signed_rank(control: list[float], treatment: list[float]) -> dict:
+    """Wilcoxon signed-rank test on matched pairs.
+
+    ``control[i]`` and ``treatment[i]`` must be the two observations of the
+    same subject -- here, the same seed.  Pairs whose difference is exactly
+    zero are dropped and the test is conditioned on the survivors, per the
+    usual convention.  The null distribution is enumerated exactly (by
+    subset-sum over the signed ranks) up to
+    :data:`_WILCOXON_EXACT_MAX_N` non-zero differences and approximated by
+    the tie-corrected normal beyond it.
+
+    This test reads only the *signs and ranks* of the paired differences.
+    On a cell where both arms are deterministic it degenerates to a sign
+    test over identical repeats, which says how consistently one arm wins
+    and nothing at all about how much.
+
+    Args:
+        control: Governance rewards, ordered by subject.
+        treatment: Baseline rewards, in the same subject order.
+
+    Returns:
+        Dict with keys ``w`` (the smaller of W+ and W-), ``p_value``
+        (two-tailed), ``n_pairs`` (non-zero differences used),
+        ``n_zero_diffs`` (pairs dropped), and ``method`` (``"exact"``,
+        ``"normal"``, or ``"all-zero-differences"``).  ``w`` is ``None`` and
+        ``p_value`` ``None`` when the inputs are not equal-length pairs.
+    """
+    if len(control) != len(treatment) or not control:
+        return {
+            "w": None,
+            "p_value": None,
+            "n_pairs": 0,
+            "n_zero_diffs": 0,
+            "method": "undefined",
+        }
+
+    diffs = [c - t for c, t in zip(control, treatment)]
+    nonzero = [d for d in diffs if d != 0.0]
+    n_zero = len(diffs) - len(nonzero)
+    n = len(nonzero)
+    if n == 0:
+        return {
+            "w": 0.0,
+            "p_value": 1.0,
+            "n_pairs": 0,
+            "n_zero_diffs": n_zero,
+            "method": "all-zero-differences",
+        }
+
+    order = sorted(range(n), key=lambda i: abs(nonzero[i]))
+    ranks = [0.0] * n
+    tie_adjustment = 0.0
+    i = 0
+    while i < n:
+        j = i
+        while j < n and abs(nonzero[order[j]]) == abs(nonzero[order[i]]):
+            j += 1
+        avg_rank = (i + 1 + j) / 2.0
+        for k in range(i, j):
+            ranks[order[k]] = avg_rank
+        tie_count = j - i
+        if tie_count > 1:
+            tie_adjustment += tie_count**3 - tie_count
+        i = j
+
+    w_plus = float(sum(ranks[i] for i in range(n) if nonzero[i] > 0))
+    w_total = float(sum(ranks))
+    w_minus = w_total - w_plus
+    w = min(w_plus, w_minus)
+
+    if n <= _WILCOXON_EXACT_MAX_N:
+        # Average ranks are multiples of 0.5, so double them to stay integral.
+        doubled = [int(round(2.0 * r)) for r in ranks]
+        total = sum(doubled)
+        counts = [0.0] * (total + 1)
+        counts[0] = 1.0
+        for r in doubled:
+            for v in range(total, r - 1, -1):
+                counts[v] += counts[v - r]
+        cutoff = int(round(2.0 * w))
+        tail = sum(counts[: cutoff + 1]) / (2.0**n)
+        p = min(1.0, 2.0 * tail)
+        method = "exact"
+    else:
+        mean_w = n * (n + 1) / 4.0
+        variance = n * (n + 1) * (2 * n + 1) / 24.0 - tie_adjustment / 48.0
+        if variance <= 0:
+            return {
+                "w": w,
+                "p_value": 1.0,
+                "n_pairs": n,
+                "n_zero_diffs": n_zero,
+                "method": "normal",
+            }
+        z = (w_plus - mean_w) / math.sqrt(variance)
+        p = math.erfc(abs(z) / math.sqrt(2.0))
+        method = "normal"
+
+    return {
+        "w": w,
+        "p_value": min(1.0, max(_MIN_REPORTABLE_P, p)),
+        "n_pairs": n,
+        "n_zero_diffs": n_zero,
+        "method": method,
+    }
+
+
 def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict]:
     """Apply Holm-Bonferroni step-down correction for multiple comparisons.
 
@@ -631,7 +744,8 @@ def compute_effect_sizes(
     baseline using Cohen's d (parametric effect size, with CI and
     normality check) and Mann-Whitney U (non-parametric test, exact
     p-value when n < 8).  Raw p-values are corrected via both Bonferroni
-    and Holm-Bonferroni.  A paired-design heuristic is noted.
+    and Holm-Bonferroni.  Comparisons that share a seed set one-to-one are
+    additionally tested with Wilcoxon signed-rank.
 
     Args:
         aggregates: Aggregates (used to determine which scenarios exist).
@@ -644,6 +758,7 @@ def compute_effect_sizes(
         ``cohens_d_ci``, ``cohens_d_se``, ``mannwhitney_u``, ``p_value_raw``,
         ``p_value_corrected``, ``p_value_holm``, ``significant``,
         ``significant_holm``, ``n_governance``, ``n_baseline``, ``paired``,
+        ``wilcoxon_w``, ``wilcoxon_p``, ``wilcoxon_method``,
         ``normality_warning``, ``interpretation``. A scenario-baseline pair
         with no runs on either side yields no entry, and is not counted in
         the correction family — an arm that was never run is not a test that
@@ -663,6 +778,14 @@ def compute_effect_sizes(
         can never report ``p_value_raw == 0.0`` alongside
         ``significant_holm: true``: the underlying tests floor their tails at
         :data:`_MIN_REPORTABLE_P` rather than rounding them to zero.
+
+        ``paired`` is true only when both arms cover the same labelled seeds
+        one observation each; when it is, a Wilcoxon signed-rank test is run
+        over those matched pairs and reported in ``wilcoxon_w`` /
+        ``wilcoxon_p`` / ``wilcoxon_method`` (all ``None`` otherwise).  The
+        Wilcoxon p-value is reported alongside, not folded into the
+        Bonferroni and Holm family, which stays the Mann-Whitney one test per
+        governance-vs-baseline pair.
     """
     groups = _group_rewards_by_seed(reports)
 
@@ -673,9 +796,11 @@ def compute_effect_sizes(
 
     raw_p_values = []
     for scenario in sorted(scenarios):
-        control_rewards = _flatten_seed_map(groups.get((governance_key, scenario), {}))
+        control_seeds = groups.get((governance_key, scenario), {})
+        control_rewards = _flatten_seed_map(control_seeds)
         for bl in baselines:
-            treatment_rewards = _flatten_seed_map(groups.get((bl, scenario), {}))
+            treatment_seeds = groups.get((bl, scenario), {})
+            treatment_rewards = _flatten_seed_map(treatment_seeds)
             if not control_rewards or not treatment_rewards:
                 continue
             mean_governance = statistics.mean(control_rewards)
@@ -711,6 +836,14 @@ def compute_effect_sizes(
             raw_p_values.append(p_raw)
 
             paired = _is_paired(groups, scenario, governance_key, bl)
+            if paired:
+                seeds = list(control_seeds)
+                wilcoxon = _wilcoxon_signed_rank(
+                    [control_seeds[seed][0] for seed in seeds],
+                    [treatment_seeds[seed][0] for seed in seeds],
+                )
+            else:
+                wilcoxon = {"w": None, "p_value": None, "method": None}
 
             effect_sizes.append(
                 {
@@ -729,6 +862,9 @@ def compute_effect_sizes(
                     "n_governance": len(control_rewards),
                     "n_baseline": len(treatment_rewards),
                     "paired": paired,
+                    "wilcoxon_w": wilcoxon["w"],
+                    "wilcoxon_p": wilcoxon["p_value"],
+                    "wilcoxon_method": wilcoxon["method"],
                     "normality_warning": normality_warning,
                     "interpretation": interpretation,
                 }
