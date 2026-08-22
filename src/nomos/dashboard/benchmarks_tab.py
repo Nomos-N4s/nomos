@@ -141,6 +141,33 @@ def _log_benchmark_to_backend(backend: OntologyBackend | None, benchmarks: dict)
         pass
 
 
+#: Effect-size columns holding a probability.  Rendered as text so the display
+#: layer cannot undo the pipeline's full-precision p-values.
+_P_VALUE_COLUMNS = ("p_value_raw", "p_value_corrected", "p_value_holm", "wilcoxon_p")
+
+
+def _format_effect_size_table(effect_sizes: list[dict]) -> pd.DataFrame:
+    """Build the effect-size display frame without flattening tiny p-values.
+
+    ``compute_effect_sizes`` carries p-values at full float precision; a
+    default numeric render shows 4.24e-10 as ``0.0000``, which puts the same
+    false claim of zero probability back in front of the reader. Format the
+    probability columns as short scientific-notation text instead.
+
+    Args:
+        effect_sizes: Records from
+            :func:`src.nomos.benchmarks.analysis.compute_effect_sizes`.
+
+    Returns:
+        A DataFrame ready for ``st.dataframe``.
+    """
+    df = pd.DataFrame(effect_sizes)
+    for column in _P_VALUE_COLUMNS:
+        if column in df.columns:
+            df[column] = df[column].map(lambda v: "" if pd.isna(v) else f"{v:.4g}")
+    return df
+
+
 def render_benchmarks_tab(backend: OntologyBackend | None = None):
     st.header("📊 Benchmark Results")
     st.caption("Statistical comparison between governance and baselines.")
@@ -241,5 +268,6 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
     if effect_sizes:
         st.divider()
         st.subheader("Effect Sizes (Cohen's d)")
-        es_df = pd.DataFrame(effect_sizes)
-        st.dataframe(es_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            _format_effect_size_table(effect_sizes), use_container_width=True, hide_index=True
+        )
