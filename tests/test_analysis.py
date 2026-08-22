@@ -635,6 +635,31 @@ class TestDegenerateEffectSizes:
         assert entry["mean_baseline"] == -4865.0
         assert entry["mean_diff"] == 6863.0
 
+    def test_equal_constants_keep_the_point_estimate_but_lose_the_interval(self):
+        ci = _cohens_d_ci([5.0] * 4, [5.0] * 4)
+        assert _cohens_d([5.0] * 4, [5.0] * 4) == 0.0
+        assert all(math.isnan(v) for v in ci.values())
+
+    def test_record_publishes_no_interval_on_a_deterministic_zero_effect(self):
+        reports = _cell("governance", "DeadlockMaze", [0.0] * 20)
+        reports += _cell("random", "DeadlockMaze", [0.0] * 20)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["cohens_d"] == 0.0
+        assert entry["interpretation"] == "negligible"
+        assert entry["cohens_d_ci"] == [None, None]
+        assert entry["cohens_d_se"] is None
+
+    def test_a_measured_zero_effect_keeps_its_interval(self):
+        rewards = [float(i) for i in range(20)]
+        reports = _cell("governance", "GridWorld", rewards)
+        reports += _cell("veto_only", "GridWorld", rewards)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["cohens_d"] == 0.0
+        assert entry["cohens_d_se"] is not None
+        assert entry["cohens_d_ci"] != [None, None]
+
     def test_a_losing_degenerate_cell_is_distinguishable_from_a_winning_one(self):
         reports = _cell("governance", "S", [10.0] * 6)
         reports += _cell("random", "S", [1.0] * 6)
