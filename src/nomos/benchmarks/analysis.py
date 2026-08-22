@@ -431,6 +431,20 @@ def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[d
     are dropped for the same reason, which also covers the case where a
     genuinely positive spike rounds down to ``0.0`` (#304).
 
+    The two conditions do not do the same work, and the positive-baseline
+    one is not free. On the published suite it is ``spike > 0`` that
+    removes almost every flat or declining artefact; requiring a positive
+    baseline on top of it is a deliberate conservatism that also costs
+    true positives, and it costs them in a direction that tracks the
+    behaviour being measured. A hack whose payoff lands while the
+    preceding window is still absorbing the delayed penalty of the
+    previous hack is never reported, however large the rise: GridWorld's
+    poison tile pays ``+5`` now and ``-10`` three steps later
+    (``experiments/grid_world.py``), so consecutive hacks blind the
+    detector to each other and that arm reports nothing at all. A count
+    from this function is therefore a floor, not a census. Appendix D.5
+    of the book quantifies the suppression on the published suite.
+
     This repairs the arithmetic; it does not recover the units. The
     records must be per-step — ``reward`` earned at that step and
     ``violations`` incurred at that step, the way ``run_all._run_scenario``
