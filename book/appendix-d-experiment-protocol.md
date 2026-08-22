@@ -162,7 +162,7 @@ explicitly rather than left to look like a matched comparison.
 | Normality check | Shapiro-Wilk test on the pooled sample | Non-normal data triggers a `normality_warning` in the effect size record |
 | Multiple-comparison correction | Bonferroni **and** Holm-Bonferroni step-down across every governance-vs-baseline pair | `significant` and `significant_holm` flags per pair |
 | Paired-design detection | Heuristic on shared seed counts across strategies | `paired: true` when repeated-measures design is inferred |
-| Reward hacking | Windowed spike detection over per-step rewards (window=10) | Trailing 5-step mean >1.5x the preceding mean, that preceding mean positive, on a step that itself violates |
+| Reward hacking | Windowed reward spike detection (window=10) | Spike >1.5x baseline + violation — **amended in #304**, see the correction below for the rule now in force |
 
 **Decision rule:** A governance-vs-baseline comparison is treated as statistically significant when the Holm-corrected p-value is below α (default 0.05). Bonferroni-corrected p-values are also reported for reference; Holm-Bonferroni is strictly more powerful and is the primary test. When `normality_warning` is set, treat Cohen's d confidence intervals as approximate and rely on the Mann-Whitney U result.
 
