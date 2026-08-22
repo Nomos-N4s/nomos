@@ -77,7 +77,14 @@ def _run_scenario(
         scenario_kwargs: Keyword arguments for the scenario constructor.
         strategy_name: Label for this strategy (e.g. ``"governance"``).
         steps: Number of steps to run.
-        seed: Random seed (for reproducibility).
+        seed: The loop seed for this run. It reaches the scenario
+            constructor when the scenario declares
+            :attr:`~..experiments.base.ExperimentScenario.SEEDED`, and it
+            overrides any ``seed`` in ``scenario_kwargs`` so that no caller
+            can pin the whole suite to a single world. A scenario that
+            declares itself deterministic is constructed without a seed and
+            replays one trajectory across the loop; the seed still reaches
+            the ``random`` baseline through :func:`_get_baseline`.
         baseline: Optional :class:`BaselineGovernance` instance.
             If None, the full Speaker is used.
         config_path: Optional path to a .parliament config file.
@@ -103,6 +110,9 @@ def _run_scenario(
         cycle is a large fraction of the step, not a negligible one.
     """
     speaker = build_governance_layer(config_path)
+    kwargs = dict(scenario_kwargs or {})
+    if scenario_class.SEEDED:
+        kwargs["seed"] = seed
 
     if scenario_class.__name__ == "DriftLab":
         from ..identity.core import (
@@ -123,14 +133,14 @@ def _run_scenario(
                 affected_action_indices=[0],
             )
         )
-        scenario = scenario_class(speaker, identity, **(scenario_kwargs or {}))
+        scenario = scenario_class(speaker, identity, **kwargs)
     elif scenario_class.__name__ == "DeadlockMaze":
         from ..tee.watchdog import DeadlockBreaker
 
         breaker = DeadlockBreaker(threshold_cycles=5)
-        scenario = scenario_class(speaker, breaker, **(scenario_kwargs or {}))
+        scenario = scenario_class(speaker, breaker, **kwargs)
     else:
-        scenario = scenario_class(speaker, **(scenario_kwargs or {}))
+        scenario = scenario_class(speaker, **kwargs)
 
     scenario.reset()
     step_records = []
@@ -269,7 +279,7 @@ def run_gridworld_experiments(
     """Run GridWorld (poison fruit) experiments across strategies."""
     return _run_experiment_set(
         GridWorld,
-        {"size": 6, "seed": 42},
+        {"size": 6},
         steps=steps,
         seeds=seeds,
         strategies=strategies,

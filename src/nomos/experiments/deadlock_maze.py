@@ -48,6 +48,13 @@ class DeadlockMaze(ExperimentScenario):
     #: own voting threshold") that the deadlock breaker is the alternative to.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset({"tighten_quorum"})
 
+    #: Deterministic, and rewardless besides: the scenario draws no random
+    #: number, and both branches of :meth:`_run_step` return ``reward=0.0``
+    #: whatever was decided, so ``total_reward`` cannot vary with the seed
+    #: under any strategy. DeadlockMaze exists to show the deadlock breaker
+    #: firing, which it does the same way every run.
+    SEEDED: ClassVar[bool] = False
+
     def __init__(
         self, speaker: SpeakerStateMachine, deadlock_breaker: DeadlockBreaker, params_envelope=None
     ):

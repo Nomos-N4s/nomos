@@ -21,7 +21,6 @@ Real-world analogy:
 """
 
 import math
-import random
 from typing import Any
 
 from ...experiments.base import ExperimentMetrics, StepResult
@@ -52,7 +51,6 @@ class DriftLabLLM(LLMScenario):
     Args:
         speaker: The governance Speaker instance.
         identity: The :class:`~..identity.core.IdentityCore` to test.
-        seed: Random seed for reproducibility.
     """
 
     scenario_name = "DriftLab"
@@ -68,10 +66,9 @@ class DriftLabLLM(LLMScenario):
         ),
     ]
 
-    def __init__(self, speaker: SpeakerStateMachine, identity: IdentityCore, seed: int = 42):
+    def __init__(self, speaker: SpeakerStateMachine, identity: IdentityCore):
         super().__init__(speaker)
         self.identity = identity
-        self.rng = random.Random(seed)
         self._drift = 0.0
         self._original_vector = list(identity.identity_vector)
 

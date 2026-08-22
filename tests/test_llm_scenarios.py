@@ -112,7 +112,7 @@ def _factory(scenario_cls, seed: int = 42):
                     affected_action_indices=[HARMFUL_ACTION_INDEX],
                 )
             )
-            return DriftLabLLM(speaker, identity, seed=seed)
+            return DriftLabLLM(speaker, identity)
         if scenario_cls is DeadlockMazeLLM:
             return DeadlockMazeLLM(speaker, DeadlockBreaker(threshold_cycles=5))
         if scenario_cls is GridWorldLLM:

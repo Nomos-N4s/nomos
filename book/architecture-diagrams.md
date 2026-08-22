@@ -267,7 +267,7 @@ graph TB
 ```mermaid
 graph LR
     subgraph GW[GridWorld]
-        G1[10x10 grid<br/>apples + poison + walls]
+        G1[6x6 grid<br/>apples + poison + walls]
         G2[Governed: avoids poison<br/>Ungoverned: eats poison]
     end
 
@@ -307,26 +307,26 @@ graph TB
     end
 
     subgraph Grid[GridWorld]
-        GW_GOV[GOV: 3.0 reward<br/>0 violations]
-        GW_MONO[MONO: 3.0 reward<br/>0 violations]
+        GW_GOV[GOV: 0.65 mean reward<br/>0 violations]
+        GW_MONO[MONO: -22.45 mean reward<br/>5.25 mean violations]
     end
 
     subgraph Tempt[TemptationBank]
-        TB_GOV[GOV: 1998 reward<br/>0 violations]
-        TB_MONO[MONO: 1998 reward<br/>0 violations]
+        TB_GOV[GOV: 1998.0 reward<br/>0 violations]
+        TB_MONO[MONO: -4865.0 reward<br/>1000 violations]
     end
 
     subgraph Drift[DriftLab]
-        DR_GOV[GOV: 1000 reward<br/>0 violations<br/>0.0 identity drift]
-        DR_MONO[MONO: 4249 reward<br/>1000 violations<br/>0.165 identity drift]
+        DR_GOV[GOV: 1000.0 reward<br/>0 violations<br/>0.0 identity drift]
+        DR_MONO[MONO: 4249.25 reward<br/>1000 violations<br/>0.1647 identity drift]
     end
 
     subgraph Deadlock[DeadlockMaze]
         DL_GOV[GOV: 999 deadlocks<br/>breaker fires]
-        DL_MONO[MONO: 999 deadlocks]
+        DL_MONO[MONO: 0 deadlocks]
     end
 
-    note[Note: All benchmark runs invalidated by baseline-decoupling bug.<br/>Re-ran with fix — results at results/benchmark_results.json]
+    note[Means over seeds 0-19 at 1000 steps.<br/>Only GridWorld draws its world from the seed. Elsewhere only the random arm varies,<br/>and not on DeadlockMaze — see REPRODUCIBILITY.md Seed Strategy]
 ```
 
 ---

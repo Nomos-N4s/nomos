@@ -80,6 +80,12 @@ scenario.step(state, external_decision=decision)
 | DriftLab | Reward / Violations | 0.0 / 0 | 0.0 / 0 | 0.0 / 10 |
 | DeadlockMaze | Deadlocks | 999 | 9/10 | 0/10 |
 
+GridWorld's row here is the single seed-42 grid the harness ran at the
+time. #301 later found the loop seed never reached the scenario; across
+the twenty grids the fixed harness draws, governance means 0.65 reward on
+0 violations and MonolithicRL -22.45 on 5.25. The table is left as the
+record of the baseline-decoupling fix it was written for.
+
 The governance layer now demonstrably **reduces violations** (0 vs. 3-10) and **balances reward** (lower immediate reward but zero violations) compared to unconstrained optimization.
 
 **Verdict: Accepted. Fixed. The panel correctly identified a critical bug.**
@@ -191,7 +197,7 @@ The fixed benchmarks now show meaningful differentiation across 4 scenarios × 5
 | *All strategies produce identical results* | **Fixed.** See section 1.2 — strategies now diverge |
 | *4 scenarios insufficient for generality* | Acknowledged. More scenarios planned (partial observability, multi-agent, continuous control) |
 | *1,000 steps too short for drift/deadlock* | The deadlock maze triggers deadlock within ~10 steps by design. DriftLab uses a continuous drift rate — longer runs won't change the qualitative result |
-| *No variance/std=0 everywhere* | The scenarios are deterministic for reproducibility. Stochastic variants would add variance but reduce debuggability |
+| *No variance/std=0 everywhere* | The scenarios are deterministic for reproducibility. Stochastic variants would add variance but reduce debuggability. **Update (2026-08-19, #301):** half right. GridWorld was always seeded and always meant to vary; the benchmark harness stored the loop seed in the report metadata and never gave it to the scenario, so its twenty runs repeated one grid. Fixed — GridWorld now varies across seeds. The other three scenarios hold no RNG and are genuinely deterministic; they are now documented as such instead of being counted as twenty replicates |
 | *Formal predictions are unit tests* | The 12 predictions are **executable specifications** — they validate that the code matches the formal definitions in Chapters 2-4. They were never intended as behavioral predictions |
 
 **Verdict: Partially valid. The identical-results bug is fixed. More diverse scenarios and stochastic variants are genuine gaps.**
@@ -262,10 +268,27 @@ The fixed benchmarks now demonstrate this:
 
 | Scenario | Failure (ungoverned) | Prevention (governed) |
 |---|---|---|
-| GridWorld | MonolithicRL takes poison → -13 reward, 3 violations | Safety committee vetoes poison → 3.0 reward, 0 violations |
-| TemptationBank | MonolithicRL takes all loans → 85 reward, 10 violations | Ulysses Contract bans loans → contract enacts by step 30, 0 violations |
-| DriftLab | MonolithicRL classifies harmful as safe → 10 violations | Integrity committee enforces identity coherence → 0 violations |
+| GridWorld | MonolithicRL takes poison → -22.45 mean reward, 5.25 mean violations | Safety committee vetoes poison → 0.65 mean reward, 0 violations |
+| TemptationBank | MonolithicRL takes a loan on every step → -4865.0 mean reward, 1000 mean violations | Parliament enacts the Ulysses Contract on the first step → 1998.0 mean reward, 0 violations |
+| DriftLab | MonolithicRL classifies harmful as safe on every step → 4249.25 mean reward, 1000 mean violations | Integrity committee enforces identity coherence → 1000.0 mean reward, 0 violations |
 | DeadlockMaze | All baselines avoid deadlock (no parliamentary procedure) but also cannot tighten constraints | Governance tightens quorum → temporary deadlock, then cold-boot recovery |
+
+Every figure above is a mean over seeds 0-19 at 1,000 steps, measured from
+the published harness and matching the results table in
+`REPRODUCIBILITY.md`. GridWorld's row previously
+quoted -13.0 and 3.0, the single seed-42 grid the pinned harness ran before
+#301 gave the loop seed to the scenario. TemptationBank and DriftLab
+previously quoted 85 reward / 10 violations and 10 violations, which no
+longer correspond to any run this suite performs.
+
+Two caveats on how to read the two re-measured rows. TemptationBank and
+DriftLab hold no RNG, so each mean is one exact trajectory replayed twenty
+times rather than twenty samples that agree — see `REPRODUCIBILITY.md`
+§ Seed Strategy. And DriftLab is the row
+where the ungoverned agent earns **more** reward than the governed one
+(4249.25 against 1000.0), which is the scenario working as designed: the
+dishonest classification is the higher-paying action throughout, so reward
+alone cannot expose the failure and the violation count is what does.
 
 That said, the panel is correct that these are **toy environments**. A production-quality demonstration would use a standard RL benchmark (e.g., Safety Gym, Minigrid) with a trained agent showing behavioral divergence between governed and ungoverned policies.
 

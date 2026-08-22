@@ -42,12 +42,46 @@ python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 
 ### Seed Strategy
 
-20 fixed seeds per scenario-strategy combination (19 combinations × 20
-seeds = 380 individual experiment runs). Four scenarios × five strategies
-is 20 combinations; GridWorld has no `static_masking` arm, for the reason
-given below the results table. Each experiment uses a
-deterministic seed for the RNG — same seed always produces identical
-results. The seed list covers a diverse range to detect sensitivity.
+Seeds 0-19 are run for every scenario-strategy combination (19
+combinations × 20 seeds = 380 individual experiment runs). Four scenarios
+× five strategies is 20 combinations; GridWorld has no `static_masking`
+arm, for the reason given below the results table. Every run is
+deterministic given its seed — the same seed always produces identical
+results — so the table below reproduces exactly, not approximately.
+
+**The seed does not move every cell, because most cells hold nothing for
+it to move.** Two components consume it:
+
+- The **scenario**, when it declares `ExperimentScenario.SEEDED`. GridWorld
+  is the only one that does: its `reset()` rolls walls, poison and apples
+  per tile, so each seed is a different grid.
+- The **`random` strategy**, whose `RandomBaseline` draws its choice from
+  the seed.
+
+TemptationBank, DriftLab and DeadlockMaze hold no RNG at all — their
+agendas, rewards and timers are constants. That is deliberate rather than
+an oversight. Each exists to demonstrate one mechanism (a Ulysses Contract
+binding, identity coherence holding under a drifting reward function, a
+deadlock breaker firing), and injecting noise would change what is being
+demonstrated instead of strengthening it. They are documented as
+deterministic rather than advertised as replicated.
+
+So GridWorld's four arms, plus the `random` arm on TemptationBank and on
+DriftLab, draw a fresh sample per seed. Every other combination returns
+the same number twenty times — including DeadlockMaze's `random` arm,
+because that scenario proposes exactly one action and a random chooser has
+nothing to choose between. For those cells `std_reward` is 0.0 and the
+bootstrap interval sits on the mean, since there is nothing to resample.
+Read them as exact values, not as twenty samples that happened to agree.
+
+Until #301 the loop seed was written into each report's metadata and
+handed to no scenario at all, while GridWorld's constructor kwargs pinned
+it to 42. Every cell but two therefore published a standard deviation,
+bootstrap interval and `n` taken over twenty repeats of a single run.
+The exceptions are the `random` arms on TemptationBank and DriftLab: the
+baseline drew from the loop seed then exactly as it does now, so those
+two were genuine 20-draw statistics, and the table below republishes
+their figures unchanged by the fix.
 
 ## Output
 
@@ -77,13 +111,39 @@ verify it from the `Identity drift:` line the runner prints for each run
 
 | Strategy | GridWorld | TemptationBank | DriftLab | DeadlockMaze |
 |---|---|---|---|---|
-| Governance | 3.0 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 999 deadlocks |
-| MonolithicRL | — | — | — | — |
-| Random | — | — | — | — |
-| StaticMasking | not applicable | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 1000 deadlocks (total inaction — see below) |
-| VetoOnly | — | — | — | — |
+| Governance | 0.65 ± 0.88 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 999 deadlocks |
+| MonolithicRL | -22.45 ± 12.50 reward, 5.25 violations | -4865.0 reward, 1000 violations | 4249.25 reward, 1000 violations, 0.1647 drift | 0.0 reward, 0 deadlocks |
+| Random | -34.90 ± 14.99 reward, 8.65 violations | 1990.30 ± 11.78 reward, 1.1 violations | 2621.41 ± 45.98 reward, 499.35 violations, 0.0777 drift | 0.0 reward, 0 deadlocks |
+| StaticMasking | not applicable | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 1000 deadlocks (total inaction — see below) |
+| VetoOnly | 0.65 ± 0.88 reward, 0 violations | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 0 deadlocks |
 
-*Dash entries are filled after the full 20-seed run completes.*
+Every entry is a mean over the 20 seeds. `±` is the standard deviation
+across seeds and is shown only where it is not zero; the cells without one
+are the deterministic combinations described under [Seed
+Strategy](#seed-strategy), where the mean is a single exact value. Reward
+and violation figures come from `results/benchmark_summary.csv`; the drift
+column comes from the DriftLab command in [DriftLab Identity
+Drift](#driftlab-identity-drift) below, run at `--seeds 20`, because the
+CSV carries no drift column.
+
+The CSV also carries a 95% bootstrap interval per cell (10,000 resamples
+from a `random.Random(42)`, so it is reproducible). Only the six sampling
+combinations have an interval wider than a point: GridWorld Governance
+[0.30, 1.05], MonolithicRL [-27.80, -17.10], Random [-41.20, -28.40] and
+VetoOnly [0.30, 1.05]; TemptationBank Random [1984.70, 1994.50]; DriftLab
+Random [2602.22, 2641.92]. For the other thirteen the interval is the mean
+twice over, because resampling twenty copies of one number returns that
+number.
+
+GridWorld's `governance` and `veto_only` arms return identical rewards on
+every seed, which is why those two cells match. They part company on
+deadlocks — steps where no proposal cleared the vote and the Speaker's
+default was returned. Across the 20 grids `governance` records 0 deadlocks
+on 10 seeds and 993-1,000 on the other 10 (mean 498.3), while `veto_only`
+records 0 on 19 seeds and 1,000 on seed 4 (mean 50.0). The single grid the
+suite ran before #301, seed 42, was one of the quiet ones: 3.0 reward and
+no deadlocks at all under governance. Half of GridWorld's seeds gridlock
+the Parliament, and the old table could not show it.
 
 StaticMasking is not run on GridWorld. The scenario declares no static
 blocklist (Appendix D.4): its actions are bare directions and the poison is
@@ -146,9 +206,12 @@ arm never executes the violating action. Before per-scenario blocklists it
 ran with an empty set and reproduced MonolithicRL's row exactly, which is
 the defect that made this arm meaningless.
 
-DriftLab never consults its RNG and the governed path is deterministic, so
-every strategy except Random reports identical values on both seeds; Random
-is given per seed. Drift is a function of how many commitment violations a
+DriftLab holds no RNG and the governed path is deterministic, so every
+strategy except Random reports identical values on both seeds; Random is
+given per seed. At `--seeds 20` the deterministic rows are unchanged and
+Random's mean reward is 2621.41 with mean drift 0.0777 (per-seed drift
+ranges 0.0713 to 0.0852), which is the DriftLab column of the table
+above. Drift is a function of how many commitment violations a
 strategy actually executed, which is why Random lands between the fully
 compliant and fully adversarial strategies.
 

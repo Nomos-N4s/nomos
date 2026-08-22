@@ -110,6 +110,34 @@ class ExperimentScenario(ABC):
     #: arm instead of publishing the same numbers under a second name.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
 
+    #: Whether this scenario's world is drawn from the benchmark seed.
+    #:
+    #: ``True`` means the constructor takes a ``seed`` and the run actually
+    #: consumes it, so two seeds are two different worlds. The benchmark
+    #: runner passes its loop seed to such a scenario, and repeating it
+    #: across seeds is real replication.
+    #:
+    #: ``False`` means the scenario draws nothing from the seed. The runner
+    #: passes it none, so a cell whose strategy draws nothing either returns
+    #: twenty copies of one trajectory — and a standard deviation or a
+    #: bootstrap interval taken over those repeats describes the harness,
+    #: not sampling variation, and must not be published as if it did. It
+    #: does not settle the whole row: the ``random`` baseline takes the loop
+    #: seed through :func:`~..benchmarks.run_all._get_baseline` and varies
+    #: wherever the agenda offers it more than one proposal.
+    #:
+    #: Every concrete scenario declares this for itself. ``False`` is the
+    #: default so that nothing is assumed to vary, but inheriting it is a
+    #: claim about the scenario rather than the absence of one — a class
+    #: that takes a seed and consumes it must say ``True``, whether or not
+    #: the benchmark runner is what builds it.
+    #:
+    #: Determinism here is a fact to declare, not a defect to paper over with
+    #: noise. A scenario exists to demonstrate a mechanism — a contract
+    #: binding, a breaker firing — and injecting randomness would change what
+    #: it measures rather than make it more rigorous.
+    SEEDED: ClassVar[bool] = False
+
     def __init__(self, speaker: SpeakerStateMachine):
         self.speaker = speaker
         self.metrics = ExperimentMetrics()

@@ -49,6 +49,11 @@ class GridWorld(ExperimentScenario):
     #: :class:`~.gym_env.GovernanceGridWorld` with ``static_mask=True``.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
 
+    #: The grid is drawn from the seed: :meth:`reset` rolls walls, poison and
+    #: apples per tile, so each seed is a different world. GridWorld is the
+    #: only scenario in the benchmark suite whose environment varies this way.
+    SEEDED: ClassVar[bool] = True
+
     def __init__(
         self, speaker: SpeakerStateMachine, size: int = 6, seed: int = 42, poison_ratio: float = 0.3
     ):

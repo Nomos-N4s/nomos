@@ -43,6 +43,16 @@ class TemptationBank(ExperimentScenario):
     #: reaches the same ban through a Ulysses Contract it votes for itself.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset({"take_loan"})
 
+    #: Deterministic. The agenda, the rewards, and the ten-step loan timer are
+    #: fixed constants and nothing in the scenario draws a random number, so
+    #: the scenario itself contributes no seed-dependence and every arm but
+    #: ``random`` replays the same trajectory. That arm does vary: the random
+    #: baseline draws from the loop seed and the agenda gives it three
+    #: proposals to choose between. TemptationBank exists to show
+    #: the Parliament voting itself a Ulysses Contract; noise added to that
+    #: would change what the demonstration measures.
+    SEEDED: ClassVar[bool] = False
+
     def __init__(self, speaker: SpeakerStateMachine, initial_balance: float = 10.0):
         super().__init__(speaker)
         self.balance = initial_balance
