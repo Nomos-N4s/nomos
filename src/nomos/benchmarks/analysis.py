@@ -63,9 +63,15 @@ def _cohens_d(control: list[float], treatment: list[float]) -> float:
     Returns:
         Cohen's d value. Conventional thresholds:
         |d| < 0.2 negligible, < 0.5 small, < 0.8 medium, >= 0.8 large.
+
+        ``nan`` when d is not defined: fewer than two observations in either
+        group, or a zero pooled standard deviation with differing means.
+        Two groups of identical constants do have a zero effect and return
+        ``0.0``; a separation divided by zero spread does not, and must not
+        be rounded down into the negligible band.
     """
     if len(control) < 2 or len(treatment) < 2:
-        return 0.0
+        return math.nan
     m1 = statistics.mean(control)
     m2 = statistics.mean(treatment)
     v1 = statistics.variance(control)
@@ -73,7 +79,7 @@ def _cohens_d(control: list[float], treatment: list[float]) -> float:
     n1, n2 = len(control), len(treatment)
     pooled = math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2))
     if pooled == 0:
-        return 0.0
+        return 0.0 if m1 == m2 else math.nan
     return (m1 - m2) / pooled
 
 
@@ -86,15 +92,21 @@ def _cohens_d_ci(control: list[float], treatment: list[float], ci: float = 0.95)
         ci: Confidence level (default 0.95).
 
     Returns:
-        Dict with keys ``d``, ``ci_lower``, ``ci_upper``, ``se_d``.
-        Returns ``{"d": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "se_d": 0.0}``
-        if either group has fewer than 2 elements.
+        Dict with keys ``d``, ``ci_lower``, ``ci_upper``, ``se_d``.  Every
+        value is ``nan`` when :func:`_cohens_d` is undefined for the pair --
+        fewer than 2 observations in a group, or zero pooled spread across
+        differing means.  There is no interval around an undefined point
+        estimate, and reporting ``0.0`` for one implies a measurement that
+        was never made.
     """
     n1, n2 = len(control), len(treatment)
+    undefined = {"d": math.nan, "ci_lower": math.nan, "ci_upper": math.nan, "se_d": math.nan}
     if n1 < 2 or n2 < 2:
-        return {"d": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "se_d": 0.0}
+        return undefined
 
     d = _cohens_d(control, treatment)
+    if math.isnan(d):
+        return undefined
     se = math.sqrt((n1 + n2) / (n1 * n2) + d * d / (2.0 * (n1 + n2 - 2)))
     if se == 0:
         return {"d": round(d, 3), "ci_lower": round(d, 3), "ci_upper": round(d, 3), "se_d": 0.0}
@@ -619,6 +631,14 @@ def compute_effect_sizes(
         with no runs on either side yields no entry, and is not counted in
         the correction family — an arm that was never run is not a test that
         was performed.
+
+        When Cohen's d is undefined for a pair, ``cohens_d``, ``cohens_d_se``
+        and both ends of ``cohens_d_ci`` are ``None`` and ``interpretation``
+        names the reason -- ``"undefined (zero pooled variance)"`` or
+        ``"undefined (insufficient samples)"``.  A cell whose two arms are
+        each constant has no pooled spread to divide by, however far apart
+        the constants are, so it is marked undefined rather than reported as
+        a negligible effect.
     """
     groups = _group_rewards_by_seed(reports)
 
@@ -636,6 +656,21 @@ def compute_effect_sizes(
                 continue
             d = _cohens_d(control_rewards, treatment_rewards)
             d_ci = _cohens_d_ci(control_rewards, treatment_rewards)
+            d_defined = not math.isnan(d)
+            if d_defined:
+                interpretation = (
+                    "large"
+                    if abs(d) > 0.8
+                    else "medium"
+                    if abs(d) > 0.5
+                    else "small"
+                    if abs(d) > 0.2
+                    else "negligible"
+                )
+            elif min(len(control_rewards), len(treatment_rewards)) < 2:
+                interpretation = "undefined (insufficient samples)"
+            else:
+                interpretation = "undefined (zero pooled variance)"
 
             normality = _shapiro_wilk(control_rewards + treatment_rewards, alpha)
             normality_warning = (
@@ -655,24 +690,18 @@ def compute_effect_sizes(
                 {
                     "scenario": scenario,
                     "governance_vs": bl,
-                    "cohens_d": round(d, 3),
-                    "cohens_d_ci": [d_ci["ci_lower"], d_ci["ci_upper"]],
-                    "cohens_d_se": d_ci["se_d"],
+                    "cohens_d": round(d, 3) if d_defined else None,
+                    "cohens_d_ci": (
+                        [d_ci["ci_lower"], d_ci["ci_upper"]] if d_defined else [None, None]
+                    ),
+                    "cohens_d_se": d_ci["se_d"] if d_defined else None,
                     "mannwhitney_u": u_stat,
                     "p_value_raw": p_raw,
                     "n_governance": len(control_rewards),
                     "n_baseline": len(treatment_rewards),
                     "paired": paired,
                     "normality_warning": normality_warning,
-                    "interpretation": (
-                        "large"
-                        if abs(d) > 0.8
-                        else "medium"
-                        if abs(d) > 0.5
-                        else "small"
-                        if abs(d) > 0.2
-                        else "negligible"
-                    ),
+                    "interpretation": interpretation,
                 }
             )
 
