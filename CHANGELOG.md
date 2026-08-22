@@ -8,6 +8,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [1.3.0](https://github.com/Nomos-N4s/nomos/compare/v1.2.1...v1.3.0) (2026-08-22)
+
+
+### Features
+
+* **experiments:** declare whether a scenario draws on the seed ([ec2c9fc](https://github.com/Nomos-N4s/nomos/commit/ec2c9fc1888f77a22c9799a15f8c282bd2cf5dab))
+* **prove:** map each prediction to its Lean counterpart ([480bac2](https://github.com/Nomos-N4s/nomos/commit/480bac2ed1713b7295fb45711c500c92c1e62b0f))
+* **prove:** report Lean coverage alongside the prediction results ([add3774](https://github.com/Nomos-N4s/nomos/commit/add3774f9fae74eed09eac5e662f2a6ac6d11176))
+
+
+### Bug Fixes
+
+* **agents:** declare that GridWorldLLM draws its grid from the seed ([7581703](https://github.com/Nomos-N4s/nomos/commit/758170355a43822cb7140aad7c9568e030825427))
+* **benchmarks:** give the loop seed to the scenario, not just the metadata ([bb98d11](https://github.com/Nomos-N4s/nomos/commit/bb98d1114d199eb7c05c599cffb5e35d28dc0d38))
+* **benchmarks:** give the loop seed to the scenarios, and say which ones use it ([294c77c](https://github.com/Nomos-N4s/nomos/commit/294c77cfbaed88b938c83dac399f7505846b000b))
+* **dashboard:** say the prediction counts are Python test asserts ([fc6b8fb](https://github.com/Nomos-N4s/nomos/commit/fc6b8fbf3a0e159493c1bd6519ad56c9211e5d99))
+* **prove:** correct P10's false claim that the Python has no quorum ([0656a56](https://github.com/Nomos-N4s/nomos/commit/0656a56c081e378917bf880eebe63fb1a0f2f4e2))
+* **prove:** label the prove banner as Python prediction tests ([d8275ec](https://github.com/Nomos-N4s/nomos/commit/d8275ec7ceab0dba53444ea93483f51cf4bb3bbb))
+* **prove:** stop P03's note reading as the corpus's whole vote result ([ee0dfda](https://github.com/Nomos-N4s/nomos/commit/ee0dfdaf2848d9e6702696a0ae5ee3a159f86ab1))
+
+
+### Documentation
+
+* **agents:** refresh the GridWorld benchmark line from the fixed harness ([eef4388](https://github.com/Nomos-N4s/nomos/commit/eef438818684e08999d42c98f1ff7e71ddfd1886))
+* **book:** correct GridWorld's grid size in the scenario diagram ([d6eae72](https://github.com/Nomos-N4s/nomos/commit/d6eae72002c42479c5c5887ae0da3a5127284892))
+* **book:** correct the seed protocol in Appendix D ([872868d](https://github.com/Nomos-N4s/nomos/commit/872868d700d18239c59201a46940cc5f0c67a5d8))
+* **book:** count the coverage map in the shared-identifier bullet ([ab8bf7a](https://github.com/Nomos-N4s/nomos/commit/ab8bf7a71d5a830a085cd42dc1b5c307996b7bfa))
+* **book:** drop the guard counts this branch made stale ([850ee07](https://github.com/Nomos-N4s/nomos/commit/850ee0754e4670c7a55cce067e87148e5c1ed93b))
+* **book:** name the coverage kind check in the guard list ([7b4b2da](https://github.com/Nomos-N4s/nomos/commit/7b4b2dadc48c9af32c368f0298ab3fdd5fd895aa))
+* **book:** publish the prediction-to-theorem coverage table ([26bda80](https://github.com/Nomos-N4s/nomos/commit/26bda8035ab6d1a57145cd2b1fe22f466f9f8dc0))
+* **book:** refresh the benchmark numbers the seed fix invalidates ([6d99982](https://github.com/Nomos-N4s/nomos/commit/6d9998279dfc62ec52004e5d050ef3d835b735a6))
+* **book:** refresh the GridWorld figures this branch invalidated ([17c35af](https://github.com/Nomos-N4s/nomos/commit/17c35af8cec8fa2a742b37d895acbfeddd4deeb7))
+* **book:** say what is actually unique to GridWorld in the diagram note ([3bb5800](https://github.com/Nomos-N4s/nomos/commit/3bb58006e8c26f930b6a78d99a417167d54da483))
+* **book:** scope the deterministic-repeat claim to the arm, not the scenario ([efa8b1b](https://github.com/Nomos-N4s/nomos/commit/efa8b1bc19703582e4bb528be0640e16901f49e2))
+* **book:** scope the NumPy claim to the benchmark package ([4cf0291](https://github.com/Nomos-N4s/nomos/commit/4cf0291d819c5688cced8fb9a5578df5b4878a4f))
+* **experiments:** say what SEEDED=False rules out, and what it does not ([ec0b4f4](https://github.com/Nomos-N4s/nomos/commit/ec0b4f4d502465bcceae47f07bb81b2db3c50404))
+* **readme:** say the 12/12 counts Python tests, not Lean results ([87aa7fc](https://github.com/Nomos-N4s/nomos/commit/87aa7fccb73553b5f3bc00152cfa06ab4fb3f41a))
+* **readme:** say the twenty seeds are twenty runs, not twenty samples ([c318bbd](https://github.com/Nomos-N4s/nomos/commit/c318bbd9ca91d3c2c323df7ff95488dabafa5b31))
+* **reproducibility:** name the two cells the pre-fix seed bug did not spoil ([efe07ce](https://github.com/Nomos-N4s/nomos/commit/efe07ce8e6fa0e70f2c0d259e5a70a1a2d1b5779))
+* **reproducibility:** publish the bootstrap intervals that mean something ([a1e5b90](https://github.com/Nomos-N4s/nomos/commit/a1e5b9086a62539fb0b102b38020de7350f84164))
+* **reproducibility:** quote the prove output the runner really prints ([d428f05](https://github.com/Nomos-N4s/nomos/commit/d428f05267ad726c7bdcc578540f6a5d467bfdc5))
+* **reproducibility:** say which benchmark cells the seed reaches ([3c4a09b](https://github.com/Nomos-N4s/nomos/commit/3c4a09bfc6e4c44712414a25dc5f1bceacb56f7c))
+* **responses:** re-measure the two failure-mode rows that were stale ([b933893](https://github.com/Nomos-N4s/nomos/commit/b93389346341c73ea2610ecffa92b6ed6b96355a))
+* **responses:** reference REPRODUCIBILITY.md the way the docs build allows ([00b22ad](https://github.com/Nomos-N4s/nomos/commit/00b22ad0b7e6e44816288e8e74d2cb7328ee9b42))
+* separate the Python prediction tests from the Lean theorems ([9221684](https://github.com/Nomos-N4s/nomos/commit/9221684fecdbf49cc78a62b2d9c4b3e2c3b950db))
+
 ## [1.2.1](https://github.com/Nomos-N4s/nomos/compare/v1.2.0...v1.2.1) (2026-08-19)
 
 
