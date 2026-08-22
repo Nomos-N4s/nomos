@@ -16,10 +16,20 @@ import json
 import math
 import os
 import statistics
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 
 from ..experiments.metrics import ExperimentReport
+
+#: Smallest p-value the analysis will report.  ``math.erfc`` underflows to
+#: exactly 0.0 once ``|z|`` passes roughly 38.5, which needs about a thousand
+#: fully separated observations per group -- far beyond the published design,
+#: but reachable.  A p-value of exactly 0.0 is a claim of zero probability
+#: that no finite sample supports, so an underflowed tail is reported at the
+#: smallest positive normal double instead.  The floor only ever makes a
+#: result look *less* significant than the arithmetic suggested.
+_MIN_REPORTABLE_P = sys.float_info.min
 
 
 def _bootstrap_ci(
@@ -180,7 +190,7 @@ def _mannwhitney_u_exact(x: list[float], y: list[float]) -> tuple[float, float]:
             count_extreme += 1
 
     p_val = count_extreme / max(total, 1)
-    return (round(u_obs, 2), round(p_val, 4))
+    return (round(u_obs, 2), p_val)
 
 
 def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
@@ -196,6 +206,8 @@ def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
     Returns:
         ``(U_statistic, p_value)`` -- U is the smaller of U1 and U2.
         Returns ``(0.0, 1.0)`` if either group has fewer than 2 elements.
+        The p-value carries full float precision and is floored at
+        :data:`_MIN_REPORTABLE_P`; callers format it for display.
     """
     n1, n2 = len(x), len(y)
     if n1 < 2 or n2 < 2:
@@ -230,8 +242,8 @@ def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
 
     z = (u - mean_u) / math.sqrt(variance)
     p = math.erfc(abs(z) / math.sqrt(2.0))
-    p = max(0.0, min(1.0, p))
-    return (round(u, 2), round(p, 4))
+    p = min(1.0, max(_MIN_REPORTABLE_P, p))
+    return (round(u, 2), p)
 
 
 def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict]:
@@ -246,7 +258,9 @@ def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list
 
     Returns:
         List of dicts with keys ``raw_p``, ``corrected_p``, ``significant``,
-        ``rank`` (1=smallest), ``method`` (``"holm"``).
+        ``rank`` (1=smallest), ``method`` (``"holm"``).  ``corrected_p``
+        carries full float precision; rounding it here turned genuinely tiny
+        p-values into an exact 0.0 that was then flagged significant.
     """
     m = len(p_values)
     if m == 0:
@@ -259,7 +273,7 @@ def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list
         corrected = min(raw_p * (m - k + 1), 1.0)
         results[orig_idx] = {
             "raw_p": raw_p,
-            "corrected_p": round(corrected, 4),
+            "corrected_p": corrected,
             "significant": corrected < alpha,
             "rank": k,
             "method": "holm",
@@ -276,6 +290,8 @@ def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict
 
     Returns:
         List of dicts with keys ``raw_p``, ``corrected_p``, ``significant``.
+        ``corrected_p`` carries full float precision; formatting belongs at
+        the print or export boundary, not here.
     """
     m = len(p_values)
     if m == 0:
@@ -286,7 +302,7 @@ def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict
         results.append(
             {
                 "raw_p": raw_p,
-                "corrected_p": round(corrected, 4),
+                "corrected_p": corrected,
                 "significant": corrected < alpha,
             }
         )
@@ -639,6 +655,11 @@ def compute_effect_sizes(
         each constant has no pooled spread to divide by, however far apart
         the constants are, so it is marked undefined rather than reported as
         a negligible effect.
+
+        Every p-value in the record carries full float precision.  A record
+        can never report ``p_value_raw == 0.0`` alongside
+        ``significant_holm: true``: the underlying tests floor their tails at
+        :data:`_MIN_REPORTABLE_P` rather than rounding them to zero.
     """
     groups = _group_rewards_by_seed(reports)
 
