@@ -1,5 +1,7 @@
 from src.nomos.prove.predictions import (
     ALL_PREDICTIONS,
+    LEAN_COVERAGE,
+    LeanStatus,
     PredictionResult,
     _build_speaker,
     pred_01_budget_enforcement,
@@ -206,3 +208,46 @@ class TestPred12DeadlockBreaker:
         for _ in range(4):
             breaker.record_cycle(decision_produced=False)
             assert not breaker.check()
+
+
+class TestLeanCoverage:
+    """LEAN_COVERAGE is the repo's prediction-to-theorem map.
+
+    Whether the theorem names in it exist is a question about the Lean
+    corpus, so tests/test_lean_claims.py asks it. These tests only hold the
+    map to its own shape.
+    """
+
+    def test_covers_every_prediction_exactly_once(self):
+        ids = [fn().id for fn in ALL_PREDICTIONS]
+        assert sorted(LEAN_COVERAGE) == sorted(ids)
+
+    def test_named_declarations_are_distinct_within_a_row(self):
+        for pid, coverage in LEAN_COVERAGE.items():
+            names = coverage.declarations
+            assert len(set(names)) == len(names), f"P{pid:02d} repeats a declaration: {names}"
+
+    def test_only_uncovered_rows_name_no_declaration(self):
+        for pid, coverage in LEAN_COVERAGE.items():
+            named = bool(coverage.declarations)
+            uncovered = coverage.status is LeanStatus.NO_COUNTERPART
+            assert named is not uncovered, (
+                f"P{pid:02d} is {coverage.status.value} and names {coverage.declarations}: "
+                f"a row with no counterpart must name nothing, and every other "
+                f"status must say which declaration it means"
+            )
+
+    def test_every_row_explains_itself(self):
+        for pid, coverage in LEAN_COVERAGE.items():
+            assert coverage.note.strip(), f"P{pid:02d} has no note saying what the row is worth"
+
+    def test_result_carries_its_coverage_row(self):
+        for fn in ALL_PREDICTIONS:
+            result = fn()
+            assert result.lean is LEAN_COVERAGE[result.id]
+
+    def test_result_outside_the_registry_has_no_row(self):
+        stray = PredictionResult(
+            id=99, chapter="ERR", section="0", description="stray", passed=False, evidence=""
+        )
+        assert stray.lean is None
