@@ -275,7 +275,7 @@ The fixed benchmarks now demonstrate this:
 
 Every figure above is a mean over seeds 0-19 at 1,000 steps, measured from
 the published harness and matching the results table in
-[REPRODUCIBILITY.md](../../REPRODUCIBILITY.md). GridWorld's row previously
+`REPRODUCIBILITY.md`. GridWorld's row previously
 quoted -13.0 and 3.0, the single seed-42 grid the pinned harness ran before
 #301 gave the loop seed to the scenario. TemptationBank and DriftLab
 previously quoted 85 reward / 10 violations and 10 violations, which no
@@ -283,8 +283,8 @@ longer correspond to any run this suite performs.
 
 Two caveats on how to read the two re-measured rows. TemptationBank and
 DriftLab hold no RNG, so each mean is one exact trajectory replayed twenty
-times rather than twenty samples that agree — see [Seed
-Strategy](../../REPRODUCIBILITY.md#seed-strategy). And DriftLab is the row
+times rather than twenty samples that agree — see `REPRODUCIBILITY.md`
+§ Seed Strategy. And DriftLab is the row
 where the ungoverned agent earns **more** reward than the governed one
 (4249.25 against 1000.0), which is the scenario working as designed: the
 dishonest classification is the higher-paying action throughout, so reward
