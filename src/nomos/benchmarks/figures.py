@@ -65,6 +65,12 @@ def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "resul
     Confidence bands derived from :func:`_bootstrap_ci` instead of
     parametric normal approximation.
 
+    The curve is each step record's ``cumulative_reward``, not the
+    per-step ``reward`` that now sits beside it. Reading the wrong key
+    would turn the panel from a running total into a scatter of
+    single-step payoffs under an axis labelled "Cumulative Reward"
+    (#304).
+
     Args:
         reports: List of experiment reports.
         output_dir: Directory for output files (default ``results/figures``).
@@ -101,7 +107,7 @@ def plot_reward_curves(reports: list[ExperimentReport], output_dir: str = "resul
             all_curves = []
             for r in relevant:
                 steps = r.metadata.get("step_records", [])
-                curve = [s.get("reward", 0) for s in steps]
+                curve = [s.get("cumulative_reward", 0) for s in steps]
                 if curve:
                     all_curves.append(curve)
 
