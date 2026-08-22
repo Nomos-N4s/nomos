@@ -1,6 +1,8 @@
 import os
 import tempfile
 
+import pytest
+
 from src.nomos.benchmarks.analysis import (
     StrategyAggregate,
     _bonferroni_correct,
@@ -20,7 +22,11 @@ from src.nomos.benchmarks.analysis import (
     export_summary_csv,
     run_analysis,
 )
+from src.nomos.benchmarks.baselines import MonolithicRL, RandomBaseline
+from src.nomos.benchmarks.run_all import _run_scenario
 from src.nomos.experiments.base import ExperimentMetrics
+from src.nomos.experiments.drift_lab import DriftLab
+from src.nomos.experiments.grid_world import GridWorld
 from src.nomos.experiments.metrics import ExperimentReport
 
 
@@ -329,6 +335,145 @@ class TestDetectRewardHacking:
 
     def test_empty_records(self):
         assert _detect_reward_hacking([]) == []
+
+
+class TestNonPositiveCumulativeSeriesRaisesNoEpisodes:
+    """A flat or falling cumulative series must raise no episodes (#304).
+
+    Before the fix the benchmark producer wrote running totals under the
+    per-step ``reward``/``violations`` keys. The failure modes below are
+    properties of that series, not of any agent behaviour.
+
+    The name is deliberately narrow, because the detector does not reject
+    cumulative input in general. A *rising positive* running total still
+    clears the ratio test — the trailing mean really is above the
+    preceding one — and no arithmetic on the series can tell that apart
+    from a genuine per-step spike. The third test below flags episodes
+    off exactly such a fixture and pins only that their spike is
+    positive. That residual gap is held by the producer emitting
+    per-step values, not by the detector; see the
+    ``_detect_reward_hacking`` docstring.
+    """
+
+    @staticmethod
+    def _cumulative(per_step_reward, steps=40):
+        """A cumulative series: running reward total, monotone violation counter."""
+        return [
+            {
+                "step": i,
+                "reward": per_step_reward * (i + 1),
+                "violations": i + 1,
+            }
+            for i in range(steps)
+        ]
+
+    def test_declining_cumulative_series_yields_no_episodes(self):
+        # Every step violates (the counter never returns to zero) and the
+        # running total falls, so the 1.5x test fires on a negative baseline.
+        assert _detect_reward_hacking(self._cumulative(-13.0)) == []
+
+    def test_flat_negative_plateau_yields_no_episodes(self):
+        # The shape that produced most of the bogus episodes: a run whose
+        # cumulative reward stops moving. -13.0 > -13.0 * 1.5 is true, so a
+        # perfectly flat series used to report a "spike" of size 0.0.
+        records = [{"step": i, "reward": -13.0, "violations": i + 1} for i in range(30)]
+        assert _detect_reward_hacking(records) == []
+
+    def test_no_episode_is_ever_exported_with_a_non_positive_spike(self):
+        # The headline number of an episode has to say something happened.
+        for per_step in (-13.0, -1.0, 0.0, 1.0, 7.5):
+            for episode in _detect_reward_hacking(self._cumulative(per_step)):
+                assert episode["reward_spike"] > 0, (per_step, episode)
+
+
+class TestRewardHackingProducerContract:
+    """Exercise the detector on records the real benchmark runner wrote (#304).
+
+    Every other test here hand-builds step records, and that is how the
+    units mismatch survived a green suite: the fixtures were per-step
+    while the one production producer emitted running totals. A unit test
+    whose fixture disagrees with the producer cannot catch a producer bug,
+    so these call ``_run_scenario`` and read what it actually stores.
+    """
+
+    @staticmethod
+    def _real_records(steps=120):
+        """Records from the arm that produced most of the bogus episodes.
+
+        GridWorld under ``monolithic_rl`` earns a little, violates twice,
+        and then plateaus at a negative total for the rest of the run —
+        the shape the 1.5x ratio test used to read as a spike on every
+        remaining step.
+        """
+        report = _run_scenario(
+            GridWorld,
+            {"size": 6},
+            "monolithic_rl",
+            steps=steps,
+            seed=0,
+            baseline=MonolithicRL(),
+        )
+        return report.metadata["step_records"]
+
+    @staticmethod
+    def _flagging_records(steps=40):
+        """Records from a real arm that does clear the detector's tests.
+
+        DriftLab under ``random`` violates on many steps and its per-step
+        reward moves both ways, so some windows genuinely spike out of a
+        positive baseline. Without an arm like this the per-episode
+        assertions below would iterate an empty list.
+        """
+        report = _run_scenario(
+            DriftLab,
+            {},
+            "random",
+            steps=steps,
+            seed=0,
+            baseline=RandomBaseline(seed=0),
+        )
+        return report.metadata["step_records"]
+
+    def test_producer_emits_the_keys_its_consumers_read(self):
+        record = self._real_records(steps=20)[0]
+        # _detect_reward_hacking reads the first two; plot_reward_curves
+        # and the --csv export read the cumulative ones.
+        assert {"reward", "violations", "cumulative_reward"} <= set(record)
+
+    def test_reward_and_violations_are_per_step_not_running_totals(self):
+        records = self._real_records()
+        assert records[-1]["cumulative_reward"] == pytest.approx(sum(r["reward"] for r in records))
+        assert records[-1]["cumulative_violations"] == sum(r["violations"] for r in records)
+        assert records[-1]["cumulative_deadlocks"] == sum(r["deadlocks"] for r in records)
+        # A running counter never returns to zero once it has moved; a
+        # per-step count does, and this arm violates on only a few steps.
+        assert records[-1]["cumulative_violations"] > 0
+        assert records[-1]["violations"] == 0
+
+    def test_the_gridworld_arm_reports_nothing_once_the_units_are_right(self):
+        # Asserted rather than left implicit, because it is the whole
+        # before/after of #304 on this arm and it is not a happy result:
+        # the poison tile books its -10 two steps after its +5, so each
+        # hack leaves the next one a negative baseline and the
+        # positive-baseline requirement drops it. Appendix D.5 records
+        # what that costs across the suite.
+        assert _detect_reward_hacking(self._real_records()) == []
+
+    def test_detector_on_real_records_reports_only_real_spikes(self):
+        records = self._flagging_records()
+        episodes = _detect_reward_hacking(records)
+        # Guard the loop: with no episodes every assertion below is dead
+        # code and this test would pass against `return []`.
+        assert episodes, "fixture must produce episodes for the assertions to mean anything"
+        for ep in episodes:
+            assert ep["reward_spike"] > 0, ep
+            # The violation belongs to the flagged step, not to the run.
+            assert ep["violation_count"] == records[ep["step"]]["violations"], ep
+            assert records[ep["step"]]["violations"] > 0, ep
+            # And it is not the running total under another name: the
+            # producer's own cumulative key is strictly larger by every
+            # step this deterministic fixture flags.
+            assert ep["violation_count"] < records[ep["step"]]["cumulative_violations"], ep
 
 
 class TestAggregateReports:
