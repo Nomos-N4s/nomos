@@ -336,12 +336,22 @@ class TestDetectRewardHacking:
         assert _detect_reward_hacking([]) == []
 
 
-class TestCumulativeSeriesRaisesNoEpisodes:
-    """A cumulative series must not read as a sequence of reward spikes (#304).
+class TestNonPositiveCumulativeSeriesRaisesNoEpisodes:
+    """A flat or falling cumulative series must raise no episodes (#304).
 
     Before the fix the benchmark producer wrote running totals under the
-    per-step ``reward``/``violations`` keys. Both defects below are
+    per-step ``reward``/``violations`` keys. The failure modes below are
     properties of that series, not of any agent behaviour.
+
+    The name is deliberately narrow, because the detector does not reject
+    cumulative input in general. A *rising positive* running total still
+    clears the ratio test — the trailing mean really is above the
+    preceding one — and no arithmetic on the series can tell that apart
+    from a genuine per-step spike. The third test below flags episodes
+    off exactly such a fixture and pins only that their spike is
+    positive. That residual gap is held by the producer emitting
+    per-step values, not by the detector; see the
+    ``_detect_reward_hacking`` docstring.
     """
 
     @staticmethod
