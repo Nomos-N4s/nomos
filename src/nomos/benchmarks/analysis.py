@@ -454,30 +454,76 @@ def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[d
     return episodes
 
 
+def _group_rewards_by_seed(
+    reports: list[ExperimentReport],
+) -> dict[tuple[str, str], dict[object, list[float]]]:
+    """Bucket report rewards by strategy+scenario, keeping the seed labels.
+
+    The inner mapping is ``seed -> rewards`` rather than a flat reward list
+    so that callers can match observations across strategies by seed.  A
+    seed is a list rather than a single float because nothing forbids a
+    report set from repeating a seed within one cell; keeping the repeats
+    lets :func:`_is_paired` see that the cell is not a clean 1:1 design.
+
+    Args:
+        reports: Flattened list of all experiment reports.
+
+    Returns:
+        Mapping ``(strategy, scenario) -> {seed: [rewards]}``.  Reports whose
+        metadata carries no ``seed`` are collected under the key ``None``.
+    """
+    groups: dict[tuple[str, str], dict[object, list[float]]] = defaultdict(dict)
+    for r in reports:
+        key = (r.metadata.get("strategy", "unknown"), r.metadata.get("scenario", "unknown"))
+        groups[key].setdefault(r.metadata.get("seed"), []).append(r.total_reward)
+    return groups
+
+
+def _flatten_seed_map(seed_map: dict[object, list[float]]) -> list[float]:
+    """Flatten a ``seed -> rewards`` map into a single reward list.
+
+    Args:
+        seed_map: One cell of the mapping built by :func:`_group_rewards_by_seed`.
+
+    Returns:
+        Every reward in the cell, in seed-insertion order.  The unpaired
+        statistics downstream are order-invariant.
+    """
+    return [reward for rewards in seed_map.values() for reward in rewards]
+
+
 def _is_paired(
-    groups: dict[tuple[str, str], list[float]],
+    groups: dict[tuple[str, str], dict[object, list[float]]],
     scenario: str,
     strategy_a: str,
     strategy_b: str,
 ) -> bool:
-    """Heuristic check whether two strategies share paired observations.
+    """Check whether two strategies were run on a matched set of seeds.
 
-    Strategies are considered paired (repeated measures) if they have the
-    same number of reports for a given scenario, suggesting a within-subject
-    design.  This is a simple diagnostic, not a formal structural-zero test.
+    This is a structural check on the seed labels, not a count heuristic:
+    the two cells must cover the *same* seeds, every seed must carry exactly
+    one observation on each side (so the observations pair 1:1), and no
+    observation may be missing its seed label.  Equal group sizes over
+    different seeds are not a paired design and are reported as unpaired.
 
     Args:
-        groups: Mapping ``(strategy, scenario) -> rewards``.
+        groups: Mapping ``(strategy, scenario) -> {seed: [rewards]}`` as
+            built by :func:`_group_rewards_by_seed`.
         scenario: Scenario name to check.
         strategy_a: First strategy name.
         strategy_b: Second strategy name.
 
     Returns:
-        ``True`` if counts match and are >= 2.
+        ``True`` when both cells cover the same >= 2 labelled seeds with one
+        observation each.
     """
-    n_a = len(groups.get((strategy_a, scenario), []))
-    n_b = len(groups.get((strategy_b, scenario), []))
-    return n_a >= 2 and n_b >= 2 and n_a == n_b
+    seeds_a = groups.get((strategy_a, scenario), {})
+    seeds_b = groups.get((strategy_b, scenario), {})
+    if len(seeds_a) < 2 or set(seeds_a) != set(seeds_b):
+        return False
+    if None in seeds_a:
+        return False
+    return all(len(seeds_a[s]) == 1 and len(seeds_b[s]) == 1 for s in seeds_a)
 
 
 @dataclass
@@ -574,10 +620,7 @@ def compute_effect_sizes(
         the correction family — an arm that was never run is not a test that
         was performed.
     """
-    groups = defaultdict(list)
-    for r in reports:
-        key = (r.metadata.get("strategy", "unknown"), r.metadata.get("scenario", "unknown"))
-        groups[key].append(r.total_reward)
+    groups = _group_rewards_by_seed(reports)
 
     effect_sizes = []
     scenarios = set(s.scenario for s in aggregates)
@@ -586,9 +629,9 @@ def compute_effect_sizes(
 
     raw_p_values = []
     for scenario in sorted(scenarios):
-        control_rewards = groups.get((governance_key, scenario), [])
+        control_rewards = _flatten_seed_map(groups.get((governance_key, scenario), {}))
         for bl in baselines:
-            treatment_rewards = groups.get((bl, scenario), [])
+            treatment_rewards = _flatten_seed_map(groups.get((bl, scenario), {}))
             if not control_rewards or not treatment_rewards:
                 continue
             d = _cohens_d(control_rewards, treatment_rewards)
