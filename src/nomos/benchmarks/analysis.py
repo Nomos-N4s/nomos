@@ -639,7 +639,8 @@ def compute_effect_sizes(
         alpha: Family-wise error rate (default 0.05).
 
     Returns:
-        List of dicts with keys ``scenario``, ``governance_vs``, ``cohens_d``,
+        List of dicts with keys ``scenario``, ``governance_vs``,
+        ``mean_governance``, ``mean_baseline``, ``mean_diff``, ``cohens_d``,
         ``cohens_d_ci``, ``cohens_d_se``, ``mannwhitney_u``, ``p_value_raw``,
         ``p_value_corrected``, ``p_value_holm``, ``significant``,
         ``significant_holm``, ``n_governance``, ``n_baseline``, ``paired``,
@@ -654,7 +655,9 @@ def compute_effect_sizes(
         ``"undefined (insufficient samples)"``.  A cell whose two arms are
         each constant has no pooled spread to divide by, however far apart
         the constants are, so it is marked undefined rather than reported as
-        a negligible effect.
+        a negligible effect.  ``mean_diff`` (governance minus baseline) keeps
+        the direction of the comparison on the record either way, since both
+        ``mannwhitney_u`` and an undefined ``cohens_d`` are direction-free.
 
         Every p-value in the record carries full float precision.  A record
         can never report ``p_value_raw == 0.0`` alongside
@@ -675,6 +678,8 @@ def compute_effect_sizes(
             treatment_rewards = _flatten_seed_map(groups.get((bl, scenario), {}))
             if not control_rewards or not treatment_rewards:
                 continue
+            mean_governance = statistics.mean(control_rewards)
+            mean_baseline = statistics.mean(treatment_rewards)
             d = _cohens_d(control_rewards, treatment_rewards)
             d_ci = _cohens_d_ci(control_rewards, treatment_rewards)
             d_defined = not math.isnan(d)
@@ -711,6 +716,9 @@ def compute_effect_sizes(
                 {
                     "scenario": scenario,
                     "governance_vs": bl,
+                    "mean_governance": mean_governance,
+                    "mean_baseline": mean_baseline,
+                    "mean_diff": mean_governance - mean_baseline,
                     "cohens_d": round(d, 3) if d_defined else None,
                     "cohens_d_ci": (
                         [d_ci["ci_lower"], d_ci["ci_upper"]] if d_defined else [None, None]
