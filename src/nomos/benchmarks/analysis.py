@@ -293,8 +293,9 @@ def _wilcoxon_signed_rank(control: list[float], treatment: list[float]) -> dict:
         Dict with keys ``w`` (the smaller of W+ and W-), ``p_value``
         (two-tailed), ``n_pairs`` (non-zero differences used),
         ``n_zero_diffs`` (pairs dropped), and ``method`` (``"exact"``,
-        ``"normal"``, or ``"all-zero-differences"``).  ``w`` is ``None`` and
-        ``p_value`` ``None`` when the inputs are not equal-length pairs.
+        ``"normal"``, ``"all-zero-differences"``, or ``"undefined"``).
+        ``w`` and ``p_value`` are ``None``, with ``method`` ``"undefined"``,
+        when the inputs are empty or of unequal length.
     """
     if len(control) != len(treatment) or not control:
         return {
@@ -799,8 +800,8 @@ def compute_effect_sizes(
 
         ``paired`` is true only when both arms cover the same labelled seeds
         one observation each; when it is, a Wilcoxon signed-rank test is run
-        over those matched pairs and reported in ``wilcoxon_w`` /
-        ``wilcoxon_p`` / ``wilcoxon_method`` (all ``None`` otherwise).  The
+        over those matched pairs and reported in the ``wilcoxon_*`` fields
+        (every one of them ``None`` otherwise).  The
         signed-rank test drops pairs whose difference is exactly zero and
         conditions on the survivors, so its p-value rests on
         ``wilcoxon_n_pairs`` observations rather than on ``n_governance``;
