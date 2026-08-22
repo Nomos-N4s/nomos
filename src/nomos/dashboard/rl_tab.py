@@ -19,10 +19,11 @@ Real-world analogy:
 
 import contextlib
 import os
-
+import re
 import altair as alt
 import pandas as pd
 import streamlit as st
+from glob import glob
 
 from ..ontology.backend import OntologyBackend
 
@@ -163,9 +164,137 @@ def _log_rl_to_backend(
                 "eval_vetoes": int(row.get("eval_vetoes", 0)),
             },
         )
+def _discover_conditions() -> dict[str, tuple[str, str]]:
+    """Return {display_label: (kind, ref)} for every available top-level RL
+    condition — aggregate governed/ungoverned averages, plus each per-seed run."""
+    conditions: dict[str, tuple[str, str]] = {}
+
+    for label in ("governed", "ungoverned"):
+        if _load_metrics(label) is not None:
+            conditions[f"{label.capitalize()} (avg)"] = ("agg", label)
+
+        seed_files = sorted(glob(_csv_path(f"{label}_seed*.csv")))
+        for f in seed_files:
+            match = re.search(r"seed(\d+)", os.path.basename(f))
+            seed_num = match.group(1) if match else "?"
+            conditions[f"{label.capitalize()} seed {seed_num}"] = ("seed", f)
+
+    return conditions
+
+def _load_condition_series(spec: tuple[str, str]) -> pd.DataFrame | None:
+    """Normalize any condition into a df with 'step' and 'reward' columns.
+    Aggregate CSVs use 'step' with 'reward' or 'total_reward'; per-seed CSVs
+    have 'total_reward' and no step column, so we index by row position."""
+    kind, ref = spec
+
+    if kind == "agg":
+        df = _load_metrics(ref)
+        if df is None or "step" not in df.columns:
+            return None
+
+        reward_col = "reward" if "reward" in df.columns else "total_reward"
+        if reward_col not in df.columns:
+            return None
+
+        return df[["step", reward_col]].rename(
+            columns={reward_col: "reward"}
+        ).copy()
+
+    df = pd.read_csv(ref)
+    if "total_reward" not in df.columns:
+        return None
+    out = df.reset_index().rename(columns={"index": "step", "total_reward": "reward"})
+    return out[["step", "reward"]]
 
 
-def _render_top_level(backend: OntologyBackend | None, should_log: bool = True):
+def _condition_reward_chart(df: pd.DataFrame, label: str, scale: alt.Scale) -> alt.Chart:
+    return (
+        alt.Chart(df)
+        .mark_line(opacity=0.85)
+        .encode(
+            x=alt.X("step:Q", title="Training Step"),
+            y=alt.Y("reward:Q", title="Reward", scale=scale),
+            tooltip=[
+                alt.Tooltip("step:Q", title="Step"),
+                alt.Tooltip("reward:Q", title="Reward", format=".2f"),
+            ],
+        )
+        .properties(height=220, title=label)
+    )
+
+
+def _condition_diff_chart(
+    df_a: pd.DataFrame,
+    label_a: str,
+    df_b: pd.DataFrame,
+    label_b: str,
+) -> alt.Chart:
+    merged = df_a.merge(df_b, on="step", suffixes=("_a", "_b"))
+    merged["delta"] = merged["reward_a"] - merged["reward_b"]
+
+    line = (
+        alt.Chart(merged)
+        .mark_line(color="#d62728")
+        .encode(
+            x=alt.X("step:Q", title="Training Step"),
+            y=alt.Y("delta:Q", title=f"Δ reward ({label_a} − {label_b})"),
+            tooltip=[
+                alt.Tooltip("step:Q", title="Step"),
+                alt.Tooltip("delta:Q", title="Delta", format=".2f"),
+            ],
+        )
+    )
+    zero_ref = (
+        alt.Chart(pd.DataFrame({"y": [0]}))
+        .mark_rule(strokeDash=[4, 4], color="gray")
+        .encode(y="y:Q")
+    )
+    return (line + zero_ref).properties(height=200)
+
+
+def _render_rl_comparison(
+    selected_labels: list[str],
+    conditions: dict[str, tuple[str, str]],
+):
+    label_a, label_b = selected_labels
+    df_a = _load_condition_series(conditions[label_a])
+    df_b = _load_condition_series(conditions[label_b])
+
+    if df_a is None or df_b is None:
+        st.warning("Could not load data for one of the selected conditions.")
+        return
+
+    y_min = min(df_a["reward"].min(), df_b["reward"].min())
+    y_max = max(df_a["reward"].max(), df_b["reward"].max())
+    shared_scale = alt.Scale(domain=[y_min, y_max])
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.altair_chart(
+            _condition_reward_chart(df_a, label_a, shared_scale),
+            use_container_width=True,
+        )
+    with col2:
+        st.altair_chart(
+            _condition_reward_chart(df_b, label_b, shared_scale),
+            use_container_width=True,
+        )
+
+    if df_a["step"].isin(df_b["step"]).any():
+        st.divider()
+        st.subheader(f"Δ Difference: {label_a} vs {label_b}")
+        st.altair_chart(
+            _condition_diff_chart(df_a, label_a, df_b, label_b),
+            use_container_width=True,
+        )
+    else:
+        st.caption("Step ranges don't overlap — skipping delta chart.")
+
+
+def _render_top_level(
+    backend: OntologyBackend | None,
+    should_log: bool = True,
+):
     summary = _load_summary()
     gov_metrics = _load_metrics("governed")
     ung_metrics = _load_metrics("ungoverned")
@@ -363,7 +492,6 @@ def _render_safety(backend: OntologyBackend | None, should_log: bool = True):
         )
         st.altair_chart(curve_chart, use_container_width=True)
 
-
 def _render_autorefresh_controls() -> bool:
     """Auto-refresh toggle, last-updated timestamp, and 'Live from Colab' badge.
 
@@ -384,6 +512,7 @@ def _render_autorefresh_controls() -> bool:
             key="rl_auto_refresh_toggle",
             help="Refresh every 30s to pick up new results pushed from a running Colab session.",
         )
+
     st.session_state["rl_auto_refresh"] = auto_refresh
 
     current_mtime = _latest_data_mtime()
@@ -393,6 +522,7 @@ def _render_autorefresh_controls() -> bool:
 
     with col_status:
         status = _format_last_updated(current_mtime)
+
         if auto_refresh and new_data:
             st.success(f"🟢 Live from Colab — {status}")
         else:
@@ -402,7 +532,10 @@ def _render_autorefresh_controls() -> bool:
         try:
             from streamlit_autorefresh import st_autorefresh
 
-            st_autorefresh(interval=30_000, key="rl_autorefresh_timer")
+            st_autorefresh(
+                interval=30_000,
+                key="rl_autorefresh_timer",
+            )
         except ImportError:
             st.warning(
                 "Auto-refresh needs the `streamlit-autorefresh` package. "
@@ -414,13 +547,42 @@ def _render_autorefresh_controls() -> bool:
 
 def render_rl_tab(backend: OntologyBackend | None = None):
     st.header("🤖 RL Training Results")
-    st.caption("Comparison between governed (Neural Parliament) and ungoverned (raw PPO) agents.")
+    st.caption(
+        "Comparison between governed (Neural Parliament) and ungoverned (raw PPO) agents."
+    )
 
     should_log = _render_autorefresh_controls()
     st.divider()
 
-    _render_top_level(backend, should_log=should_log)
+    conditions = _discover_conditions()
 
+    col_select, col_reset = st.columns([4, 1])
+
+    with col_select:
+        selected = st.multiselect(
+            "Compare conditions (select exactly 2)",
+            options=list(conditions.keys()),
+            default=[],
+            max_selections=2,
+            key="rl_compare_conditions",
+        )
+
+    with col_reset:
+        st.write("")
+        if st.button("Reset", key="rl_compare_reset"):
+            st.session_state.pop("rl_compare_conditions", None)
+            st.rerun()
+
+    if len(selected) == 2:
+        _render_rl_comparison(selected, conditions)
+    else:
+        if len(selected) == 1:
+            st.caption("Select one more condition to compare.")
+
+        _render_top_level(
+            backend,
+            should_log=should_log,
+        )
     st.divider()
     _render_minigrid(backend, should_log=should_log)
 
