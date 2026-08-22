@@ -16,10 +16,20 @@ import json
 import math
 import os
 import statistics
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 
 from ..experiments.metrics import ExperimentReport
+
+#: Smallest p-value the analysis will report.  ``math.erfc`` underflows to
+#: exactly 0.0 once ``|z|`` passes roughly 38.5, which needs about a thousand
+#: fully separated observations per group -- far beyond the published design,
+#: but reachable.  A p-value of exactly 0.0 is a claim of zero probability
+#: that no finite sample supports, so an underflowed tail is reported at the
+#: smallest positive normal double instead.  The floor only ever makes a
+#: result look *less* significant than the arithmetic suggested.
+_MIN_REPORTABLE_P = sys.float_info.min
 
 
 def _bootstrap_ci(
@@ -51,6 +61,24 @@ def _bootstrap_ci(
     return (means[lower_idx], means[upper_idx - 1])
 
 
+def _pooled_sd(control: list[float], treatment: list[float]) -> float:
+    """Pooled standard deviation of two samples.
+
+    Args:
+        control: First group; at least two observations.
+        treatment: Second group; at least two observations.
+
+    Returns:
+        The pooled SD.  Exactly ``0.0`` when neither group varies -- a
+        deterministic cell, where every reported spread is a repeat
+        rather than a measurement.
+    """
+    n1, n2 = len(control), len(treatment)
+    v1 = statistics.variance(control)
+    v2 = statistics.variance(treatment)
+    return math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2))
+
+
 def _cohens_d(control: list[float], treatment: list[float]) -> float:
     """Compute Cohen's d effect size between two groups.
 
@@ -63,17 +91,20 @@ def _cohens_d(control: list[float], treatment: list[float]) -> float:
     Returns:
         Cohen's d value. Conventional thresholds:
         |d| < 0.2 negligible, < 0.5 small, < 0.8 medium, >= 0.8 large.
+
+        ``nan`` when d is not defined: fewer than two observations in either
+        group, or a zero pooled standard deviation with differing means.
+        Two groups of identical constants do have a zero effect and return
+        ``0.0``; a separation divided by zero spread does not, and must not
+        be rounded down into the negligible band.
     """
     if len(control) < 2 or len(treatment) < 2:
-        return 0.0
+        return math.nan
     m1 = statistics.mean(control)
     m2 = statistics.mean(treatment)
-    v1 = statistics.variance(control)
-    v2 = statistics.variance(treatment)
-    n1, n2 = len(control), len(treatment)
-    pooled = math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2))
+    pooled = _pooled_sd(control, treatment)
     if pooled == 0:
-        return 0.0
+        return 0.0 if m1 == m2 else math.nan
     return (m1 - m2) / pooled
 
 
@@ -86,15 +117,23 @@ def _cohens_d_ci(control: list[float], treatment: list[float], ci: float = 0.95)
         ci: Confidence level (default 0.95).
 
     Returns:
-        Dict with keys ``d``, ``ci_lower``, ``ci_upper``, ``se_d``.
-        Returns ``{"d": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "se_d": 0.0}``
-        if either group has fewer than 2 elements.
+        Dict with keys ``d``, ``ci_lower``, ``ci_upper``, ``se_d``.  Every
+        value is ``nan`` when there is no interval to report: fewer than 2
+        observations in a group, or a pooled standard deviation of exactly
+        zero.  A zero pooled SD removes the interval even where it leaves
+        the point estimate at ``0.0`` -- the standard error below is the
+        large-sample approximation for ``d``, which presumes a measured
+        spread, and quoting it over identical repeats asserts sampling
+        uncertainty that was never observed.
     """
     n1, n2 = len(control), len(treatment)
+    undefined = {"d": math.nan, "ci_lower": math.nan, "ci_upper": math.nan, "se_d": math.nan}
     if n1 < 2 or n2 < 2:
-        return {"d": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "se_d": 0.0}
+        return undefined
 
     d = _cohens_d(control, treatment)
+    if math.isnan(d) or _pooled_sd(control, treatment) == 0:
+        return undefined
     se = math.sqrt((n1 + n2) / (n1 * n2) + d * d / (2.0 * (n1 + n2 - 2)))
     if se == 0:
         return {"d": round(d, 3), "ci_lower": round(d, 3), "ci_upper": round(d, 3), "se_d": 0.0}
@@ -168,7 +207,7 @@ def _mannwhitney_u_exact(x: list[float], y: list[float]) -> tuple[float, float]:
             count_extreme += 1
 
     p_val = count_extreme / max(total, 1)
-    return (round(u_obs, 2), round(p_val, 4))
+    return (round(u_obs, 2), p_val)
 
 
 def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
@@ -184,6 +223,8 @@ def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
     Returns:
         ``(U_statistic, p_value)`` -- U is the smaller of U1 and U2.
         Returns ``(0.0, 1.0)`` if either group has fewer than 2 elements.
+        The p-value carries full float precision and is floored at
+        :data:`_MIN_REPORTABLE_P`; callers format it for display.
     """
     n1, n2 = len(x), len(y)
     if n1 < 2 or n2 < 2:
@@ -218,8 +259,122 @@ def _mannwhitney_u(x: list[float], y: list[float]) -> tuple[float, float]:
 
     z = (u - mean_u) / math.sqrt(variance)
     p = math.erfc(abs(z) / math.sqrt(2.0))
-    p = max(0.0, min(1.0, p))
-    return (round(u, 2), round(p, 4))
+    p = min(1.0, max(_MIN_REPORTABLE_P, p))
+    return (round(u, 2), p)
+
+
+#: Largest number of non-zero pair differences for which the Wilcoxon
+#: signed-rank null distribution is enumerated exactly.  Above it the normal
+#: approximation is used, matching the conventional cut-off.
+_WILCOXON_EXACT_MAX_N = 25
+
+
+def _wilcoxon_signed_rank(control: list[float], treatment: list[float]) -> dict:
+    """Wilcoxon signed-rank test on matched pairs.
+
+    ``control[i]`` and ``treatment[i]`` must be the two observations of the
+    same subject -- here, the same seed.  Pairs whose difference is exactly
+    zero are dropped and the test is conditioned on the survivors, per the
+    usual convention.  The null distribution is enumerated exactly (by
+    subset-sum over the signed ranks) up to
+    :data:`_WILCOXON_EXACT_MAX_N` non-zero differences and approximated by
+    the tie-corrected normal beyond it.
+
+    This test reads only the *signs and ranks* of the paired differences.
+    On a cell where both arms are deterministic it degenerates to a sign
+    test over identical repeats, which says how consistently one arm wins
+    and nothing at all about how much.
+
+    Args:
+        control: Governance rewards, ordered by subject.
+        treatment: Baseline rewards, in the same subject order.
+
+    Returns:
+        Dict with keys ``w`` (the smaller of W+ and W-), ``p_value``
+        (two-tailed), ``n_pairs`` (non-zero differences used),
+        ``n_zero_diffs`` (pairs dropped), and ``method`` (``"exact"``,
+        ``"normal"``, ``"all-zero-differences"``, or ``"undefined"``).
+        ``w`` and ``p_value`` are ``None``, with ``method`` ``"undefined"``,
+        when the inputs are empty or of unequal length.
+    """
+    if len(control) != len(treatment) or not control:
+        return {
+            "w": None,
+            "p_value": None,
+            "n_pairs": 0,
+            "n_zero_diffs": 0,
+            "method": "undefined",
+        }
+
+    diffs = [c - t for c, t in zip(control, treatment)]
+    nonzero = [d for d in diffs if d != 0.0]
+    n_zero = len(diffs) - len(nonzero)
+    n = len(nonzero)
+    if n == 0:
+        return {
+            "w": 0.0,
+            "p_value": 1.0,
+            "n_pairs": 0,
+            "n_zero_diffs": n_zero,
+            "method": "all-zero-differences",
+        }
+
+    order = sorted(range(n), key=lambda i: abs(nonzero[i]))
+    ranks = [0.0] * n
+    tie_adjustment = 0.0
+    i = 0
+    while i < n:
+        j = i
+        while j < n and abs(nonzero[order[j]]) == abs(nonzero[order[i]]):
+            j += 1
+        avg_rank = (i + 1 + j) / 2.0
+        for k in range(i, j):
+            ranks[order[k]] = avg_rank
+        tie_count = j - i
+        if tie_count > 1:
+            tie_adjustment += tie_count**3 - tie_count
+        i = j
+
+    w_plus = float(sum(ranks[i] for i in range(n) if nonzero[i] > 0))
+    w_total = float(sum(ranks))
+    w_minus = w_total - w_plus
+    w = min(w_plus, w_minus)
+
+    if n <= _WILCOXON_EXACT_MAX_N:
+        # Average ranks are multiples of 0.5, so double them to stay integral.
+        doubled = [int(round(2.0 * r)) for r in ranks]
+        total = sum(doubled)
+        counts = [0.0] * (total + 1)
+        counts[0] = 1.0
+        for r in doubled:
+            for v in range(total, r - 1, -1):
+                counts[v] += counts[v - r]
+        cutoff = int(round(2.0 * w))
+        tail = sum(counts[: cutoff + 1]) / (2.0**n)
+        p = min(1.0, 2.0 * tail)
+        method = "exact"
+    else:
+        mean_w = n * (n + 1) / 4.0
+        variance = n * (n + 1) * (2 * n + 1) / 24.0 - tie_adjustment / 48.0
+        if variance <= 0:
+            return {
+                "w": w,
+                "p_value": 1.0,
+                "n_pairs": n,
+                "n_zero_diffs": n_zero,
+                "method": "normal",
+            }
+        z = (w_plus - mean_w) / math.sqrt(variance)
+        p = math.erfc(abs(z) / math.sqrt(2.0))
+        method = "normal"
+
+    return {
+        "w": w,
+        "p_value": min(1.0, max(_MIN_REPORTABLE_P, p)),
+        "n_pairs": n,
+        "n_zero_diffs": n_zero,
+        "method": method,
+    }
 
 
 def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict]:
@@ -234,7 +389,9 @@ def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list
 
     Returns:
         List of dicts with keys ``raw_p``, ``corrected_p``, ``significant``,
-        ``rank`` (1=smallest), ``method`` (``"holm"``).
+        ``rank`` (1=smallest), ``method`` (``"holm"``).  ``corrected_p``
+        carries full float precision; rounding it here turned genuinely tiny
+        p-values into an exact 0.0 that was then flagged significant.
     """
     m = len(p_values)
     if m == 0:
@@ -247,7 +404,7 @@ def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list
         corrected = min(raw_p * (m - k + 1), 1.0)
         results[orig_idx] = {
             "raw_p": raw_p,
-            "corrected_p": round(corrected, 4),
+            "corrected_p": corrected,
             "significant": corrected < alpha,
             "rank": k,
             "method": "holm",
@@ -264,6 +421,8 @@ def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict
 
     Returns:
         List of dicts with keys ``raw_p``, ``corrected_p``, ``significant``.
+        ``corrected_p`` carries full float precision; formatting belongs at
+        the print or export boundary, not here.
     """
     m = len(p_values)
     if m == 0:
@@ -274,7 +433,7 @@ def _bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list[dict
         results.append(
             {
                 "raw_p": raw_p,
-                "corrected_p": round(corrected, 4),
+                "corrected_p": corrected,
                 "significant": corrected < alpha,
             }
         )
@@ -454,30 +613,76 @@ def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[d
     return episodes
 
 
+def _group_rewards_by_seed(
+    reports: list[ExperimentReport],
+) -> dict[tuple[str, str], dict[object, list[float]]]:
+    """Bucket report rewards by strategy+scenario, keeping the seed labels.
+
+    The inner mapping is ``seed -> rewards`` rather than a flat reward list
+    so that callers can match observations across strategies by seed.  A
+    seed is a list rather than a single float because nothing forbids a
+    report set from repeating a seed within one cell; keeping the repeats
+    lets :func:`_is_paired` see that the cell is not a clean 1:1 design.
+
+    Args:
+        reports: Flattened list of all experiment reports.
+
+    Returns:
+        Mapping ``(strategy, scenario) -> {seed: [rewards]}``.  Reports whose
+        metadata carries no ``seed`` are collected under the key ``None``.
+    """
+    groups: dict[tuple[str, str], dict[object, list[float]]] = defaultdict(dict)
+    for r in reports:
+        key = (r.metadata.get("strategy", "unknown"), r.metadata.get("scenario", "unknown"))
+        groups[key].setdefault(r.metadata.get("seed"), []).append(r.total_reward)
+    return groups
+
+
+def _flatten_seed_map(seed_map: dict[object, list[float]]) -> list[float]:
+    """Flatten a ``seed -> rewards`` map into a single reward list.
+
+    Args:
+        seed_map: One cell of the mapping built by :func:`_group_rewards_by_seed`.
+
+    Returns:
+        Every reward in the cell, in seed-insertion order.  The unpaired
+        statistics downstream are order-invariant.
+    """
+    return [reward for rewards in seed_map.values() for reward in rewards]
+
+
 def _is_paired(
-    groups: dict[tuple[str, str], list[float]],
+    groups: dict[tuple[str, str], dict[object, list[float]]],
     scenario: str,
     strategy_a: str,
     strategy_b: str,
 ) -> bool:
-    """Heuristic check whether two strategies share paired observations.
+    """Check whether two strategies were run on a matched set of seeds.
 
-    Strategies are considered paired (repeated measures) if they have the
-    same number of reports for a given scenario, suggesting a within-subject
-    design.  This is a simple diagnostic, not a formal structural-zero test.
+    This is a structural check on the seed labels, not a count heuristic:
+    the two cells must cover the *same* seeds, every seed must carry exactly
+    one observation on each side (so the observations pair 1:1), and no
+    observation may be missing its seed label.  Equal group sizes over
+    different seeds are not a paired design and are reported as unpaired.
 
     Args:
-        groups: Mapping ``(strategy, scenario) -> rewards``.
+        groups: Mapping ``(strategy, scenario) -> {seed: [rewards]}`` as
+            built by :func:`_group_rewards_by_seed`.
         scenario: Scenario name to check.
         strategy_a: First strategy name.
         strategy_b: Second strategy name.
 
     Returns:
-        ``True`` if counts match and are >= 2.
+        ``True`` when both cells cover the same >= 2 labelled seeds with one
+        observation each.
     """
-    n_a = len(groups.get((strategy_a, scenario), []))
-    n_b = len(groups.get((strategy_b, scenario), []))
-    return n_a >= 2 and n_b >= 2 and n_a == n_b
+    seeds_a = groups.get((strategy_a, scenario), {})
+    seeds_b = groups.get((strategy_b, scenario), {})
+    if len(seeds_a) < 2 or set(seeds_a) != set(seeds_b):
+        return False
+    if None in seeds_a:
+        return False
+    return all(len(seeds_a[s]) == 1 and len(seeds_b[s]) == 1 for s in seeds_a)
 
 
 @dataclass
@@ -557,7 +762,8 @@ def compute_effect_sizes(
     baseline using Cohen's d (parametric effect size, with CI and
     normality check) and Mann-Whitney U (non-parametric test, exact
     p-value when n < 8).  Raw p-values are corrected via both Bonferroni
-    and Holm-Bonferroni.  A paired-design heuristic is noted.
+    and Holm-Bonferroni.  Comparisons that share a seed set one-to-one are
+    additionally tested with Wilcoxon signed-rank.
 
     Args:
         aggregates: Aggregates (used to determine which scenarios exist).
@@ -565,19 +771,46 @@ def compute_effect_sizes(
         alpha: Family-wise error rate (default 0.05).
 
     Returns:
-        List of dicts with keys ``scenario``, ``governance_vs``, ``cohens_d``,
+        List of dicts with keys ``scenario``, ``governance_vs``,
+        ``mean_governance``, ``mean_baseline``, ``mean_diff``, ``cohens_d``,
         ``cohens_d_ci``, ``cohens_d_se``, ``mannwhitney_u``, ``p_value_raw``,
         ``p_value_corrected``, ``p_value_holm``, ``significant``,
         ``significant_holm``, ``n_governance``, ``n_baseline``, ``paired``,
+        ``wilcoxon_w``, ``wilcoxon_p``, ``wilcoxon_n_pairs``,
+        ``wilcoxon_n_zero_diffs``, ``wilcoxon_method``,
         ``normality_warning``, ``interpretation``. A scenario-baseline pair
         with no runs on either side yields no entry, and is not counted in
         the correction family — an arm that was never run is not a test that
         was performed.
+
+        When Cohen's d is undefined for a pair, ``cohens_d``, ``cohens_d_se``
+        and both ends of ``cohens_d_ci`` are ``None`` and ``interpretation``
+        names the reason -- ``"undefined (zero pooled variance)"`` or
+        ``"undefined (insufficient samples)"``.  A cell whose two arms are
+        each constant has no pooled spread to divide by, however far apart
+        the constants are, so it is marked undefined rather than reported as
+        a negligible effect.  ``mean_diff`` (governance minus baseline) keeps
+        the direction of the comparison on the record either way, since both
+        ``mannwhitney_u`` and an undefined ``cohens_d`` are direction-free.
+
+        Every p-value in the record carries full float precision.  A record
+        can never report ``p_value_raw == 0.0`` alongside
+        ``significant_holm: true``: the underlying tests floor their tails at
+        :data:`_MIN_REPORTABLE_P` rather than rounding them to zero.
+
+        ``paired`` is true only when both arms cover the same labelled seeds
+        one observation each; when it is, a Wilcoxon signed-rank test is run
+        over those matched pairs and reported in the ``wilcoxon_*`` fields
+        (every one of them ``None`` otherwise).  The
+        signed-rank test drops pairs whose difference is exactly zero and
+        conditions on the survivors, so its p-value rests on
+        ``wilcoxon_n_pairs`` observations rather than on ``n_governance``;
+        ``wilcoxon_n_zero_diffs`` says how many were dropped.  The Wilcoxon
+        p-value is reported alongside, not folded into the Bonferroni and
+        Holm family, which stays the Mann-Whitney one test per
+        governance-vs-baseline pair.
     """
-    groups = defaultdict(list)
-    for r in reports:
-        key = (r.metadata.get("strategy", "unknown"), r.metadata.get("scenario", "unknown"))
-        groups[key].append(r.total_reward)
+    groups = _group_rewards_by_seed(reports)
 
     effect_sizes = []
     scenarios = set(s.scenario for s in aggregates)
@@ -586,13 +819,35 @@ def compute_effect_sizes(
 
     raw_p_values = []
     for scenario in sorted(scenarios):
-        control_rewards = groups.get((governance_key, scenario), [])
+        control_seeds = groups.get((governance_key, scenario), {})
+        control_rewards = _flatten_seed_map(control_seeds)
         for bl in baselines:
-            treatment_rewards = groups.get((bl, scenario), [])
+            treatment_seeds = groups.get((bl, scenario), {})
+            treatment_rewards = _flatten_seed_map(treatment_seeds)
             if not control_rewards or not treatment_rewards:
                 continue
+            mean_governance = statistics.mean(control_rewards)
+            mean_baseline = statistics.mean(treatment_rewards)
             d = _cohens_d(control_rewards, treatment_rewards)
             d_ci = _cohens_d_ci(control_rewards, treatment_rewards)
+            d_defined = not math.isnan(d)
+            # A d of 0.0 over two identical constants is real; the interval
+            # around it is not, so the two are gated separately.
+            ci_defined = not math.isnan(d_ci["se_d"])
+            if d_defined:
+                interpretation = (
+                    "large"
+                    if abs(d) > 0.8
+                    else "medium"
+                    if abs(d) > 0.5
+                    else "small"
+                    if abs(d) > 0.2
+                    else "negligible"
+                )
+            elif min(len(control_rewards), len(treatment_rewards)) < 2:
+                interpretation = "undefined (insufficient samples)"
+            else:
+                interpretation = "undefined (zero pooled variance)"
 
             normality = _shapiro_wilk(control_rewards + treatment_rewards, alpha)
             normality_warning = (
@@ -607,29 +862,45 @@ def compute_effect_sizes(
             raw_p_values.append(p_raw)
 
             paired = _is_paired(groups, scenario, governance_key, bl)
+            if paired:
+                seeds = list(control_seeds)
+                wilcoxon = _wilcoxon_signed_rank(
+                    [control_seeds[seed][0] for seed in seeds],
+                    [treatment_seeds[seed][0] for seed in seeds],
+                )
+            else:
+                wilcoxon = {
+                    "w": None,
+                    "p_value": None,
+                    "n_pairs": None,
+                    "n_zero_diffs": None,
+                    "method": None,
+                }
 
             effect_sizes.append(
                 {
                     "scenario": scenario,
                     "governance_vs": bl,
-                    "cohens_d": round(d, 3),
-                    "cohens_d_ci": [d_ci["ci_lower"], d_ci["ci_upper"]],
-                    "cohens_d_se": d_ci["se_d"],
+                    "mean_governance": mean_governance,
+                    "mean_baseline": mean_baseline,
+                    "mean_diff": mean_governance - mean_baseline,
+                    "cohens_d": round(d, 3) if d_defined else None,
+                    "cohens_d_ci": (
+                        [d_ci["ci_lower"], d_ci["ci_upper"]] if ci_defined else [None, None]
+                    ),
+                    "cohens_d_se": d_ci["se_d"] if ci_defined else None,
                     "mannwhitney_u": u_stat,
                     "p_value_raw": p_raw,
                     "n_governance": len(control_rewards),
                     "n_baseline": len(treatment_rewards),
                     "paired": paired,
+                    "wilcoxon_w": wilcoxon["w"],
+                    "wilcoxon_p": wilcoxon["p_value"],
+                    "wilcoxon_n_pairs": wilcoxon["n_pairs"],
+                    "wilcoxon_n_zero_diffs": wilcoxon["n_zero_diffs"],
+                    "wilcoxon_method": wilcoxon["method"],
                     "normality_warning": normality_warning,
-                    "interpretation": (
-                        "large"
-                        if abs(d) > 0.8
-                        else "medium"
-                        if abs(d) > 0.5
-                        else "small"
-                        if abs(d) > 0.2
-                        else "negligible"
-                    ),
+                    "interpretation": interpretation,
                 }
             )
 

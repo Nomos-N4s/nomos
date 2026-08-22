@@ -1,7 +1,12 @@
+import math
 import os
+import re
 import tempfile
+from pathlib import Path
 
 from src.nomos.benchmarks.analysis import (
+    _MIN_REPORTABLE_P,
+    _WILCOXON_EXACT_MAX_N,
     StrategyAggregate,
     _bonferroni_correct,
     _bootstrap_ci,
@@ -13,6 +18,7 @@ from src.nomos.benchmarks.analysis import (
     _mannwhitney_u,
     _mannwhitney_u_exact,
     _shapiro_wilk,
+    _wilcoxon_signed_rank,
     aggregate_reports,
     compute_effect_sizes,
     detect_hacking_episodes,
@@ -82,11 +88,11 @@ class TestCohensD:
 
     def test_small_samples(self):
         d = _cohens_d([1.0], [2.0])
-        assert d == 0.0
+        assert math.isnan(d)
 
     def test_zero_variance(self):
         d = _cohens_d([5.0, 5.0, 5.0], [3.0, 3.0, 3.0])
-        assert d == 0.0
+        assert math.isnan(d)
 
 
 class TestMannWhitneyU:
@@ -137,7 +143,7 @@ class TestMannWhitneyUExact:
     def test_separated_small(self):
         u, p = _mannwhitney_u_exact([5.0, 6.0], [1.0, 2.0])
         assert u == 0.0
-        assert p == 0.3333
+        assert abs(p - 2.0 / 6.0) < 1e-12
 
     def test_falls_back_large(self):
         u, p = _mannwhitney_u_exact(list(range(10)), list(range(10, 20)))
@@ -203,7 +209,7 @@ class TestCohensDCI:
 
     def test_small_samples(self):
         ci = _cohens_d_ci([1.0], [2.0])
-        assert ci["d"] == 0.0
+        assert all(math.isnan(v) for v in ci.values())
 
     def test_ci_structure(self):
         ci = _cohens_d_ci([1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0])
@@ -249,20 +255,26 @@ class TestShapiroWilk:
 
 
 class TestIsPaired:
-    def test_equal_counts_paired(self):
-        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5, 6]}
+    def test_matched_seeds_paired(self):
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {0: [4.0], 1: [5.0], 2: [6.0]},
+        }
         assert _is_paired(groups, "A", "gov", "ran") is True
 
     def test_unequal_counts_not_paired(self):
-        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5]}
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {0: [4.0], 1: [5.0]},
+        }
         assert _is_paired(groups, "A", "gov", "ran") is False
 
     def test_empty_group_not_paired(self):
-        groups = {("gov", "A"): []}
+        groups = {("gov", "A"): {}}
         assert _is_paired(groups, "A", "gov", "ran") is False
 
     def test_different_scenario(self):
-        groups = {("gov", "A"): [1, 2], ("ran", "B"): [3, 4]}
+        groups = {("gov", "A"): {0: [1.0], 1: [2.0]}, ("ran", "B"): {0: [3.0], 1: [4.0]}}
         assert _is_paired(groups, "A", "gov", "ran") is False
 
 
@@ -490,6 +502,7 @@ class TestExportFunctions:
             export_results_json([r], [agg], [], [], path)
             assert os.path.exists(path)
             import json
+
             with open(path) as f:
                 data = json.load(f)
             assert "aggregates" in data
@@ -579,3 +592,318 @@ class TestGovernanceLatencyExport:
                 data = json.load(f)
 
         assert data["aggregates"][0]["mean_governance_latency_seconds"] == 0.005
+
+
+def _cell(strategy, scenario, rewards, seeds=None):
+    """Build one strategy-scenario cell, one report per seed."""
+    seeds = list(range(len(rewards))) if seeds is None else seeds
+    out = []
+    for seed, reward in zip(seeds, rewards):
+        r = _make_report(f"{strategy}_{scenario}_{seed}", reward)
+        r.metadata["strategy"] = strategy
+        r.metadata["scenario"] = scenario
+        r.metadata["seed"] = seed
+        out.append(r)
+    return out
+
+
+class TestDegenerateEffectSizes:
+    """The published TemptationBank cell: two constants 6863.0 apart."""
+
+    def test_zero_pooled_variance_with_separation_is_undefined(self):
+        d = _cohens_d([1998.0] * 20, [-4865.0] * 20)
+        assert math.isnan(d)
+
+    def test_identical_constants_really_are_no_effect(self):
+        assert _cohens_d([5.0] * 4, [5.0] * 4) == 0.0
+
+    def test_ci_around_an_undefined_d_is_undefined(self):
+        ci = _cohens_d_ci([1998.0] * 20, [-4865.0] * 20)
+        assert all(math.isnan(v) for v in ci.values())
+
+    def test_record_marks_the_gap_undefined_and_keeps_the_direction(self):
+        reports = _cell("governance", "TemptationBank", [1998.0] * 20)
+        reports += _cell("monolithic_rl", "TemptationBank", [-4865.0] * 20)
+        es = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        (entry,) = [e for e in es if e["governance_vs"] == "monolithic_rl"]
+        assert entry["interpretation"] == "undefined (zero pooled variance)"
+        assert entry["cohens_d"] is None
+        assert entry["cohens_d_ci"] == [None, None]
+        assert entry["cohens_d_se"] is None
+        assert entry["mean_governance"] == 1998.0
+        assert entry["mean_baseline"] == -4865.0
+        assert entry["mean_diff"] == 6863.0
+
+    def test_equal_constants_keep_the_point_estimate_but_lose_the_interval(self):
+        ci = _cohens_d_ci([5.0] * 4, [5.0] * 4)
+        assert _cohens_d([5.0] * 4, [5.0] * 4) == 0.0
+        assert all(math.isnan(v) for v in ci.values())
+
+    def test_record_publishes_no_interval_on_a_deterministic_zero_effect(self):
+        reports = _cell("governance", "DeadlockMaze", [0.0] * 20)
+        reports += _cell("random", "DeadlockMaze", [0.0] * 20)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["cohens_d"] == 0.0
+        assert entry["interpretation"] == "negligible"
+        assert entry["cohens_d_ci"] == [None, None]
+        assert entry["cohens_d_se"] is None
+
+    def test_a_measured_zero_effect_keeps_its_interval(self):
+        rewards = [float(i) for i in range(20)]
+        reports = _cell("governance", "GridWorld", rewards)
+        reports += _cell("veto_only", "GridWorld", rewards)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["cohens_d"] == 0.0
+        assert entry["cohens_d_se"] is not None
+        assert entry["cohens_d_ci"] != [None, None]
+
+    def test_a_losing_degenerate_cell_is_distinguishable_from_a_winning_one(self):
+        reports = _cell("governance", "S", [10.0] * 6)
+        reports += _cell("random", "S", [1.0] * 6)
+        reports += _cell("veto_only", "S", [99.0] * 6)
+        es = {
+            e["governance_vs"]: e for e in compute_effect_sizes(aggregate_reports(reports), reports)
+        }
+
+        assert es["random"]["interpretation"] == es["veto_only"]["interpretation"]
+        assert es["random"]["mean_diff"] == 9.0
+        assert es["veto_only"]["mean_diff"] == -89.0
+
+
+class TestPValuePrecision:
+    def test_normal_approximation_keeps_a_sub_1e_4_tail(self):
+        u, p = _mannwhitney_u([1998.0] * 20, [-4865.0] * 20)
+        assert u == 0.0
+        assert p == 4.2380554260794744e-10
+
+    def test_exact_path_is_not_rounded_to_four_places(self):
+        u, p = _mannwhitney_u_exact([5.0, 6.0, 7.0, 8.0], [1.0, 2.0, 3.0, 4.0])
+        assert u == 0.0
+        assert abs(p - 2.0 / 70.0) < 1e-15
+        assert p != round(p, 4)
+
+    def test_an_underflowed_tail_is_floored_rather_than_zero(self):
+        # |z| passes 38.5 here, so math.erfc really does return 0.0.
+        u, p = _mannwhitney_u(
+            [float(i) for i in range(1000)], [float(i) + 1e4 for i in range(1000)]
+        )
+        assert u == 0.0
+        assert p > 0.0
+        assert p == _MIN_REPORTABLE_P
+
+    def test_holm_keeps_full_precision(self):
+        results = _holm_bonferroni_correct([1e-10, 0.5])
+        assert results[0]["corrected_p"] == 2e-10
+
+    def test_bonferroni_keeps_full_precision(self):
+        results = _bonferroni_correct([1e-10, 0.5])
+        assert results[0]["corrected_p"] == 2e-10
+
+
+class TestSignificanceInvariant:
+    """No record may claim zero probability and significance at once."""
+
+    @staticmethod
+    def _suite():
+        reports = _cell("governance", "TemptationBank", [1998.0] * 20)
+        reports += _cell("monolithic_rl", "TemptationBank", [-4865.0] * 20)
+        reports += _cell("static_masking", "TemptationBank", [2000.0] * 20)
+        reports += _cell("governance", "GridWorld", [float(i) for i in range(20)])
+        reports += _cell("random", "GridWorld", [float(i) - 100 for i in range(20)])
+        return reports
+
+    def test_no_zero_raw_p_is_flagged_significant(self):
+        reports = self._suite()
+        es = compute_effect_sizes(aggregate_reports(reports), reports)
+        assert es
+        assert not any(e["p_value_raw"] == 0.0 and e["significant_holm"] for e in es)
+        assert not any(e["p_value_raw"] == 0.0 and e["significant"] for e in es)
+
+    def test_the_invariant_is_not_vacuous(self):
+        reports = self._suite()
+        es = compute_effect_sizes(aggregate_reports(reports), reports)
+        tiny = [e for e in es if e["significant_holm"] and e["p_value_raw"] < 1e-4]
+        assert tiny, "expected at least one genuinely tiny significant p-value"
+        assert all(e["p_value_raw"] > 0.0 for e in tiny)
+
+
+class TestSeedKeyedPairing:
+    def test_equal_counts_over_disjoint_seeds_are_not_paired(self):
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {100: [4.0], 101: [5.0], 102: [6.0]},
+        }
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_a_repeated_seed_inside_a_cell_is_not_paired(self):
+        groups = {
+            ("gov", "A"): {0: [1.0, 2.0], 1: [3.0, 4.0]},
+            ("ran", "A"): {0: [5.0, 6.0], 1: [7.0, 8.0]},
+        }
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_unlabelled_seeds_are_not_paired(self):
+        groups = {("gov", "A"): {None: [1.0, 2.0]}, ("ran", "A"): {None: [3.0, 4.0]}}
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_record_reports_unpaired_when_the_seed_sets_differ(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0], seeds=[0, 1, 2, 3])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0], seeds=[7, 8, 9, 10])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["paired"] is False
+        assert entry["wilcoxon_w"] is None
+        assert entry["wilcoxon_p"] is None
+        assert entry["wilcoxon_method"] is None
+
+    def test_record_reports_paired_and_tests_it_when_seeds_match(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0], seeds=[0, 1, 2, 3])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0], seeds=[0, 1, 2, 3])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["paired"] is True
+        assert entry["wilcoxon_method"] == "exact"
+        assert entry["wilcoxon_p"] == 2.0 / 2**4
+
+
+class TestWilcoxonPairCounts:
+    """The p-value rests on the surviving pairs, so the record says how many."""
+
+    def test_dropped_ties_are_visible_on_the_record(self):
+        seeds = list(range(20))
+        governance = [5.0] * 12 + [5.0 + k for k in range(1, 9)]
+        reports = _cell("governance", "S", governance, seeds=seeds)
+        reports += _cell("random", "S", [5.0] * 20, seeds=seeds)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["n_governance"] == 20
+        assert entry["wilcoxon_n_pairs"] == 8
+        assert entry["wilcoxon_n_zero_diffs"] == 12
+        assert entry["wilcoxon_p"] == 2.0 / 2**8
+
+    def test_an_unpaired_comparison_reports_no_counts(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0], seeds=[0, 1, 2, 3])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0], seeds=[7, 8, 9, 10])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["paired"] is False
+        assert entry["wilcoxon_n_pairs"] is None
+        assert entry["wilcoxon_n_zero_diffs"] is None
+
+
+class TestWilcoxonSignedRank:
+    @staticmethod
+    def _brute_force(diffs):
+        import itertools
+
+        nonzero = [d for d in diffs if d != 0]
+        n = len(nonzero)
+        order = sorted(range(n), key=lambda i: abs(nonzero[i]))
+        ranks = [0.0] * n
+        i = 0
+        while i < n:
+            j = i
+            while j < n and abs(nonzero[order[j]]) == abs(nonzero[order[i]]):
+                j += 1
+            for k in range(i, j):
+                ranks[order[k]] = (i + 1 + j) / 2.0
+            i = j
+        total = sum(ranks)
+        w_plus = sum(ranks[i] for i in range(n) if nonzero[i] > 0)
+        w = min(w_plus, total - w_plus)
+        extreme = 0
+        for signs in itertools.product((0, 1), repeat=n):
+            t = sum(ranks[i] for i in range(n) if signs[i])
+            if min(t, total - t) <= w + 1e-12:
+                extreme += 1
+        return w, min(1.0, extreme / 2**n)
+
+    def test_exact_distribution_matches_brute_force_enumeration(self):
+        cases = [
+            [1.0, 2.0, 3.0, 4.0],
+            [-1.0, -2.0, 3.0, 4.0, 5.0],
+            [2.0, 2.0, 2.0, -2.0, 5.0],
+            [0.0, 1.0, -1.0, 3.0, 0.0, 4.0],
+            [-5.0, -4.0, -3.0, -2.0, -1.0, 6.0, 7.0],
+        ]
+        for diffs in cases:
+            result = _wilcoxon_signed_rank(diffs, [0.0] * len(diffs))
+            expected_w, expected_p = self._brute_force(diffs)
+            assert result["method"] == "exact"
+            assert abs(result["w"] - expected_w) < 1e-12, diffs
+            assert abs(result["p_value"] - expected_p) < 1e-12, diffs
+
+    def test_every_pair_favouring_one_side_gives_two_over_two_to_the_n(self):
+        result = _wilcoxon_signed_rank([float(i) for i in range(1, 11)], [0.0] * 10)
+        assert result["w"] == 0.0
+        assert result["n_pairs"] == 10
+        assert result["p_value"] == 2.0 / 2**10
+
+    def test_a_deterministic_cell_reduces_to_a_sign_test(self):
+        result = _wilcoxon_signed_rank([1998.0] * 20, [-4865.0] * 20)
+        assert result["method"] == "exact"
+        assert result["w"] == 0.0
+        assert result["p_value"] == 2.0 / 2**20
+
+    def test_all_zero_differences_are_no_evidence(self):
+        result = _wilcoxon_signed_rank([3.0] * 5, [3.0] * 5)
+        assert result["method"] == "all-zero-differences"
+        assert result["p_value"] == 1.0
+        assert result["n_zero_diffs"] == 5
+
+    def test_dropped_zero_pairs_are_counted(self):
+        result = _wilcoxon_signed_rank([1.0, 2.0, 3.0, 4.0], [1.0, 0.0, 3.0, 0.0])
+        assert result["n_pairs"] == 2
+        assert result["n_zero_diffs"] == 2
+
+    def test_unequal_lengths_are_undefined(self):
+        result = _wilcoxon_signed_rank([1.0, 2.0], [1.0])
+        assert result["w"] is None
+        assert result["p_value"] is None
+        assert result["method"] == "undefined"
+
+    def test_large_samples_use_the_normal_approximation(self):
+        result = _wilcoxon_signed_rank(
+            [float(i) + 5.0 for i in range(30)], [float(i) for i in range(30)]
+        )
+        assert result["method"] == "normal"
+        assert result["n_pairs"] == 30
+        assert 0.0 < result["p_value"] < 1e-6
+
+
+APPENDIX_D = Path(__file__).parent.parent / "book" / "appendix-d-experiment-protocol.md"
+
+
+class TestPublishedStatisticsClaims:
+    """Appendix D.5 spells out the record and the method; hold it to the code.
+
+    Both claims are hand-maintained prose about a machine-generated record,
+    which is exactly the kind of sentence that goes stale beneath its subject.
+    """
+
+    @staticmethod
+    def _appendix_text():
+        return APPENDIX_D.read_text(encoding="utf-8")
+
+    def test_the_documented_record_keys_are_the_emitted_ones(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        sentence = next(
+            line
+            for line in self._appendix_text().splitlines()
+            if line.startswith("Each entry returned by `compute_effect_sizes()` includes:")
+        )
+        documented = set(re.findall(r"`([a-z_]+)`", sentence)) - {"compute_effect_sizes()"}
+        assert documented == set(entry)
+
+    def test_the_documented_exact_wilcoxon_cutoff_is_the_code_constant(self):
+        cutoff = re.search(
+            r"exact null distribution up to (\d+) non-zero differences", self._appendix_text()
+        )
+        assert cutoff, "Appendix D.5 no longer states the Wilcoxon exact cutoff"
+        assert int(cutoff.group(1)) == _WILCOXON_EXACT_MAX_N
