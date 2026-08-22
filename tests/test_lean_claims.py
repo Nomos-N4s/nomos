@@ -6,6 +6,10 @@ These tests hold that list to two standards: every name is really declared in
 axiom, which would mean the goal was closed by excluded middle and so holds
 for any ``Prop`` at all.
 
+The prediction-to-theorem map in ``src/nomos/prove/predictions.py`` is held to
+the first of those standards too, since it names theorems in the same way and
+is published as a table in the book.
+
 An axiom-free proof term is a necessary condition for a headline claim, not a
 sufficient one: it rules out excluded middle, not a statement that is trivially
 true of the model. Whether each headlined statement says something about the
@@ -18,12 +22,17 @@ import re
 import shutil
 import subprocess
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
+from src.nomos.prove.predictions import LEAN_COVERAGE, LeanStatus
+
 REPO_ROOT = Path(__file__).parent.parent
 README_PATH = REPO_ROOT / "README.md"
+BOOK_PATH = REPO_ROOT / "book" / "formal-verification-lean.md"
+COVERAGE_HEADING = "## Prediction coverage"
 LEAN_ROOT = REPO_ROOT / "gov-budget-proof"
 VOTE_MODULE = LEAN_ROOT / "GovBudgetProof" / "VoteAndFalsification.lean"
 TIER_MODULE = LEAN_ROOT / "GovBudgetProof" / "IdentityTiers.lean"
@@ -36,7 +45,23 @@ DECL_START = re.compile(
     r"(?:private\s+|protected\s+|noncomputable\s+)*"
     r"(?:theorem|lemma|instance|def|abbrev|example|structure|inductive)\b"
 )
+DECLARED_NAME = re.compile(
+    r"^(?:private\s+|protected\s+|noncomputable\s+)*"
+    r"(theorem|lemma|instance|def|abbrev)\s+([A-Za-z_][A-Za-z0-9_'!?]*)"
+)
+PROVING_KEYWORDS = frozenset({"theorem", "lemma"})
+DEFINING_KEYWORDS = frozenset({"def", "abbrev"})
+COVERAGE_KEYWORDS = {
+    LeanStatus.THEOREM: PROVING_KEYWORDS,
+    LeanStatus.DIFFERENT_ENCODING: PROVING_KEYWORDS,
+    LeanStatus.MODELLED_ONLY: DEFINING_KEYWORDS,
+}
 AXIOM_REPORT = re.compile(r"^'([^']+)' (.+)$", re.MULTILINE)
+BACKTICKED = re.compile(r"`([^`]+)`")
+README_COVERAGE_CLAIM = re.compile(
+    r"(\d+) of the (\d+) prediction tests have a theorem of the Lean model "
+    r"behind them; (\d+) have no counterpart"
+)
 BLOCK_COMMENT = re.compile(r"/-.*?-/", re.DOTALL)
 LINE_COMMENT = re.compile(r"--.*")
 NATIVE_DECISION = re.compile(r"native_decide|\+\s*native\b|\bnative\s*:=\s*true\b")
@@ -94,6 +119,31 @@ def _declaration_body(name: str) -> tuple[Path, str]:
                 body.append(following)
             return path, "\n".join(body)
     pytest.fail(f"no Lean declaration named {name!r} in {LEAN_ROOT}")
+
+
+def _declarations() -> dict[str, tuple[str, Path]]:
+    """Return every named declaration, mapped to its keyword and its file.
+
+    The keyword is the one the corpus declares the name with -- ``theorem``,
+    ``lemma``, ``instance``, ``def`` or ``abbrev`` -- which is what separates
+    a proved statement from a definition that merely models the object.
+
+    Anonymous ``example`` blocks carry no name and so are absent, which is
+    why this cannot stand in for the axiom sweep. It is a source scan, so it
+    needs no Lean toolchain.
+    """
+    found: dict[str, tuple[str, Path]] = {}
+    for path in _lean_sources():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = DECLARED_NAME.match(line)
+            if match:
+                found.setdefault(match.group(2), (match.group(1), path))
+    return found
+
+
+def _declared_names() -> dict[str, Path]:
+    """Return every named declaration in the corpus, mapped to its file."""
+    return {name: path for name, (_, path) in _declarations().items()}
 
 
 def _lean_probe(commands: list[str], what: str, extra_imports: tuple[str, ...] = ()) -> str:
@@ -465,4 +515,193 @@ def test_falsification_invariance_derives_from_the_tier_theorem() -> None:
         f"{generic} does not use IdentityTiers.immutable_parameters_never_change, "
         f"so the link to the tier model is no longer carried by the proof "
         f"term:\n{stdout}"
+    )
+
+
+def test_prediction_coverage_names_declarations_the_corpus_has() -> None:
+    """Every Lean name in the prediction coverage map is really declared (#305).
+
+    ``LEAN_COVERAGE`` is the repo's prediction-to-theorem map and the source
+    of the coverage table in ``book/formal-verification-lean.md``. A name in
+    it that the corpus does not declare would leave a published table
+    pointing at nothing, which is not hypothetical: the issue that asked for
+    this map cited ``vote_resolution_deterministic``, a name the corpus has
+    not declared since the commit that replaced it with a constructive
+    proof.
+
+    The check says nothing about whether a named theorem is *about* the
+    prediction beside it. That judgement is in the map's ``note`` fields and
+    in the book, and no source check makes it for us.
+
+    A source scan, so it runs with no Lean toolchain installed.
+    """
+    declared = _declared_names()
+
+    modules = [path for path in _lean_sources() if path.parent.name == "GovBudgetProof"]
+    assert modules, f"no proof modules under {LEAN_ROOT}, so the scan proves nothing"
+    silent = sorted(path.name for path in modules if path not in declared.values())
+    assert not silent, (
+        f"the declaration scan found no declaration at all in {silent}, so a "
+        f"missing name would go unnoticed and this test would pass for the "
+        f"wrong reason"
+    )
+
+    missing = {
+        f"P{pid:02d}": [name for name in coverage.declarations if name not in declared]
+        for pid, coverage in sorted(LEAN_COVERAGE.items())
+        if any(name not in declared for name in coverage.declarations)
+    }
+    assert not missing, (
+        f"the prediction coverage map names Lean declarations the corpus does "
+        f"not have: {missing}. Either the declaration was renamed or removed "
+        f"and the map still points at the old name, or the map claims a "
+        f"counterpart that was never there. Re-derive the row against "
+        f"{LEAN_ROOT}, and if the prediction has no counterpart any more, say "
+        f"so with LeanStatus.NO_COUNTERPART rather than by dropping the row"
+    )
+
+    malformed = {
+        f"P{pid:02d}": [name for name in coverage.declarations if not IDENTIFIER.fullmatch(name)]
+        for pid, coverage in sorted(LEAN_COVERAGE.items())
+        if any(not IDENTIFIER.fullmatch(name) for name in coverage.declarations)
+    }
+    assert not malformed, f"these are not Lean identifiers: {malformed}"
+
+
+def test_prediction_coverage_rows_name_the_kind_of_declaration_they_claim() -> None:
+    """A row claiming a proof names a theorem, not a definition (#305).
+
+    "proved of the Lean model" versus "modelled, no theorem" is the split the
+    book's coverage table and the README's count publish, and until this
+    guard existed nothing checked it: the name scan accepts ``theorem``,
+    ``lemma``, ``instance``, ``def`` and ``abbrev`` alike, so a row promoted
+    to :attr:`LeanStatus.THEOREM` while still naming a ``def`` passed. P03 is
+    the live case -- it is ``MODELLED_ONLY`` precisely because the vote
+    declarations it names are definitions.
+
+    This pins the kind of declaration, not its content: a theorem that says
+    nothing about the prediction beside it still passes. That judgement is in
+    the map's ``note`` fields and in the book.
+
+    A source scan, so it runs with no Lean toolchain installed.
+    """
+    declarations = _declarations()
+    assert declarations, f"no declaration found under {LEAN_ROOT}, so the scan proves nothing"
+
+    wrong_kind = {}
+    for pid, coverage in sorted(LEAN_COVERAGE.items()):
+        allowed = COVERAGE_KEYWORDS.get(coverage.status)
+        if allowed is None:
+            continue
+        offenders = [
+            f"{name} is a {declarations[name][0]}"
+            for name in coverage.declarations
+            if name in declarations and declarations[name][0] not in allowed
+        ]
+        if offenders:
+            wrong_kind[f"P{pid:02d} ({coverage.status.value})"] = offenders
+
+    assert not wrong_kind, (
+        f"these coverage rows name a declaration of the wrong kind: {wrong_kind}. "
+        f"A row that claims a proof must name theorems or lemmas; a row that "
+        f"claims only a model must name definitions. Either the status is wrong "
+        f"or the declarations are"
+    )
+
+
+def _book_coverage_table() -> dict[int, tuple[str, tuple[str, ...]]]:
+    """Return the coverage table published in the book, keyed by prediction id.
+
+    Each value is the row's coverage wording and the Lean declarations it
+    names, in the order it names them.
+    """
+    text = BOOK_PATH.read_text(encoding="utf-8")
+    _, heading, after = text.partition(COVERAGE_HEADING)
+    assert heading, f"{BOOK_PATH} has no {COVERAGE_HEADING!r} section"
+
+    published: dict[int, tuple[str, tuple[str, ...]]] = {}
+    for line in after.splitlines():
+        if line.startswith("## "):
+            break
+        if not line.startswith("| P"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        assert len(cells) == 4, f"the coverage row has {len(cells)} cells: {line}"
+        identifier = int(cells[0].lstrip("P"))
+        assert identifier not in published, f"P{identifier:02d} has two rows in the table"
+        published[identifier] = (cells[2], tuple(BACKTICKED.findall(cells[3])))
+    return published
+
+
+def test_book_prediction_coverage_table_matches_the_map() -> None:
+    """The published coverage table says what LEAN_COVERAGE says (#305).
+
+    The table in ``book/formal-verification-lean.md`` is rendered from
+    ``LEAN_COVERAGE``, and a rendered table drifts from its source the moment
+    someone edits one of them -- which is the whole failure this epic is
+    remediating. Re-deriving a row in the map without re-rendering the table
+    fails here, and so does editing a cell by hand.
+
+    The names themselves are checked against the corpus by
+    ``test_prediction_coverage_names_declarations_the_corpus_has``; this test
+    only holds the two published forms to each other.
+    """
+    published = _book_coverage_table()
+    assert published, (
+        f"no coverage rows parsed out of {BOOK_PATH}: the table is gone, or "
+        f"its rows no longer start with '| P'"
+    )
+
+    expected = {
+        identifier: (coverage.status.value, coverage.declarations)
+        for identifier, coverage in LEAN_COVERAGE.items()
+    }
+    differing = sorted(
+        identifier
+        for identifier in set(published) | set(expected)
+        if published.get(identifier) != expected.get(identifier)
+    )
+    assert not differing, (
+        f"the coverage table in {BOOK_PATH.name} and LEAN_COVERAGE in "
+        f"src/nomos/prove/predictions.py disagree about "
+        f"{[f'P{i:02d}' for i in differing]}. The map is the source: "
+        f"published={ {i: published.get(i) for i in differing} }, "
+        f"map={ {i: expected.get(i) for i in differing} }"
+    )
+
+
+def test_readme_prediction_coverage_counts_match_the_map() -> None:
+    """The README's coverage counts are the ones LEAN_COVERAGE supports (#305).
+
+    The README states two figures a reader is likely to remember: how many of
+    the 12 predictions have a Lean theorem behind them, and how many have no
+    counterpart at all. Hand-maintained counts in prose are exactly what this
+    epic found going stale beneath the code, so both are recounted here from
+    the map rather than trusted.
+
+    A reworded sentence fails this test. That is the intended cost: the
+    counts have to stay findable to stay checkable, and rewording is the
+    moment to re-derive them.
+    """
+    text = " ".join(README_PATH.read_text(encoding="utf-8").split())
+    match = README_COVERAGE_CLAIM.search(text)
+    assert match, (
+        f"{README_PATH.name} no longer states its prediction coverage in a "
+        f"form this test can read. Restore the sentence, or move the counts "
+        f"out of the README entirely -- but do not leave a count in prose "
+        f"that nothing recounts"
+    )
+
+    published_proved, published_total, published_uncovered = (int(g) for g in match.groups())
+    counted = Counter(coverage.status for coverage in LEAN_COVERAGE.values())
+    assert published_total == len(LEAN_COVERAGE), (
+        f"the README counts {published_total} predictions, the map has {len(LEAN_COVERAGE)}"
+    )
+    assert published_proved == counted[LeanStatus.THEOREM], (
+        f"the README says {published_proved} predictions have a Lean theorem "
+        f"behind them; the map says {counted[LeanStatus.THEOREM]}"
+    )
+    assert published_uncovered == counted[LeanStatus.NO_COUNTERPART], (
+        f"the README says {published_uncovered} predictions have no Lean "
+        f"counterpart; the map says {counted[LeanStatus.NO_COUNTERPART]}"
     )

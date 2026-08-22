@@ -218,11 +218,17 @@ compliant and fully adversarial strategies.
 ## Formal Predictions
 
 ```bash
-# Verify all 12 formal predictions pass
+# Run the 12 prediction tests over src/nomos/
 python -m src.nomos.runner prove --all
 ```
 
-Expected output: `12/12 PASS`
+Expected output: `12/12 PASS`, under the banner `Formal Prediction Tests
+(Python)` and above a footer repeating that no Lean proof is checked by the
+run. The predictions are Python asserts; this command invokes no Lean
+toolchain and compiles nothing in `gov-budget-proof/`. Which of them have a
+theorem of the Lean model behind them, and which have no counterpart there at
+all, is in
+[Prediction coverage](book/formal-verification-lean.md#prediction-coverage).
 
 ## Agent Benchmark (LLM) Protocol
 

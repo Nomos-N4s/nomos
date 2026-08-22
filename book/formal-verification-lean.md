@@ -37,20 +37,34 @@ Concretely, five links a reader might assume exist do not:
   native decision tactic and no module declares an axiom of its own (the two
   halves of the #300 guard, one a source scan, one a sweep of the elaborated
   environment); that `votePasses` is decided by computation and the
-  governance-cycle invariant rests on that decision procedure; and that the
+  governance-cycle invariant rests on that decision procedure; that the
   falsification results are derived from the tier model rather than restated
-  beside it. All eight read Lean. None executes governance code from
-  `src/nomos/`, and nothing anywhere runs a Lean decision and a Python one
-  over the same input and compares them.
-- **No shared identifiers.** Outside `gov-budget-proof/`, Lean names appear
-  only in prose: `processProposal` in Chapter 5, and `quorumCount` in the
-  docstrings of `src/nomos/identity/keys.py` and `tests/test_keys.py`, which
-  say the Python mirrors the Lean model. (`tests/test_lean_claims.py` also
-  names `votePasses` and `isPermitted`, but as string literals for scanning
-  Lean source.) A docstring asserting a correspondence is a claim, not a
-  mechanism that checks one — for the genesis quorum a Python test does check
-  the corresponding property, but by hand, in Python, against no Lean artefact
-  (see below); nothing fails if the two models drift apart.
+  beside it; and that the prediction coverage map below names only
+  declarations the corpus really has, of the kind each row claims — theorems
+  where it reports a proof, definitions where it reports a model without one —
+  and that the table and the README figures published from that map still
+  agree with it. Every one of them reads the Lean sources or the prose that
+  names them; the coverage guards also import the map from
+  `src/nomos/prove/predictions.py`, but only to read it. None executes
+  governance code from `src/nomos/`, and nothing anywhere runs a Lean decision
+  and a Python one over the same input and compares them.
+- **No binding identifiers.** Lean names do appear outside
+  `gov-budget-proof/`, but nothing is bound to them: no Python object
+  imports, extracts or takes its meaning from a Lean declaration. They appear
+  in prose, as `processProposal` in Chapter 5; in docstrings saying the Python
+  mirrors the Lean model, as `quorumCount` in `src/nomos/identity/keys.py` and
+  `tests/test_keys.py`; as the string literals `tests/test_lean_claims.py`
+  scans the Lean sources for; and as the `declarations` of `LEAN_COVERAGE` in
+  `src/nomos/prove/predictions.py` — a shipped module, whose names the prove
+  runner prints and the exported results JSON carries. A docstring or a table
+  cell asserting a correspondence is a claim, not a mechanism that checks one;
+  for the genesis quorum a Python test does check the corresponding property,
+  but by hand, in Python, against no Lean artefact (see below). One kind of
+  drift is caught now: the coverage guards fail if the corpus stops declaring
+  a name the map lists, or declares it under a kind the row does not claim.
+  That holds the map to the corpus's names, not the models to each other — a
+  theorem and the assert beside it can come to say different things, and
+  nothing fails.
 - **Different numeric types.** The Lean model is `Nat` throughout —
   `IdentityCoherence.lean`'s `COHERENCE_THRESHOLD : Nat := 70` on a 0–100
   scale, `IdentityTiers.lean`'s `CONSTITUTIONAL_QUORUM : Nat := 3` as a count.
@@ -106,6 +120,57 @@ by the manifest and by nothing else. Issue #298 asked for the row to be
 corrected or for the file to gain the definitions it claimed; the module was
 deleted instead, which is a third route and is recorded here so it can be
 reviewed as one.
+
+## Prediction coverage
+
+The repository ships 12 formal predictions, listed in the README and run with
+`python -m src.nomos.runner prove --all`. They are Python asserts over
+`src/nomos/`: running them runs no Lean, and a passing prediction is a passing
+test, not a discharged proof obligation. This table records what the corpus
+has to say about the same property, and where it has nothing to say.
+
+| # | Prediction | Coverage | Lean declarations |
+|---|---|---|---|
+| P01 | Ch2 §3.1 — Budget caps proposals per member (κ₂) | proved of the Lean model | `budget_invariant_holds`, `budget_never_exceeded` |
+| P02 | Ch2 §3.2 — CRITICAL_SAFETY priority before ROUTINE | no counterpart | — |
+| P03 | Ch2 §3.4 — Weighted vote outcome matches formal spec | modelled, no theorem | `weightedSum`, `totalWeight`, `thresholdOf`, `votePasses` |
+| P04 | Ch2 §3.7 — Tag falsification halves budget after 3+ offences | proved of the Lean model | `budget_halving_formula`, `budget_unchanged_below_cutoff`, `budget_preserves_positive` |
+| P05 | Ch3 §2.1 — Contract restricts action set | no counterpart | — |
+| P06 | Ch3 §2.3 — Revocation threshold above enactment threshold | no counterpart | — |
+| P07 | Ch3 §2.4 — Timelock holds until its unlock cycle | no counterpart | — |
+| P08 | Ch3 §3.0 — Mask composition: allowed − restricted | no counterpart | — |
+| P09 | Ch4 §2.1 — Low-coherence proposal triggers integrity veto | modelled under a different encoding | `acceptable_iff_ge`, `below_threshold_rejection_leaves_state`, `rejected_action_does_not_mutate_identity` |
+| P10 | Ch4 §2.5 — Tier-4 requires external multisig; lower tiers do not | modelled under a different encoding | `constitutional_requires_quorum_and_cooldown`, `constitutional_change_meets_genesis_bar`, `dynamic_requires_only_majority` |
+| P11 | Ch4 §3.1 — Genesis 3-of-5: 2 sigs insufficient, 3 sigs authorises | proved of the Lean model | `two_signatures_insufficient`, `three_signatures_sufficient`, `double_signing_cannot_reach_quorum_alone`, `quorumCount_bounded_by_five` |
+| P12 | Ch4 §3.6 — Deadlock breaker fires after N defaults, resets | no counterpart | — |
+
+Reading the four coverage values:
+
+- **proved of the Lean model** — a theorem states the prediction's property of
+  the Lean model. It remains a property of the model and not of `src/nomos/`:
+  everything in [Scope and limits](#scope-and-limits) applies to these rows
+  unchanged. P01 and P11 are the two that section also names on the Python
+  side, where a hand-written test checks the same property of `src/nomos/` —
+  separately, in Python, against no Lean artefact.
+- **modelled under a different encoding** — the corpus models the same
+  mechanism and proves theorems about it, but under an encoding the Python
+  does not share, so the theorem and the assert are not two statements of one
+  claim. Both cases are numeric: a `Nat` coherence score against a 0–100
+  threshold where the Python uses a `float` on 0.0–1.0, and a bar stated as a
+  quorum count and a cooldown in days where the Python reads a `bool` flag.
+- **modelled, no theorem** — the definitions are there and the constants
+  agree, but no theorem states what the prediction asserts.
+- **no counterpart** — nothing in the corpus models this at all.
+
+The correspondence is thin in the other direction too. `IdentityBuffer.lean`
+and `IdentityHashes.lean` — the sandboxed isolation buffer and the runtime
+integrity hash chains — have no prediction pointing at them at all.
+
+The table is rendered from `LEAN_COVERAGE` in
+`src/nomos/prove/predictions.py`, which carries the per-row reasoning that
+does not fit in a cell. `tests/test_lean_claims.py` keeps the two in step: a
+name above that `gov-budget-proof/` does not declare fails there, and so does
+this table disagreeing with the map it is rendered from.
 
 ## Building the proofs
 

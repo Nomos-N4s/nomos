@@ -70,7 +70,7 @@ evidence-based split signals. See
 ## By the Numbers
 
 ```
-Formal predictions verified:    12 / 12
+Prediction tests (Python):       12 / 12 pass
 Lean 4 theorems proven:          budget_invariant_holds, budget_preserves_positive,
                                  vote_resolution_determined_by_tallies,
                                  falsification_params_unchanged_at_immutable_tier
@@ -87,6 +87,15 @@ the Python and no refinement argument connects the two, so the implementation
 is tested rather than verified
 ([Chapter 5 §7](book/chapter-05/05-related-work.md#7-where-to-attack-this-chapter),
 [Scope and limits](book/formal-verification-lean.md#scope-and-limits)).
+
+The first two lines of that block count different things. 3 of the 12
+prediction tests have a theorem of the Lean model behind them; 6 have no
+counterpart in the corpus at all; the rest are modelled under an encoding the
+Python does not share, or modelled with no theorem stating the claim. Which is
+which is in
+[Prediction coverage](book/formal-verification-lean.md#prediction-coverage),
+rendered from `LEAN_COVERAGE` in `src/nomos/prove/predictions.py`; a test fails
+if it names a theorem `gov-budget-proof/` does not declare.
 
 Those twenty seeds are twenty runs, not twenty independent observations.
 Only GridWorld draws its world from the seed, and only the `random`
@@ -173,7 +182,9 @@ Every formal claim in the book chapters has a corresponding executable test:
 | 11 | Ch4 §3.1 | Genesis 3-of-5: 2 sigs insufficient, 3 sigs authorises | ✓ |
 | 12 | Ch4 §3.6 | Deadlock breaker fires after N defaults, resets | ✓ |
 
-Run them yourself: `python -m src.nomos.runner prove --all`
+Run them yourself: `python -m src.nomos.runner prove --all`. These are Python
+asserts over `src/nomos/`; which of them a Lean theorem stands behind is in
+[Prediction coverage](book/formal-verification-lean.md#prediction-coverage).
 
 ---
 
