@@ -163,7 +163,7 @@ explicitly rather than left to look like a matched comparison.
 | Normality check | Shapiro-Wilk test on the pooled sample | Non-normal data triggers a `normality_warning` in the effect size record |
 | Multiple-comparison correction | Bonferroni **and** Holm-Bonferroni step-down across every governance-vs-baseline pair | `significant` and `significant_holm` flags per pair |
 | Paired-design detection | Both arms cover the same labelled seeds, one observation per seed | `paired: true` only for a verified one-to-one seed match, never for merely equal group sizes |
-| Paired test | Wilcoxon signed-rank over the seed-matched pairs — exact null distribution up to 25 non-zero differences, tie-corrected normal above | `wilcoxon_w`, `wilcoxon_p`, `wilcoxon_method`; reported alongside the family, not folded into it |
+| Paired test | Wilcoxon signed-rank over the seed-matched pairs — exact null distribution up to 25 non-zero differences, tie-corrected normal above; pairs whose difference is exactly zero are dropped and the test is conditioned on the survivors (Wilcoxon's convention, not Pratt's) | `wilcoxon_w`, `wilcoxon_p`, `wilcoxon_method`, and the counts the p-value rests on: `wilcoxon_n_pairs` used, `wilcoxon_n_zero_diffs` dropped; reported alongside the family, not folded into it |
 | Reward hacking | Windowed reward spike detection (window=10) | Spike >1.5x baseline + violation |
 
 **Decision rule:** A governance-vs-baseline comparison is treated as statistically significant when the Holm-corrected p-value is below α (default 0.05). Bonferroni-corrected p-values are also reported for reference; Holm-Bonferroni is strictly more powerful and is the primary test. When `normality_warning` is set, treat Cohen's d confidence intervals as approximate and rely on the Mann-Whitney U result.
@@ -172,7 +172,7 @@ explicitly rather than left to look like a matched comparison.
 
 **Degenerate cells.** Several cells are deterministic on both arms (Section D.1), so their pooled standard deviation is exactly zero and Cohen's d does not exist: the separation is divided by zero spread. Those records report `cohens_d: null` and `interpretation: "undefined (zero pooled variance)"` rather than a d of 0.0 labelled negligible — the largest separation in the suite is not a negligible effect. `mean_diff` still states which arm won and by how much. On such a cell the Wilcoxon signed-rank test reduces to a sign test over identical repeats: it reports how consistently one arm wins, not how much, and those repeats are runs rather than independent samples (Section D.1).
 
-Each entry returned by `compute_effect_sizes()` includes: `scenario`, `governance_vs`, `mean_governance`, `mean_baseline`, `mean_diff`, `cohens_d`, `cohens_d_ci`, `cohens_d_se`, `mannwhitney_u`, `p_value_raw`, `p_value_corrected`, `p_value_holm`, `significant`, `significant_holm`, `n_governance`, `n_baseline`, `paired`, `wilcoxon_w`, `wilcoxon_p`, `wilcoxon_method`, `normality_warning`, and `interpretation`.
+Each entry returned by `compute_effect_sizes()` includes: `scenario`, `governance_vs`, `mean_governance`, `mean_baseline`, `mean_diff`, `cohens_d`, `cohens_d_ci`, `cohens_d_se`, `mannwhitney_u`, `p_value_raw`, `p_value_corrected`, `p_value_holm`, `significant`, `significant_holm`, `n_governance`, `n_baseline`, `paired`, `wilcoxon_w`, `wilcoxon_p`, `wilcoxon_n_pairs`, `wilcoxon_n_zero_diffs`, `wilcoxon_method`, `normality_warning`, and `interpretation`.
 
 ---
 
