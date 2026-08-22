@@ -775,7 +775,8 @@ def compute_effect_sizes(
         ``cohens_d_ci``, ``cohens_d_se``, ``mannwhitney_u``, ``p_value_raw``,
         ``p_value_corrected``, ``p_value_holm``, ``significant``,
         ``significant_holm``, ``n_governance``, ``n_baseline``, ``paired``,
-        ``wilcoxon_w``, ``wilcoxon_p``, ``wilcoxon_method``,
+        ``wilcoxon_w``, ``wilcoxon_p``, ``wilcoxon_n_pairs``,
+        ``wilcoxon_n_zero_diffs``, ``wilcoxon_method``,
         ``normality_warning``, ``interpretation``. A scenario-baseline pair
         with no runs on either side yields no entry, and is not counted in
         the correction family — an arm that was never run is not a test that
@@ -800,8 +801,12 @@ def compute_effect_sizes(
         one observation each; when it is, a Wilcoxon signed-rank test is run
         over those matched pairs and reported in ``wilcoxon_w`` /
         ``wilcoxon_p`` / ``wilcoxon_method`` (all ``None`` otherwise).  The
-        Wilcoxon p-value is reported alongside, not folded into the
-        Bonferroni and Holm family, which stays the Mann-Whitney one test per
+        signed-rank test drops pairs whose difference is exactly zero and
+        conditions on the survivors, so its p-value rests on
+        ``wilcoxon_n_pairs`` observations rather than on ``n_governance``;
+        ``wilcoxon_n_zero_diffs`` says how many were dropped.  The Wilcoxon
+        p-value is reported alongside, not folded into the Bonferroni and
+        Holm family, which stays the Mann-Whitney one test per
         governance-vs-baseline pair.
     """
     groups = _group_rewards_by_seed(reports)
@@ -863,7 +868,13 @@ def compute_effect_sizes(
                     [treatment_seeds[seed][0] for seed in seeds],
                 )
             else:
-                wilcoxon = {"w": None, "p_value": None, "method": None}
+                wilcoxon = {
+                    "w": None,
+                    "p_value": None,
+                    "n_pairs": None,
+                    "n_zero_diffs": None,
+                    "method": None,
+                }
 
             effect_sizes.append(
                 {
@@ -884,6 +895,8 @@ def compute_effect_sizes(
                     "paired": paired,
                     "wilcoxon_w": wilcoxon["w"],
                     "wilcoxon_p": wilcoxon["p_value"],
+                    "wilcoxon_n_pairs": wilcoxon["n_pairs"],
+                    "wilcoxon_n_zero_diffs": wilcoxon["n_zero_diffs"],
                     "wilcoxon_method": wilcoxon["method"],
                     "normality_warning": normality_warning,
                     "interpretation": interpretation,
