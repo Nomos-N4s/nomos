@@ -1,6 +1,8 @@
 import os
 import tempfile
 
+import pytest
+
 from src.nomos.benchmarks.analysis import (
     StrategyAggregate,
     _bonferroni_correct,
@@ -20,7 +22,10 @@ from src.nomos.benchmarks.analysis import (
     export_summary_csv,
     run_analysis,
 )
+from src.nomos.benchmarks.baselines import MonolithicRL
+from src.nomos.benchmarks.run_all import _run_scenario
 from src.nomos.experiments.base import ExperimentMetrics
+from src.nomos.experiments.grid_world import GridWorld
 from src.nomos.experiments.metrics import ExperimentReport
 
 
@@ -368,6 +373,61 @@ class TestCumulativeSeriesRaisesNoEpisodes:
         for per_step in (-13.0, -1.0, 0.0, 1.0, 7.5):
             for episode in _detect_reward_hacking(self._cumulative(per_step)):
                 assert episode["reward_spike"] > 0, (per_step, episode)
+
+
+class TestRewardHackingProducerContract:
+    """Exercise the detector on records the real benchmark runner wrote (#304).
+
+    Every other test here hand-builds step records, and that is how the
+    units mismatch survived a green suite: the fixtures were per-step
+    while the one production producer emitted running totals. A unit test
+    whose fixture disagrees with the producer cannot catch a producer bug,
+    so these call ``_run_scenario`` and read what it actually stores.
+    """
+
+    @staticmethod
+    def _real_records(steps=120):
+        """Records from the arm that produced most of the bogus episodes.
+
+        GridWorld under ``monolithic_rl`` earns a little, violates twice,
+        and then plateaus at a negative total for the rest of the run —
+        the shape the 1.5x ratio test used to read as a spike on every
+        remaining step.
+        """
+        report = _run_scenario(
+            GridWorld,
+            {"size": 6},
+            "monolithic_rl",
+            steps=steps,
+            seed=0,
+            baseline=MonolithicRL(),
+        )
+        return report.metadata["step_records"]
+
+    def test_producer_emits_the_keys_its_consumers_read(self):
+        record = self._real_records(steps=20)[0]
+        # _detect_reward_hacking reads the first two; plot_reward_curves
+        # and the --csv export read the cumulative ones.
+        assert {"reward", "violations", "cumulative_reward"} <= set(record)
+
+    def test_reward_and_violations_are_per_step_not_running_totals(self):
+        records = self._real_records()
+        assert records[-1]["cumulative_reward"] == pytest.approx(sum(r["reward"] for r in records))
+        assert records[-1]["cumulative_violations"] == sum(r["violations"] for r in records)
+        assert records[-1]["cumulative_deadlocks"] == sum(r["deadlocks"] for r in records)
+        # A running counter never returns to zero once it has moved; a
+        # per-step count does, and this arm violates on only a few steps.
+        assert records[-1]["cumulative_violations"] > 0
+        assert records[-1]["violations"] == 0
+
+    def test_detector_on_real_records_reports_only_real_spikes(self):
+        records = self._real_records()
+        episodes = _detect_reward_hacking(records)
+        for ep in episodes:
+            assert ep["reward_spike"] > 0, ep
+            # The violation belongs to the flagged step, not to the run.
+            assert ep["violation_count"] == records[ep["step"]]["violations"], ep
+            assert records[ep["step"]]["violations"] > 0, ep
 
 
 class TestAggregateReports:
