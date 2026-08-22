@@ -1,3 +1,4 @@
+import math
 import os
 import tempfile
 
@@ -82,11 +83,11 @@ class TestCohensD:
 
     def test_small_samples(self):
         d = _cohens_d([1.0], [2.0])
-        assert d == 0.0
+        assert math.isnan(d)
 
     def test_zero_variance(self):
         d = _cohens_d([5.0, 5.0, 5.0], [3.0, 3.0, 3.0])
-        assert d == 0.0
+        assert math.isnan(d)
 
 
 class TestMannWhitneyU:
@@ -137,7 +138,7 @@ class TestMannWhitneyUExact:
     def test_separated_small(self):
         u, p = _mannwhitney_u_exact([5.0, 6.0], [1.0, 2.0])
         assert u == 0.0
-        assert p == 0.3333
+        assert abs(p - 2.0 / 6.0) < 1e-12
 
     def test_falls_back_large(self):
         u, p = _mannwhitney_u_exact(list(range(10)), list(range(10, 20)))
@@ -203,7 +204,7 @@ class TestCohensDCI:
 
     def test_small_samples(self):
         ci = _cohens_d_ci([1.0], [2.0])
-        assert ci["d"] == 0.0
+        assert all(math.isnan(v) for v in ci.values())
 
     def test_ci_structure(self):
         ci = _cohens_d_ci([1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0])
@@ -249,20 +250,26 @@ class TestShapiroWilk:
 
 
 class TestIsPaired:
-    def test_equal_counts_paired(self):
-        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5, 6]}
+    def test_matched_seeds_paired(self):
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {0: [4.0], 1: [5.0], 2: [6.0]},
+        }
         assert _is_paired(groups, "A", "gov", "ran") is True
 
     def test_unequal_counts_not_paired(self):
-        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5]}
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {0: [4.0], 1: [5.0]},
+        }
         assert _is_paired(groups, "A", "gov", "ran") is False
 
     def test_empty_group_not_paired(self):
-        groups = {("gov", "A"): []}
+        groups = {("gov", "A"): {}}
         assert _is_paired(groups, "A", "gov", "ran") is False
 
     def test_different_scenario(self):
-        groups = {("gov", "A"): [1, 2], ("ran", "B"): [3, 4]}
+        groups = {("gov", "A"): {0: [1.0], 1: [2.0]}, ("ran", "B"): {0: [3.0], 1: [4.0]}}
         assert _is_paired(groups, "A", "gov", "ran") is False
 
 
