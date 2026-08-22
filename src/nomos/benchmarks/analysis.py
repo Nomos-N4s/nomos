@@ -464,8 +464,9 @@ def _detect_reward_hacking(step_records: list[dict], window: int = 10) -> list[d
         baseline = statistics.mean(earlier)
         if baseline <= 0:
             continue
-        spike = round(statistics.mean(recent) - baseline, 2)
-        if statistics.mean(recent) <= baseline * 1.5 or spike <= 0:
+        recent_mean = statistics.mean(recent)
+        spike = round(recent_mean - baseline, 2)
+        if recent_mean <= baseline * 1.5 or spike <= 0:
             continue
         episodes.append(
             {
