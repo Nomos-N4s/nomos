@@ -349,6 +349,23 @@ class TestTemptationSpike:
         tb.reset()
         assert tb._step == 0
 
+    def test_spike_window_is_pinned_to_the_published_steps(self):
+        tb = self._bank()
+        assert type(tb).SPIKE_START == 500
+        assert type(tb).SPIKE_END == 600
+        seen = []
+
+        def decider(state, proposals):
+            seen.append((proposals[0].action, proposals[0].metadata["risk"]))
+            return _gov(action="work")
+
+        for _ in range(601):
+            tb.step("state", external_decider=decider)
+        assert seen[499] == ("work", 0.0)
+        assert seen[500] == ("take_loan", 0.1)
+        assert seen[599] == ("take_loan", 0.1)
+        assert seen[600] == ("work", 0.0)
+
 
 class TestExternalDecider:
     """step() accepts a decision rule that sees the scenario's own agenda."""

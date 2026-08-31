@@ -110,7 +110,9 @@ class DeadlockMaze(ExperimentScenario):
         baseline deciders receive the same ``[]`` the Speaker does. The
         pre-#303 harness computed the agenda outside the scenario, so
         every baseline kept receiving the stale phase-0 ``tighten_quorum``
-        proposal for the whole run and never defaulted at all.
+        proposal for the whole run: the three deciding baselines never
+        defaulted at all, while ``static_masking`` blocked the proposal
+        and defaulted every step, then as now.
         """
         if self._phase == PHASE_NORMAL:
             proposals = self.get_proposals(state)

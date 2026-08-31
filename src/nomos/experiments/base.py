@@ -332,7 +332,14 @@ class ExperimentScenario(ABC):
             external_decider: Optional decision rule called as
                 ``decider(state, proposals)`` with the proposals the
                 scenario itself computed for this step — the same
-                phase-dependent agenda the Speaker would see.
+                phase-dependent agenda the Speaker would see. Supported
+                by the scenarios whose ``_run_step`` accepts the
+                parameter: the four benchmark experiment scenarios and
+                the default implementation. The LLM agent scenarios
+                (``agents/scenarios``) use a different decision
+                architecture — the agent's chosen action arrives *as*
+                ``external_decision`` — and take no decider; passing one
+                raises ``TypeError`` from their ``_run_step``.
 
         Returns:
             A :class:`StepResult` with the decision, next state, and reward.

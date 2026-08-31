@@ -272,7 +272,7 @@ graph LR
     end
 
     subgraph TBank[TemptationBank]
-        T1[Receive loan offer<br/>+5 now vs -10 later]
+        T1[Receive loan offer<br/>+10 now vs -15 later]
         T2[ban_loans contract<br/>prevents borrowing]
     end
 

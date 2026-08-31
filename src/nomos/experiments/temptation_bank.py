@@ -34,7 +34,9 @@ class TemptationBank(ExperimentScenario):
     During the **teaser spike** (steps :data:`SPIKE_START` to
     :data:`SPIKE_END`, exclusive) the bank markets the loan: it leads the
     agenda and its *asserted* ``risk`` metadata drops from 0.7 to 0.1,
-    while what the loan actually does — +10 now, −15 ten steps later —
+    while what the loan actually does — +10 now, −15 when its 10-step
+    timer expires, which is the ninth step after the loan because the
+    timer is started and first decremented on the loan step itself —
     never changes. The assertion is a lie the environment tells, and it is
     the point of the phase: a decision rule that trusts asserted risk
     (``VetoOnly``) takes every teaser and eats every penalty, while an arm
