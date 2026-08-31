@@ -837,7 +837,8 @@ class TestPValuePrecision:
     def test_normal_approximation_keeps_a_sub_1e_4_tail(self):
         u, p = _mannwhitney_u([1998.0] * 20, [-4865.0] * 20)
         assert u == 0.0
-        assert p == 4.2380554260794744e-10
+        # math.erfc varies in the last ulp across platform libms.
+        assert p == pytest.approx(4.2380554260794744e-10, rel=1e-9)
 
     def test_exact_path_is_not_rounded_to_four_places(self):
         u, p = _mannwhitney_u_exact([5.0, 6.0, 7.0, 8.0], [1.0, 2.0, 3.0, 4.0])
