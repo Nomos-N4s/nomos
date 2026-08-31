@@ -1,3 +1,4 @@
+import csv
 import io
 import os
 import sys
@@ -29,23 +30,49 @@ class TestResolveCsvPath:
         assert _resolve_csv_path("my/path.csv") == "my/path.csv"
 
 
+def _csv_report():
+    """A report whose step records are shaped the way the runner writes them.
+
+    Two steps, each earning 5.0, the second one violating — so the
+    per-step columns and the running totals cannot be confused (#304).
+    """
+    return ExperimentReport(
+        name="test", total_steps=2, total_reward=10.0, avg_reward_per_step=5.0,
+        deadlock_count=0, deadlock_rate=0.0, constraint_violations=1, veto_count=0,
+        final_identity_drift=0.0, governance_latency_avg=0.0,
+        metadata={"scenario": "GridWorld", "strategy": "governance", "seed": 0,
+                  "step_records": [
+                      {"step": 0, "reward": 5.0, "violations": 0, "deadlocks": 0,
+                       "cumulative_reward": 5.0, "cumulative_violations": 0,
+                       "cumulative_deadlocks": 0, "runtime_ms": 1.0},
+                      {"step": 1, "reward": 5.0, "violations": 1, "deadlocks": 0,
+                       "cumulative_reward": 10.0, "cumulative_violations": 1,
+                       "cumulative_deadlocks": 0, "runtime_ms": 1.0},
+                  ]},
+    )
+
+
 class TestExportCsv:
     def test_creates_csv_file(self):
-        report = ExperimentReport(
-            name="test", total_steps=10, total_reward=50.0, avg_reward_per_step=5.0,
-            deadlock_count=0, deadlock_rate=0.0, constraint_violations=0, veto_count=0,
-            final_identity_drift=0.0, governance_latency_avg=0.0,
-            metadata={"scenario": "GridWorld", "strategy": "governance", "seed": 0,
-                      "step_records": [{"step": 0, "reward": 5.0, "violations": 0, "deadlocks": 0, "runtime_ms": 1.0}]},
-        )
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "out.csv")
-            _export_csv([report], path)
+            _export_csv([_csv_report()], path)
             assert os.path.exists(path)
             with open(path) as f:
                 content = f.read()
             assert "timestamp" in content
             assert "GridWorld" in content
+
+    def test_per_step_and_cumulative_columns_are_both_carried(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "out.csv")
+            _export_csv([_csv_report()], path)
+            with open(path, newline="") as f:
+                rows = list(csv.DictReader(f))
+        assert [r["reward"] for r in rows] == ["5.0", "5.0"]
+        assert [r["cumulative_reward"] for r in rows] == ["5.0", "10.0"]
+        assert [r["violations"] for r in rows] == ["0", "1"]
+        assert [r["cumulative_violations"] for r in rows] == ["0", "1"]
 
 
 class TestBuildBaselineFlags:
