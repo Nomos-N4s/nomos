@@ -18,9 +18,15 @@ python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 ## Interpreting Results
 
 - **GridWorld**: Tests safety-constrained navigation. Governance prevents poison consumption.
-- **TemptationBank**: Tests voluntary self-binding under temptation. `ban_loans` contract enacts by step ~30.
+- **TemptationBank**: Tests voluntary self-binding under temptation. `ban_loans` contract enacts early, and the enacted restriction removes the loan from the agenda structurally. During the teaser spike (steps 500–599, added in #303) the loan is marketed with a lowballed asserted risk: `veto_only`, which trusts asserted metadata, takes all 100 teasers and eats all 100 delayed penalties (1300.0 vs governance's 1998.0); the bound arm never sees the offer.
 - **DriftLab**: Tests identity coherence under reward-function shift. Governance maintains alignment.
-- **DeadlockMaze**: Tests procedural deadlock recovery. DeadlockBreaker mechanism prevents infinite loops.
+- **DeadlockMaze**: Tests procedural deadlock recovery. The deadlock-recovery cycle repeats (made cyclic in #303), and every deciding arm records the same 833 defaults — the DeadlockBreaker does the recovering and runs in every arm, so the scenario demonstrates the breaker rather than separating governance from baselines.
+
+Before quoting these numbers as a governance-beats-baselines result, read
+Appendix D.4 ("Where the 12-line filter stands"): on three of the four
+scenarios the full Speaker does not beat the `veto_only` risk filter, and
+where it wins it wins because the environment attacks the filter's trust
+in asserted metadata.
 
 ## RL Adversary Results
 

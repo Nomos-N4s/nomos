@@ -83,6 +83,17 @@ baseline drew from the loop seed then exactly as it does now, so those
 two were genuine 20-draw statistics, and the table below republishes
 their figures unchanged by the fix.
 
+Two further cells were invalidated by #303 and are republished from a
+re-run: TemptationBank's `veto_only` (the teaser-spike amendment,
+Appendix D.3.2) and the whole DeadlockMaze column (a stale-agenda harness
+bug plus the recovery-cycle amendment, Appendix D.3.4). Every published
+pre-#303 DeadlockMaze baseline figure of 0 deadlocks was a harness
+artifact — the loop handed baselines the phase-0 proposal on every step —
+and the old 999 for governance counted ~994 defaults on an
+empty-by-design agenda. TemptationBank's `random` cell survives #303
+unchanged: the random baseline enacts the loan ban within its first few
+steps on every seed, so the spike window never reaches its agenda.
+
 ## Output
 
 | File | Description |
@@ -111,11 +122,11 @@ verify it from the `Identity drift:` line the runner prints for each run
 
 | Strategy | GridWorld | TemptationBank | DriftLab | DeadlockMaze |
 |---|---|---|---|---|
-| Governance | 0.65 ± 0.88 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 999 deadlocks |
-| MonolithicRL | -22.45 ± 12.50 reward, 5.25 violations | -4865.0 reward, 1000 violations | 4249.25 reward, 1000 violations, 0.1647 drift | 0.0 reward, 0 deadlocks |
-| Random | -34.90 ± 14.99 reward, 8.65 violations | 1990.30 ± 11.78 reward, 1.1 violations | 2621.41 ± 45.98 reward, 499.35 violations, 0.0777 drift | 0.0 reward, 0 deadlocks |
+| Governance | 0.65 ± 0.88 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 833 deadlocks |
+| MonolithicRL | -22.45 ± 12.50 reward, 5.25 violations | -4865.0 reward, 1000 violations | 4249.25 reward, 1000 violations, 0.1647 drift | 0.0 reward, 833 deadlocks |
+| Random | -34.90 ± 14.99 reward, 8.65 violations | 1990.30 ± 11.78 reward, 1.1 violations | 2621.41 ± 45.98 reward, 499.35 violations, 0.0777 drift | 0.0 reward, 833 deadlocks |
 | StaticMasking | not applicable | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 1000 deadlocks (total inaction — see below) |
-| VetoOnly | 0.65 ± 0.88 reward, 0 violations | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 0 deadlocks |
+| VetoOnly | 0.65 ± 0.88 reward, 0 violations | 1300.0 reward, 100 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 833 deadlocks |
 
 Every entry is a mean over the 20 seeds. `±` is the standard deviation
 across seeds and is shown only where it is not zero; the cells without one
@@ -151,15 +162,37 @@ in the target tile, so no fixed set of action names expresses the
 constraint. With an empty blocklist the arm would reproduce MonolithicRL's
 numbers under a second name, so the runner omits it.
 
-StaticMasking's DeadlockMaze cell does not measure the same thing as
-Governance's neighbouring 999. `tighten_quorum` is the only action the
-scenario ever proposes, and it is the one action the blocklist forbids, so
-the arm selects nothing on all 1,000 steps. `deadlock_count` counts default
-(no-decision) outcomes, so the 1,000 is total inaction: the quorum is never
-tightened and the gridlock the scenario studies never occurs. Governance's
-999 is genuine gridlock. The arm is kept because a blanket ban is a real
-ablation result for a single-action scenario, but it is not comparable
-step-for-step with the rows above it.
+DeadlockMaze's four deciding arms all read 833 because the scenario
+cycles: the temptation passes (1 step), five consecutive defaults fire
+the breaker, parameters reset, and the temptation is re-proposed — a
+6-step cycle, 166 recoveries per 1,000 steps, and 833 defaults for any
+arm that takes the single offered proposal. Every deciding rule does take
+it: the Speaker passes it, `monolithic_rl` and `random` have nothing else
+to pick, and `veto_only` sees asserted risk 0.0. The identical counts are
+the honest result — the deadlock breaker does the recovering and it runs
+in every arm, so the scenario demonstrates the breaker rather than
+separating governance from baselines (Appendix D.3.4, amended in #303).
+
+StaticMasking's DeadlockMaze cell does not measure the same thing as the
+deciding arms' 833. `tighten_quorum` is the only action the scenario ever
+proposes, and it is the one action the blocklist forbids, so the arm
+selects nothing on all 1,000 steps. `deadlock_count` counts default
+(no-decision) outcomes, so the 1,000 is total inaction: the quorum is
+never tightened and the gridlock the scenario studies never occurs. The
+deciding arms' 833 is genuine, recovered-from gridlock. The arm is kept
+because a blanket ban is a real ablation result for a single-action
+scenario, but it is not comparable step-for-step with the rows above it.
+
+TemptationBank's `veto_only` cell is the one place a baseline pays for
+being unbound: during the teaser spike (steps 500–599) the loan leads the
+agenda asserting `risk: 0.1`, the filter trusts the assertion 100 times,
+and 100 delayed −15 penalties land — 1300.0 total against governance's
+1998.0. The enacted Ulysses Contract never sees a teaser at all: the
+restriction removes the offer from the agenda structurally. StaticMasking
+still tops that column at 2000.0 — the hard-coded ban is the same rule
+the Parliament votes itself, minus the one-step cost of the vote. See
+Appendix D.4, "Where the 12-line filter stands", before quoting any of
+these numbers as a governance-beats-baselines result.
 
 ### DriftLab Identity Drift
 
