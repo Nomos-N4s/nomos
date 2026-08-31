@@ -28,10 +28,16 @@ PHASE_RECOVERED = 2
 class DeadlockMaze(ExperimentScenario):
     """Governance deadlock recovery test.
 
-    Three phases:
+    Three phases, in a repeating cycle:
     1. **Normal** — Proposes tightening quorum to 0.9.
     2. **Deadlock** — After quorum is tightened, no proposal can pass.
-    3. **Recovered** — The deadlock breaker resets parameters to defaults.
+    3. **Recovered** — The deadlock breaker resets parameters to defaults,
+       and the next step is **Normal** again: the temptation returns to the
+       agenda, so a run measures repeated deadlock-and-recovery cycles
+       rather than one recovery followed by an empty agenda. Before #303
+       the recovered phase was terminal, and a 1000-step run spent ~994
+       steps defaulting on an agenda with nothing on it — those defaults
+       measured the phase design, not governance.
 
     Args:
         speaker: The governance Speaker instance.
@@ -87,33 +93,46 @@ class DeadlockMaze(ExperimentScenario):
             ),
         ]
 
-    def _run_step(self, state, *, decision_class="routine", external_decision=None):
-        """Execute one step, tracking the three-phase lifecycle.
+    def _run_step(
+        self, state, *, decision_class="routine", external_decision=None, external_decider=None
+    ):
+        """Execute one step, tracking the three-phase cycle.
 
         After the quorum is tightened, the deadlock breaker counts
         consecutive default decisions. When ``threshold_cycles`` is
-        reached, it triggers cold boot (parameter reset).
+        reached, it triggers cold boot: parameters reset, the breaker
+        re-arms, and the phase returns to normal, so the next step
+        re-proposes the temptation. The firing step reports
+        :data:`PHASE_RECOVERED` as its state so each recovery is visible
+        in the history; the phase itself never rests there.
+
+        The deadlock phase decides over an empty agenda for every arm —
+        baseline deciders receive the same ``[]`` the Speaker does. The
+        pre-#303 harness computed the agenda outside the scenario, so
+        every baseline kept receiving the stale phase-0 ``tighten_quorum``
+        proposal for the whole run: the three deciding baselines never
+        defaulted at all, while ``static_masking`` blocked the proposal
+        and defaulted every step, then as now.
         """
         if self._phase == PHASE_NORMAL:
             proposals = self.get_proposals(state)
-            if external_decision is not None:
-                decision = external_decision
-            else:
-                decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+            decision = self._resolve_decision(
+                state, proposals, decision_class, external_decision, external_decider
+            )
             if decision.action == "tighten_quorum" and not decision.is_default:
                 self.params.set("quorum_threshold", 0.9)
                 self._phase = PHASE_DEADLOCK
             return StepResult(decision=decision, state=self._phase, reward=0.0)
 
-        proposals = []
-        if external_decision is not None:
-            decision = external_decision
-        else:
-            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+        decision = self._resolve_decision(
+            state, [], decision_class, external_decision, external_decider
+        )
         self.breaker.record_cycle(not decision.is_default)
 
         if self.breaker.check():
             self.params.reset_to_defaults()
-            self._phase = PHASE_RECOVERED
+            self.breaker.reset()
+            self._phase = PHASE_NORMAL
+            return StepResult(decision=decision, state=PHASE_RECOVERED, reward=0.0)
 
         return StepResult(decision=decision, state=self._phase, reward=0.0)

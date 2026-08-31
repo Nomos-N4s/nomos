@@ -86,6 +86,16 @@ the twenty grids the fixed harness draws, governance means 0.65 reward on
 0 violations and MonolithicRL -22.45 on 5.25. The table is left as the
 record of the baseline-decoupling fix it was written for.
 
+The code block above is itself a historical record: #303 later found that
+this fix introduced a second, subtler decoupling. The loop computed
+`proposals` outside the scenario, so on DeadlockMaze every baseline was
+handed the stale phase-0 proposal on all 1,000 steps while the Speaker
+saw the phase-dependent agenda — which is why baselines recorded 0
+deadlocks. The loop now passes the decision *rule* instead
+(`scenario.step(state, external_decider=baseline.decide)`), the scenario
+computes one agenda per step, and every deciding arm records the same 833
+deadlocks. See Appendix D.3.4.
+
 The governance layer now demonstrably **reduces violations** (0 vs. 3-10) and **balances reward** (lower immediate reward but zero violations) compared to unconstrained optimization.
 
 **Verdict: Accepted. Fixed. The panel correctly identified a critical bug.**
@@ -271,7 +281,7 @@ The fixed benchmarks now demonstrate this:
 | GridWorld | MonolithicRL takes poison → -22.45 mean reward, 5.25 mean violations | Safety committee vetoes poison → 0.65 mean reward, 0 violations |
 | TemptationBank | MonolithicRL takes a loan on every step → -4865.0 mean reward, 1000 mean violations | Parliament enacts the Ulysses Contract on the first step → 1998.0 mean reward, 0 violations |
 | DriftLab | MonolithicRL classifies harmful as safe on every step → 4249.25 mean reward, 1000 mean violations | Integrity committee enforces identity coherence → 1000.0 mean reward, 0 violations |
-| DeadlockMaze | All baselines avoid deadlock (no parliamentary procedure) but also cannot tighten constraints | Governance tightens quorum → temporary deadlock, then cold-boot recovery |
+| DeadlockMaze | Every deciding arm — baselines included — takes the tightening and gridlocks: 833 defaults, 166 breaker recoveries per 1,000 steps | Not a governed-vs-ungoverned separation: the deadlock breaker does the recovering and runs in every arm. The earlier "all baselines avoid deadlock" reading was a harness artifact (#303) |
 
 Every figure above is a mean over seeds 0-19 at 1,000 steps, measured from
 the published harness and matching the results table in

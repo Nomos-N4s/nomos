@@ -158,6 +158,101 @@ class TestRunScenario:
         assert report.total_steps == 5
 
 
+class TestAgendaParity:
+    """#303: a baseline decides over the agenda the scenario computed.
+
+    The pre-#303 loop called ``scenario.get_proposals`` itself, which on
+    DeadlockMaze handed every baseline the stale phase-0 ``tighten_quorum``
+    proposal for the whole run while the Speaker saw the phase-dependent
+    agenda. These tests pin the parity path.
+    """
+
+    def test_deadlock_baseline_agenda_is_phase_dependent(self):
+        seen = []
+
+        class SpyVeto(VetoOnly):
+            def decide(self, state, proposals):
+                seen.append([p.action for p in proposals])
+                return super().decide(state, proposals)
+
+        _run_scenario(DeadlockMaze, {}, "veto_only", steps=13, seed=0, baseline=SpyVeto())
+        assert seen[0] == ["tighten_quorum"]
+        assert seen[1:6] == [[]] * 5
+        assert seen[6] == ["tighten_quorum"]
+        assert seen[7:12] == [[]] * 5
+        assert seen[12] == ["tighten_quorum"]
+
+    def test_deadlock_agenda_matches_the_governance_run(self):
+        speaker = build_governance_layer()
+        breaker = DeadlockBreaker(threshold_cycles=5)
+        scenario = DeadlockMaze(speaker, breaker)
+        scenario.reset()
+        captured = []
+        original = speaker.run_governance_cycle
+
+        def recording(state, proposals, decision_class="routine"):
+            decision = original(state, proposals, decision_class)
+            captured.append(([p.action for p in proposals], decision))
+            return decision
+
+        speaker.run_governance_cycle = recording
+        for _ in range(13):
+            scenario.step("normal")
+
+        decisions = iter(decision for _, decision in captured)
+        replayed = []
+
+        class Replay:
+            name = "replay"
+
+            def decide(self, state, proposals):
+                replayed.append([p.action for p in proposals])
+                return next(decisions)
+
+        _run_scenario(DeadlockMaze, {}, "replay", steps=13, seed=0, baseline=Replay())
+        assert replayed == [agenda for agenda, _ in captured]
+
+    def test_the_loop_computes_no_agenda(self):
+        calls = 0
+
+        class CountingBank(TemptationBank):
+            def get_proposals(self, state):
+                nonlocal calls
+                calls += 1
+                return super().get_proposals(state)
+
+        _run_scenario(CountingBank, {}, "veto_only", steps=10, seed=0, baseline=VetoOnly())
+        assert calls == 10
+
+    def test_deadlock_cycle_counts_match_across_deciding_arms(self):
+        governed = _run_scenario(DeadlockMaze, {}, "governance", steps=100, seed=0)
+        unbound = _run_scenario(
+            DeadlockMaze, {}, "veto_only", steps=100, seed=0, baseline=VetoOnly()
+        )
+        assert governed.deadlock_count == unbound.deadlock_count
+        assert governed.deadlock_count > 0
+
+
+class TestTemptationSpikeOutcomes:
+    """#303: with the teaser spike, being unbound has a measured price."""
+
+    def test_veto_only_takes_every_teaser_and_eats_every_penalty(self):
+        report = _run_scenario(
+            TemptationBank, {}, "veto_only", steps=1000, seed=0, baseline=VetoOnly()
+        )
+        assert report.total_reward == 1300.0
+        assert report.constraint_violations == 100
+
+    def test_governance_never_sees_the_teaser_and_wins(self):
+        governed = _run_scenario(TemptationBank, {}, "governance", steps=1000, seed=0)
+        unbound = _run_scenario(
+            TemptationBank, {}, "veto_only", steps=1000, seed=0, baseline=VetoOnly()
+        )
+        assert governed.total_reward == 1998.0
+        assert governed.constraint_violations == 0
+        assert governed.total_reward > unbound.total_reward
+
+
 class TestRunExperimentSet:
     def test_single_strategy_single_seed(self):
         reports = _run_experiment_set(

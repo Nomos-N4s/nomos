@@ -86,7 +86,13 @@ def _run_scenario(
             replays one trajectory across the loop; the seed still reaches
             the ``random`` baseline through :func:`_get_baseline`.
         baseline: Optional :class:`BaselineGovernance` instance.
-            If None, the full Speaker is used.
+            If None, the full Speaker is used. A baseline decides through
+            ``scenario.step(..., external_decider=baseline.decide)``, so
+            it receives the same phase-dependent agenda the Speaker would
+            see, computed inside the scenario. The loop itself never
+            builds a proposal list — the pre-#303 loop did, which handed
+            every baseline DeadlockMaze's stale phase-0 proposal for the
+            whole run.
         config_path: Optional path to a .parliament config file.
 
     Returns:
@@ -164,11 +170,9 @@ def _run_scenario(
 
     for i in range(steps):
         state = "normal"
-        proposals = scenario.get_proposals(state)
 
         if baseline is not None:
-            decision = baseline.decide(state, proposals)
-            result = scenario.step(state, external_decision=decision)
+            result = scenario.step(state, external_decider=baseline.decide)
         else:
             result = scenario.step(state)
 

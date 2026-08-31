@@ -272,7 +272,7 @@ graph LR
     end
 
     subgraph TBank[TemptationBank]
-        T1[Receive loan offer<br/>+5 now vs -10 later]
+        T1[Receive loan offer<br/>+10 now vs -15 later]
         T2[ban_loans contract<br/>prevents borrowing]
     end
 
@@ -322,8 +322,8 @@ graph TB
     end
 
     subgraph Deadlock[DeadlockMaze]
-        DL_GOV[GOV: 999 deadlocks<br/>breaker fires]
-        DL_MONO[MONO: 0 deadlocks]
+        DL_GOV[GOV: 833 deadlocks<br/>166 breaker recoveries]
+        DL_MONO[MONO: 833 deadlocks<br/>identical cycle — see D.3.4]
     end
 
     note[Means over seeds 0-19 at 1000 steps.<br/>Only GridWorld draws its world from the seed. Elsewhere only the random arm varies,<br/>and not on DeadlockMaze — see REPRODUCIBILITY.md Seed Strategy]

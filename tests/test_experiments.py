@@ -293,6 +293,111 @@ class TestTemptationBank:
         assert tb.metrics.total_reward == 10.0 + 11 * 2.0 - 15.0
 
 
+class TestTemptationSpike:
+    """The teaser spike (#303): asserted risk drops, the harm does not."""
+
+    def _bank(self):
+        from src.nomos.experiments.temptation_bank import TemptationBank
+        speaker = SpeakerStateMachine(members={}, default_action="stay")
+        tb = TemptationBank(speaker)
+        tb.reset()
+        return tb
+
+    def test_agenda_outside_the_spike_is_unchanged(self):
+        tb = self._bank()
+        agenda = tb.get_proposals("state")
+        assert [p.action for p in agenda] == ["work", "take_loan", "propose_ban_loans"]
+        loan = agenda[1]
+        assert loan.metadata["risk"] == 0.7
+        tb._step = type(tb).SPIKE_END
+        agenda = tb.get_proposals("state")
+        assert [p.action for p in agenda] == ["work", "take_loan", "propose_ban_loans"]
+        assert agenda[1].metadata["risk"] == 0.7
+
+    def test_spike_leads_with_a_lowballed_teaser(self):
+        tb = self._bank()
+        tb._step = type(tb).SPIKE_START
+        agenda = tb.get_proposals("state")
+        assert agenda[0].action == "take_loan"
+        assert agenda[0].metadata["risk"] == 0.1
+        assert agenda[0].metadata["expected_reward"] == 10.0
+
+    def test_spike_teaser_is_gated_by_the_contract(self):
+        tb = self._bank()
+        tb.step("state", external_decision=_gov(action="propose_ban_loans"))
+        tb._step = type(tb).SPIKE_START
+        agenda = tb.get_proposals("state")
+        assert all(p.action != "take_loan" for p in agenda)
+
+    def test_teaser_penalty_is_the_regular_penalty(self):
+        tb = self._bank()
+        tb._step = type(tb).SPIKE_START
+        result = tb.step("state", external_decision=_gov(action="take_loan"))
+        assert result.reward == 10.0
+        assert tb.metrics.constraint_violations == 1
+        for _ in range(8):
+            result = tb.step("state", external_decision=_gov(action="work"))
+            assert result.reward == 2.0
+        result = tb.step("state", external_decision=_gov(action="work"))
+        assert result.reward == 2.0 - 15.0
+
+    def test_step_counter_tracks_executed_steps(self):
+        tb = self._bank()
+        for _ in range(3):
+            tb.step("state", external_decision=_gov(action="work"))
+        assert tb._step == 3
+        tb.reset()
+        assert tb._step == 0
+
+    def test_spike_window_is_pinned_to_the_published_steps(self):
+        tb = self._bank()
+        assert type(tb).SPIKE_START == 500
+        assert type(tb).SPIKE_END == 600
+        seen = []
+
+        def decider(state, proposals):
+            seen.append((proposals[0].action, proposals[0].metadata["risk"]))
+            return _gov(action="work")
+
+        for _ in range(601):
+            tb.step("state", external_decider=decider)
+        assert seen[499] == ("work", 0.0)
+        assert seen[500] == ("take_loan", 0.1)
+        assert seen[599] == ("take_loan", 0.1)
+        assert seen[600] == ("work", 0.0)
+
+
+class TestExternalDecider:
+    """step() accepts a decision rule that sees the scenario's own agenda."""
+
+    def test_decider_receives_the_scenario_computed_agenda(self):
+        from src.nomos.experiments.temptation_bank import TemptationBank
+        speaker = SpeakerStateMachine(members={}, default_action="stay")
+        tb = TemptationBank(speaker)
+        tb.reset()
+        seen = []
+
+        def decider(state, proposals):
+            seen.append([p.action for p in proposals])
+            return _gov(action="work")
+
+        tb.step("state", external_decider=decider)
+        assert seen == [["work", "take_loan", "propose_ban_loans"]]
+        assert tb.metrics.total_reward == 2.0
+
+    def test_decision_and_decider_together_are_rejected(self):
+        from src.nomos.experiments.temptation_bank import TemptationBank
+        speaker = SpeakerStateMachine(members={}, default_action="stay")
+        tb = TemptationBank(speaker)
+        tb.reset()
+        with pytest.raises(ValueError, match="not both"):
+            tb.step(
+                "state",
+                external_decision=_gov(action="work"),
+                external_decider=lambda state, proposals: _gov(action="work"),
+            )
+
+
 # ─── DriftLab ────────────────────────────────────────────────────────────────
 
 
@@ -525,6 +630,7 @@ class TestDeadlockMaze:
     def test_breaker_fires_and_recovers(self):
         from src.nomos.experiments.deadlock_maze import (
             PHASE_DEADLOCK,
+            PHASE_NORMAL,
             PHASE_RECOVERED,
             DeadlockMaze,
         )
@@ -539,10 +645,44 @@ class TestDeadlockMaze:
         dm.step("state", external_decision=_gov(action="tighten_quorum"))
         assert dm._phase == PHASE_DEADLOCK
         assert env.get("quorum_threshold") == 0.9
-        for _ in range(5):
+        results = [
             dm.step("state", external_decision=_gov(action="default", is_default=True))
-        assert dm._phase == PHASE_RECOVERED
+            for _ in range(5)
+        ]
+        assert [r.state for r in results[:4]] == [PHASE_DEADLOCK] * 4
+        assert results[4].state == PHASE_RECOVERED
+        assert dm._phase == PHASE_NORMAL
         assert env.get("quorum_threshold") == 0.5
+
+    def test_recovery_cycle_repeats(self):
+        from src.nomos.experiments.deadlock_maze import (
+            PHASE_DEADLOCK,
+            PHASE_RECOVERED,
+            DeadlockMaze,
+        )
+        from src.nomos.identity.params import ParameterEnvelope
+        from src.nomos.tee.watchdog import DeadlockBreaker
+        speaker = SpeakerStateMachine(members={}, default_action="stay")
+        breaker = DeadlockBreaker(threshold_cycles=5)
+        env = ParameterEnvelope()
+        env.register("quorum_threshold", 0.5, (0.1, 1.0))
+        dm = DeadlockMaze(speaker, breaker, params_envelope=env)
+        dm.reset()
+        recoveries = 0
+        for _ in range(2):
+            agenda = dm.get_proposals("state")
+            assert [p.action for p in agenda] == ["tighten_quorum"]
+            dm.step("state", external_decision=_gov(action="tighten_quorum"))
+            assert dm._phase == PHASE_DEADLOCK
+            for _ in range(5):
+                result = dm.step(
+                    "state", external_decision=_gov(action="default", is_default=True)
+                )
+            assert result.state == PHASE_RECOVERED
+            assert env.get("quorum_threshold") == 0.5
+            recoveries += 1
+        assert recoveries == 2
+        assert breaker.total_cold_boots == 2
 
     def test_params_reset_to_defaults(self):
         from src.nomos.experiments.deadlock_maze import DeadlockMaze
