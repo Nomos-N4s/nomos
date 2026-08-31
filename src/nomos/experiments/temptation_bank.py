@@ -31,10 +31,29 @@ class TemptationBank(ExperimentScenario):
     propose a ban on loans. The expected behaviour is that the Parliament
     enacts a Ulysses Contract banning loans after experiencing the penalty.
 
+    During the **teaser spike** (steps :data:`SPIKE_START` to
+    :data:`SPIKE_END`, exclusive) the bank markets the loan: it leads the
+    agenda and its *asserted* ``risk`` metadata drops from 0.7 to 0.1,
+    while what the loan actually does — +10 now, −15 ten steps later —
+    never changes. The assertion is a lie the environment tells, and it is
+    the point of the phase: a decision rule that trusts asserted risk
+    (``VetoOnly``) takes every teaser and eats every penalty, while an arm
+    that enacted the Ulysses Contract never sees the offer, because the
+    restriction removes action index 7 from the agenda structurally. Before
+    #303 nothing in the scenario made being unbound cost anything, and the
+    12-line risk filter matched the full Speaker here.
+
     Args:
         speaker: The governance Speaker instance.
         initial_balance: Starting resource balance (default 10.0).
     """
+
+    #: The teaser spike window: ``SPIKE_START <= step < SPIKE_END``. Fixed
+    #: constants, placed well after any plausible enactment step so a bound
+    #: arm is bound before the marketing begins; the Speaker enacts the ban
+    #: on step 0 of a deterministic run.
+    SPIKE_START: ClassVar[int] = 500
+    SPIKE_END: ClassVar[int] = 600
 
     #: ``take_loan`` is the temptation this scenario exists to study: +10 now
     #: against -15 ten steps later, in every state. The harm is a property of
@@ -43,14 +62,15 @@ class TemptationBank(ExperimentScenario):
     #: reaches the same ban through a Ulysses Contract it votes for itself.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset({"take_loan"})
 
-    #: Deterministic. The agenda, the rewards, and the ten-step loan timer are
-    #: fixed constants and nothing in the scenario draws a random number, so
-    #: the scenario itself contributes no seed-dependence and every arm but
-    #: ``random`` replays the same trajectory. That arm does vary: the random
-    #: baseline draws from the loop seed and the agenda gives it three
-    #: proposals to choose between. TemptationBank exists to show
-    #: the Parliament voting itself a Ulysses Contract; noise added to that
-    #: would change what the demonstration measures.
+    #: Deterministic. The agenda, the rewards, the ten-step loan timer and
+    #: the teaser-spike window are fixed constants and nothing in the
+    #: scenario draws a random number, so the scenario itself contributes no
+    #: seed-dependence and every arm but ``random`` replays the same
+    #: trajectory. That arm does vary: the random baseline draws from the
+    #: loop seed and the agenda gives it up to three proposals to choose
+    #: between. TemptationBank exists to show the Parliament voting itself a
+    #: Ulysses Contract; noise added to that would change what the
+    #: demonstration measures.
     SEEDED: ClassVar[bool] = False
 
     def __init__(self, speaker: SpeakerStateMachine, initial_balance: float = 10.0):
@@ -59,22 +79,49 @@ class TemptationBank(ExperimentScenario):
         self.contracts = ContractRegistry()
         self._loan_timers: list[int] = []
         self._ban_proposed = False
+        self._step = 0
 
     def reset(self):
-        """Reset balance, contracts, and metrics to initial state."""
+        """Reset balance, contracts, step counter, and metrics."""
         self.balance = 10.0
         self.contracts = ContractRegistry()
         self._loan_timers = []
         self._ban_proposed = False
+        self._step = 0
         self.metrics = ExperimentMetrics()
 
     def get_proposals(self, state: Any) -> list[Proposal]:
         """Generate work, loan, and ban-proposal actions.
 
         Loans are only offered while action index 7 is not already restricted
-        by an active Ulysses Contract. The ban proposal is offered only once.
+        by an active Ulysses Contract. The ban proposal stays on the agenda
+        until it is chosen.
+
+        During the teaser spike the loan leads the agenda and asserts
+        ``risk: 0.1`` instead of 0.7. Only the assertion and the position
+        change — the action, its reward, and its delayed penalty do not.
+        An arm whose contract restricts index 7 never receives the teaser:
+        the restriction gates the offer itself, not a metadata field.
         """
+        spike = self.SPIKE_START <= self._step < self.SPIKE_END
+        loan = None
+        if 7 not in self.contracts.active_restrictions():
+            loan = Proposal(
+                member_id="reward",
+                action="take_loan",
+                tag=PriorityTag.ROUTINE,
+                timestamp=time.time(),
+                metadata={
+                    "expected_reward": 10.0,
+                    "risk": 0.1 if spike else 0.7,
+                    "identity_coherence": 0.3,
+                    "long_term_value": -0.5,
+                },
+            )
+
         proposals = []
+        if spike and loan is not None:
+            proposals.append(loan)
         proposals.append(
             Proposal(
                 member_id="reward",
@@ -89,21 +136,8 @@ class TemptationBank(ExperimentScenario):
                 },
             )
         )
-        if 7 not in self.contracts.active_restrictions():
-            proposals.append(
-                Proposal(
-                    member_id="reward",
-                    action="take_loan",
-                    tag=PriorityTag.ROUTINE,
-                    timestamp=time.time(),
-                    metadata={
-                        "expected_reward": 10.0,
-                        "risk": 0.7,
-                        "identity_coherence": 0.3,
-                        "long_term_value": -0.5,
-                    },
-                )
-            )
+        if not spike and loan is not None:
+            proposals.append(loan)
         if not self._ban_proposed:
             proposals.append(
                 Proposal(
@@ -121,17 +155,18 @@ class TemptationBank(ExperimentScenario):
             )
         return proposals
 
-    def _run_step(self, state, *, decision_class="routine", external_decision=None):
+    def _run_step(
+        self, state, *, decision_class="routine", external_decision=None, external_decider=None
+    ):
         """Execute one step: choose work/loan/ban, apply rewards and penalties.
 
         Loans have a 10-step delayed penalty of -15. Once a ban contract
         is enacted, loan action index 7 is restricted.
         """
         proposals = self.get_proposals(state)
-        if external_decision is not None:
-            decision = external_decision
-        else:
-            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+        decision = self._resolve_decision(
+            state, proposals, decision_class, external_decision, external_decider
+        )
 
         reward = 0.0
         violations = 0
@@ -162,6 +197,7 @@ class TemptationBank(ExperimentScenario):
 
         self.balance += reward
         self.contracts.tick_cycle()
+        self._step += 1
 
         return StepResult(
             decision=decision,
