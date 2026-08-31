@@ -11,7 +11,9 @@ Validated artifacts:
 
 - ``agent_report.md`` — human-readable markdown (non-empty)
 - ``agent_benchmark_results.json`` — ``num_pairs``, ``num_steps``,
-  ``summary`` (dict of numeric keys), ``pairs`` (non-empty list)
+  ``summary`` (dict of numeric keys; ``reward_cohens_d`` is ``null``
+  when Cohen's d is not defined for the pair set), ``pairs``
+  (non-empty list)
 - ``agent_benchmark_summary.csv`` — exact header row
 - ``cache_manifest.json`` — per-entry SHA-256 digests matching the
   cache directory on disk (replay verification)
@@ -62,7 +64,7 @@ RESULTS_SUMMARY_KEYS: dict[str, type | tuple[type, ...]] = {
     "governed_rate_never_worse": (int, float),
     "reward_preservation_ratio": (int, float),
     "reward_preservation_ci": list,
-    "reward_cohens_d": (int, float),
+    "reward_cohens_d": (int, float, type(None)),
     "veto_precision": (int, float),
     "veto_recall": (int, float),
     "latency_p50": dict,

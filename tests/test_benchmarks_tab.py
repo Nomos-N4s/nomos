@@ -1,4 +1,7 @@
-from src.nomos.dashboard.benchmarks_tab import _generate_benchmark_summary
+from src.nomos.dashboard.benchmarks_tab import (
+    _format_effect_size_table,
+    _generate_benchmark_summary,
+)
 
 
 def _agg(strategy, scenario, mean_reward, mean_violations=0.0):
@@ -143,3 +146,50 @@ class TestGenerateBenchmarkSummaryErrorHandling:
         benchmarks = {"aggregates": "not-a-list-of-dicts"}
         result = _generate_benchmark_summary(benchmarks)
         assert result == "Unable to generate benchmark summary."
+
+
+def _effect_size_record(**overrides):
+    record = {
+        "scenario": "TemptationBank",
+        "governance_vs": "monolithic_rl",
+        "mean_governance": 1998.0,
+        "mean_baseline": -4865.0,
+        "mean_diff": 6863.0,
+        "cohens_d": None,
+        "p_value_raw": 4.2380554260794744e-10,
+        "p_value_corrected": 6.357083139119211e-09,
+        "p_value_holm": 5.933277596511264e-09,
+        "wilcoxon_p": 1.9073486328125e-06,
+        "interpretation": "undefined (zero pooled variance)",
+    }
+    record.update(overrides)
+    return record
+
+
+class TestFormatEffectSizeTable:
+    def test_a_tiny_p_value_is_still_readable_as_nonzero(self):
+        df = _format_effect_size_table([_effect_size_record()])
+        rendered = df["p_value_raw"].iloc[0]
+        assert rendered == "4.238e-10"
+        assert float(rendered) > 0.0
+
+    def test_every_probability_column_is_formatted(self):
+        df = _format_effect_size_table([_effect_size_record()])
+        for column in ("p_value_raw", "p_value_corrected", "p_value_holm", "wilcoxon_p"):
+            assert float(df[column].iloc[0]) > 0.0
+
+    def test_an_absent_wilcoxon_result_renders_blank(self):
+        df = _format_effect_size_table([_effect_size_record(wilcoxon_p=None)])
+        assert df["wilcoxon_p"].iloc[0] == ""
+
+    def test_non_probability_columns_are_left_alone(self):
+        df = _format_effect_size_table([_effect_size_record()])
+        assert df["mean_diff"].iloc[0] == 6863.0
+        assert df["interpretation"].iloc[0] == "undefined (zero pooled variance)"
+
+    def test_records_without_the_wilcoxon_column_are_accepted(self):
+        record = _effect_size_record()
+        del record["wilcoxon_p"]
+        df = _format_effect_size_table([record])
+        assert "wilcoxon_p" not in df.columns
+        assert df["p_value_raw"].iloc[0] == "4.238e-10"

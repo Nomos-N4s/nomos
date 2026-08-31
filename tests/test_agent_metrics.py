@@ -18,6 +18,8 @@ from src.nomos.agents import (
     summarize_pairs,
 )
 from src.nomos.agents.harness import ArmResult, PairResult, StepLogEntry
+from src.nomos.agents.report import format_agent_summary
+from src.nomos.agents.schema import RESULTS_SUMMARY_KEYS, _json_types
 from src.nomos.agents.scenarios import TemptationBankLLM
 from src.nomos.committee.members import ExampleRewardMember, ExampleSafetyMember
 from src.nomos.experiments.base import ExperimentMetrics
@@ -321,3 +323,89 @@ class TestReport:
         with open(tmp_path / "agent_report.md") as f:
             md = f.read()
         assert "## LLM-as-judge alignment" not in md
+
+
+# ----------------------------------------------------------------------
+# Undefined Cohen's d must not escape as a NaN (#302)
+# ----------------------------------------------------------------------
+
+
+def _reject_json_constant(token: str) -> float:
+    raise AssertionError(f"non-standard JSON constant in the export: {token}")
+
+
+class TestUndefinedRewardCohensD:
+    """A Cohen's d that does not exist must be stated, not printed as nan.
+
+    ``NaN`` is not a JSON constant under RFC 8259, and ``+nan`` in the
+    report reads as a measurement rather than a missing one.
+    """
+
+    @staticmethod
+    def _single_pair() -> list[PairResult]:
+        return [
+            _pair(
+                seed=0,
+                governed=[_entry(0)],
+                ungoverned=[_entry(0, violations=1)],
+                governed_reward=9.0,
+                ungoverned_reward=4.0,
+            )
+        ]
+
+    @staticmethod
+    def _deterministic_pairs() -> list[PairResult]:
+        return [
+            _pair(
+                seed=seed,
+                governed=[_entry(0)],
+                ungoverned=[_entry(0, violations=1)],
+                governed_reward=10.0,
+                ungoverned_reward=4.0,
+            )
+            for seed in range(5)
+        ]
+
+    def test_one_pair_is_undefined_not_zero(self) -> None:
+        assert summarize_pairs(self._single_pair()).reward_cohens_d is None
+
+    def test_zero_pooled_spread_across_differing_means_is_undefined(self) -> None:
+        assert summarize_pairs(self._deterministic_pairs()).reward_cohens_d is None
+
+    def test_equal_constants_keep_a_zero_effect(self) -> None:
+        pairs = [
+            _pair(
+                seed=seed,
+                governed=[_entry(0)],
+                ungoverned=[_entry(0)],
+                governed_reward=7.0,
+                ungoverned_reward=7.0,
+            )
+            for seed in range(5)
+        ]
+        assert summarize_pairs(pairs).reward_cohens_d == 0.0
+
+    @pytest.mark.parametrize("pairs_name", ["_single_pair", "_deterministic_pairs"])
+    def test_export_stays_strict_json_and_says_undefined(self, tmp_path, pairs_name) -> None:
+        pairs = getattr(self, pairs_name)()
+        run_agent_analysis(pairs, output_dir=str(tmp_path))
+
+        text = (tmp_path / "agent_benchmark_results.json").read_text()
+        assert "NaN" not in text
+        data = json.loads(text, parse_constant=_reject_json_constant)
+        assert data["summary"]["reward_cohens_d"] is None
+
+        md = (tmp_path / "agent_report.md").read_text()
+        assert "- Cohen's d (governed vs ungoverned reward): undefined" in md
+        assert "nan" not in md
+
+    def test_the_terminal_summary_says_undefined(self) -> None:
+        summary = summarize_pairs(self._single_pair())
+        line = next(
+            line for line in format_agent_summary(summary).splitlines() if "Cohen's d" in line
+        )
+        assert line.strip() == "Cohen's d: undefined"
+
+    def test_the_artifact_contract_accepts_a_null_effect_size(self) -> None:
+        assert _json_types(None, RESULTS_SUMMARY_KEYS["reward_cohens_d"]) is True
+        assert _json_types(0.0, RESULTS_SUMMARY_KEYS["reward_cohens_d"]) is True
