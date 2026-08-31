@@ -132,7 +132,9 @@ class DriftLab(ExperimentScenario):
         ]
         return proposals
 
-    def _run_step(self, state, *, decision_class="routine", external_decision=None):
+    def _run_step(
+        self, state, *, decision_class="routine", external_decision=None, external_decider=None
+    ):
         """Execute one step: increment drift, decide, apply it to the identity.
 
         The executed decision is fed back into the
@@ -153,10 +155,9 @@ class DriftLab(ExperimentScenario):
         """
         self._drift += 0.001
         proposals = self.get_proposals(state)
-        if external_decision is not None:
-            decision = external_decision
-        else:
-            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+        decision = self._resolve_decision(
+            state, proposals, decision_class, external_decision, external_decider
+        )
 
         violations = 1 if decision.action == HARMFUL_ACTION else 0
         if violations:
