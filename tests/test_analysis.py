@@ -177,10 +177,25 @@ class TestHolmBonferroni:
 
     def test_two_strong_signals(self):
         results = _holm_bonferroni_correct([0.01, 0.01], alpha=0.05)
-        # rank 1: 0.01 * 2 = 0.02; rank 2: 0.01 * 1 = 0.01
+        # rank 1: 0.01 * 2 = 0.02; rank 2: max(0.02, 0.01 * 1) = 0.02
         assert results[0]["corrected_p"] == 0.02
         assert results[0]["significant"] is True
-        assert results[1]["corrected_p"] == 0.01
+        assert results[1]["corrected_p"] == 0.02
+        assert results[1]["significant"] is True
+
+    def test_step_down_stops_at_the_first_failure(self):
+        results = _holm_bonferroni_correct([0.03, 0.031], alpha=0.05)
+        # rank 1: 0.03 * 2 = 0.06 fails; rank 2 inherits max(0.06, 0.031 * 1)
+        assert results[0]["corrected_p"] == 0.06
+        assert results[0]["significant"] is False
+        assert results[1]["corrected_p"] == 0.06
+        assert results[1]["significant"] is False
+
+    def test_adjusted_p_is_monotone_in_rank(self):
+        results = _holm_bonferroni_correct([0.04, 0.001, 0.03, 0.0005])
+        by_rank = sorted(results, key=lambda r: r["rank"])
+        for earlier, later in zip(by_rank, by_rank[1:]):
+            assert later["corrected_p"] >= earlier["corrected_p"]
 
     def test_first_significant_rest_not(self):
         p_vals = [0.01, 0.04, 0.10]

@@ -389,9 +389,13 @@ def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list
 
     Returns:
         List of dicts with keys ``raw_p``, ``corrected_p``, ``significant``,
-        ``rank`` (1=smallest), ``method`` (``"holm"``).  ``corrected_p``
-        carries full float precision; rounding it here turned genuinely tiny
-        p-values into an exact 0.0 that was then flagged significant.
+        ``rank`` (1=smallest), ``method`` (``"holm"``).  ``corrected_p`` is
+        the step-down adjusted value ``max(previous, p_k * (m - k + 1))``
+        capped at 1.0 — the cumulative maximum keeps it monotone in rank, so
+        a hypothesis cannot test significant after an earlier step has
+        already failed.  It carries full float precision; rounding it here
+        turned genuinely tiny p-values into an exact 0.0 that was then
+        flagged significant.
     """
     m = len(p_values)
     if m == 0:
@@ -399,9 +403,11 @@ def _holm_bonferroni_correct(p_values: list[float], alpha: float = 0.05) -> list
     indexed = [(raw_p, i) for i, raw_p in enumerate(p_values)]
     indexed.sort(key=lambda x: x[0])
     results: list[dict] = [{} for _ in range(m)]
+    running_max = 0.0
     for rank, (raw_p, orig_idx) in enumerate(indexed):
         k = rank + 1
-        corrected = min(raw_p * (m - k + 1), 1.0)
+        running_max = max(running_max, raw_p * (m - k + 1))
+        corrected = min(running_max, 1.0)
         results[orig_idx] = {
             "raw_p": raw_p,
             "corrected_p": corrected,
