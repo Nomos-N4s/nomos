@@ -291,9 +291,10 @@ The digest must equal `preregistration.sha256` in
 `book/appendix-f-data/verifier_frontier.json`, and `preregistration.commit` — the
 commit that **certified the hypotheses** — must appear in that log, dated before
 the run. The log may also contain later commits: those are provenance-only
-corrections, and each is itemised under `preregistration.correction`, so "the
-hypotheses have not moved" stays checkable with `git diff` between the certifying
-commit and any later one. `rl_validate` **recomputes** the digest and compares it,
+corrections and additions, each itemised under `preregistration.correction` or
+`preregistration.provenance_only_edits`, so "the hypotheses have not moved"
+stays checkable with `git diff` between the certifying commit and any later
+one. `rl_validate` **recomputes** the digest and compares it,
 and checks the certifying commit is an ancestor of `HEAD` — a hash that is merely
 present proves nothing, and a commit that a rebase orphaned cannot date anything.
 A result with no verifiable pre-registration is not a weaker result, it is an
@@ -305,6 +306,28 @@ taken over CRLF bytes and the original commit was rebased away, so both commands
 above failed for a reader on an LF clone. **The pre-registered text itself never
 changed** — the blob is identical at both commits — and the superseded values are
 retained under `preregistration.correction` rather than being overwritten.
+
+**Registration and first results, pinned (#277).** The commit that introduced
+this pre-registration and the commit that published the first results are named
+here, so the ordering is checkable in one step instead of reconstructed from
+the log:
+
+- registration introduced: `15fd544` — *feat(experiments): adversarial bypass
+  reward + pre-registered H1–H3 protocol* (PR #262)
+- first results published: `19d11ce` — *feat(book): publish real RL adversary
+  results, replacing Appendix E placeholders* (PR #263)
+
+```bash
+git merge-base --is-ancestor 15fd544 19d11ce && echo "registration precedes results"
+```
+
+Ancestry, not timestamps, is the claim: commit dates are author-controlled
+(these two even share one), but an ancestor precedes its descendant in any
+history a reader holds, and rewriting `main` to fake the order would have to
+move commits the release tags pin. No **external** timestamp exists for this
+first campaign — that gap, and the retrospective OSF registration that closes
+it, is tracked in #277; the timestamp-before-run rule for every future
+campaign is in Appendix D §D.7.
 
 ## Reproduce
 
