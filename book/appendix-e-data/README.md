@@ -33,3 +33,13 @@ The hypotheses, metrics, and thresholds are pre-registered in
 [appendix-e-preregistration.md](../appendix-e-preregistration.md); the
 determinism and archiving policy is in
 [appendix-d-experiment-protocol.md](../appendix-d-experiment-protocol.md) §D.7.
+
+**External timestamp status (#277):** none yet. The campaign's ordering
+evidence is repository-internal — the introducing and first-results commits
+pinned in the pre-registration's Provenance section, checkable by ancestry.
+A retrospective OSF registration of the certified content digest
+(`f0ce46a1ecbe37d14c4eb48fc1d7d98bc9303a2e6e0900392aa994f5d1dd83fd`, the LF
+digest of the text the run was bound to) is tracked in #277 and will be
+linked here, and only here, when it exists — this file is deliberately the
+mutable home for that status, so the certified page never needs another
+digest re-chain for it.

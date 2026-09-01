@@ -288,6 +288,15 @@ aggregate JSON (`protocol` and `environment` blocks) and copied into
 `book/appendix-e-data/README.md` and the pre-registration in
 `book/appendix-e-preregistration.md`.
 
+**Timestamp-before-run rule (#277).** A campaign's pre-registration must be
+(1) merged to `main` and (2) externally timestamped — an OSF registration of
+its LF content digest — **before** any registered run starts, and the
+resulting frontier artifact must record both (the digest chain of
+`book/appendix-f-data/verifier_frontier.json` is the template). The first
+campaign predates this rule: its ordering evidence is git ancestry alone,
+pinned in the pre-registration's Provenance section, and its retrospective
+OSF registration is tracked in #277.
+
 Since #308 the aggregate also carries, per mode, a `per_seed` block (raw
 poison-attempt, execution, falsification and detection counts for every run)
 and a `totals` block summing them, so the tracked copy under
