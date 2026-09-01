@@ -1,8 +1,12 @@
 """
 Flat-branch and fixed-iteration helpers for constant-time execution (Appendix A §10).
 
-These operations execute in the same number of cycles regardless of input data,
-preventing cache-timing side-channel attacks on the governance path.
+These helpers keep their control flow and memory-access pattern independent
+of the sensitive values they touch - the data-oblivious *discipline* a real
+TEE deployment would need against cache-timing side channels. As pure Python
+they are an executable specification of that discipline, not a defence:
+CPython makes no constant-cycle guarantee, and nothing in the governance
+path calls these helpers (#311).
 
 In a TEE context, timing side channels can leak information about:
 - Which actions were vetoed (via comparison timing)

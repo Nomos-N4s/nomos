@@ -3,8 +3,15 @@ Merkle-tree batch verification for TEE throughput optimisation (Appendix A §11)
 
 The optimisation layer submits a batch of action indices as a single Merkle
 root hash. The TEE validates the macro-trajectory (aggregate risk, diversity)
-and returns a signed root. The optimisation layer can then use Merkle proofs
-to execute individual actions without further TEE round-trips.
+and - in the Appendix A specification - returns a *signed* root the
+optimisation layer can then pair with Merkle proofs to execute individual
+actions without further TEE round-trips. This module implements the
+validation and the tree, not the signature: ``validate_batch`` returns an
+unsigned ``(bool, str)``, and no signing primitive exists anywhere in this
+codebase (#311). ``merkle_root`` is production code (audit-log chaining in
+``nomos.audit``); ``BatchVerifier``, ``BatchProposal`` and
+``compute_diversity`` are executable specification exercised by their unit
+tests - nothing in the governance path constructs them.
 
 This amortises the TEE's verification cost across many actions, solving the
 throughput bottleneck described in Chapter 2 §4.2.
@@ -140,6 +147,12 @@ class BatchVerifier:
     1. **Aggregate risk** must not exceed ``risk_threshold``
     2. **Action diversity** must not fall below ``diversity_min``
     3. **Merkle root** is computed for later proof verification
+
+    The Appendix A protocol's step 5 - "TEE signs the root hash" - is not
+    implemented: :meth:`validate_batch` returns an unsigned ``(bool, str)``
+    with the root pasted into the message, and nothing here or elsewhere in
+    the codebase signs anything (#311). Executable specification, not a
+    security mechanism.
 
     Args:
         risk_threshold: Maximum acceptable aggregate risk (default 0.7).
