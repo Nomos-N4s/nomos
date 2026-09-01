@@ -26,6 +26,15 @@ A formal framework for bounded autonomous decision-making.
 
 Optimization pressure erodes constraints that are not formally enforced. Nomos bounds autonomous behavior through deliberation, contracts, and a verifiable identity model before actions are executed.
 
+## The Headline Result
+
+> **A safety check that scores proposer-supplied metadata has zero adversarial value: a 64×64-MLP PPO policy, given 100,000 training steps and never told the mechanism, learned to silence it on 100% of its genuinely unsafe proposals, on every seed.**
+
+Wherever an agent self-declares the risk of its own actions, this is the failure mode; at least one independently grounded verifier is load-bearing. The governance layer survived this adversary only because
+one committee verifies against ground truth instead of the proposer's claim —
+the full result, its conditions, and its limitations are in
+[Appendix E](book/appendix-e-rl-adversary.md).
+
 ## Architecture at a Glance
 
 ```mermaid
