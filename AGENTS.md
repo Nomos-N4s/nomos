@@ -23,22 +23,24 @@
 - **Appendix A** — TEE threat model, SGX/SEV/TrustZone, hardware watchdog, constant-time execution, Merkle-tree batch verification, single-enclave architecture with multi-enclave consensus addendum, deadlock breaker cold-boot recovery (§A.9.5).
 - **Response to AI-generated review panel** — `book/responses/response-to-review-panel.md`. All 5 phases documented. Phase 5.2 concedes all three Chapter 4 Identity Layer attacks: isolation buffer sandbox (§5.2 fix), runtime integrity hashes (§2.1/§6.1 fix), deadlock breaker (§A.9.5 fix).
 - **MVP code** — `src/nomos/speaker.py`. Reference implementation with deterministic falsification counter. Runs successfully.
-- **Full modular reference implementation** — 50+ Python files across 10 subpackages (~2800 lines total):
+- **Full modular reference implementation** — 90+ Python files across 12 subpackages (~22,300 lines total; the aggregate is held to the tree by `tests/test_size_claims.py`, so update it when it fails rather than deleting the test):
 
-  | Module | Files | Key Contents |
+  | Module | Where | Key Contents |
   |---|---|---|
-  | Core types | `models.py` (73 lines) | PriorityTag, Action, Proposal, GovernanceDecision, GovernanceContext |
-  | Parliament | `committee/` (178 lines) | ABC + 7 concrete members (Reward, Safety, Curiosity, Planning, Memory, Social, Integrity) |
-  | Identity Layer | `identity/` (383 lines) | ontology.py, core.py (commitments), tiers.py (4-tier mutability), keys.py (genesis 3-of-5), params.py (bounded envelope), extension.py (sandboxed isolation buffer) |
-  | Contracts | `contracts/` (159 lines) | contract.py (tuple + lifecycle), enforcement.py (3 κ modes), merger.py (mask union/intersection) |
-  | TEE Simulation | `tee/` (216 lines) | enclave.py (single-enclave sim), batch.py (Merkle root), watchdog.py (heartbeat + deadlock breaker), constant_time.py (data-oblivious loops) |
-  | Speaker | `speaker.py` (191 lines) | Full state machine: budgets, agenda sorting, scoring, tag compliance, vetoes, weighted voting |
-  | Experiments | `experiments/` (469 lines) | base.py (scenario ABC + metrics), grid_world.py, temptation_bank.py, drift_lab.py, deadlock_maze.py, metrics.py |
-  | Benchmarks | `benchmarks/` (360+ lines) | baselines.py (4 comparison strategies), run_all.py, report.py, **analysis.py** (statistical pipeline + Cohen's d + reward-hacking detection), **figures.py** (4 publication-ready plots) |
-  | CLI | `runner.py` (320 lines) | Full argparse: `--baselines`, `--strategies`, `--steps`, `--seeds`, `--csv` export, `--config` (DSL) |
-| DSL | `dsl/` (5 files, ~550 lines) | Indentation-based parser, validator, models, errors |
-  | Ontology | `ontology/` (246 lines) | ABC + MemoryBackend (default) + Neo4jBackend (when .env configured) |
-  | Dashboard | `dashboard/` (550+ lines) | Streamlit app with 5 tabs: Formal Model, Parliament Live, Benchmarks, RL Training, Agent Traces |
+  | Core types | `models.py` | PriorityTag, Action, Proposal, GovernanceDecision, GovernanceContext |
+  | Parliament | `committee/` | ABC + 7 concrete members (Reward, Safety, Curiosity, Planning, Memory, Social, Integrity) |
+  | Identity Layer | `identity/` | ontology.py, core.py (commitments), tiers.py (4-tier mutability), keys.py (genesis 3-of-5), params.py (bounded envelope), extension.py (sandboxed isolation buffer) |
+  | Contracts | `contracts/` | contract.py (tuple + lifecycle), enforcement.py (3 κ modes), merger.py (mask union/intersection) |
+  | TEE Simulation | `tee/` | enclave.py (single-enclave sim), batch.py (Merkle root), watchdog.py (heartbeat + deadlock breaker), constant_time.py (data-oblivious loops) |
+  | Speaker | `speaker.py` | Full state machine: budgets, agenda sorting, scoring, tag compliance, vetoes, weighted voting |
+  | Experiments | `experiments/` | base.py (scenario ABC + metrics), the four classic scenarios, gym_env.py, the RL adversary stack (rl_*.py), safety_grid_world.py |
+  | Benchmarks | `benchmarks/` | baselines.py (4 comparison strategies), run_all.py, report.py, analysis.py (statistical pipeline + Cohen's d + reward-hacking detection), figures.py |
+  | LLM agents | `agents/` | PydanticAI/OpenRouter backend, governed-vs-ungoverned harness, 4 LLM-native scenarios (`agents/scenarios/`), metrics, reports, trace viewer, response cache |
+  | Formal predictions | `prove/` | The 12-prediction Python test runner and the prediction-to-Lean coverage map |
+  | CLI | `runner.py` | Full argparse: `--baselines`, `--strategies`, `--steps`, `--seeds`, `--csv` export, `--config` (DSL) |
+  | DSL | `dsl/` | Indentation-based parser, validator, models, errors |
+  | Ontology | `ontology/` | ABC + MemoryBackend (default) + Neo4jBackend (when .env configured) |
+  | Dashboard | `dashboard/` | Streamlit app with 5 tabs: Formal Model, Parliament Live, Benchmarks, RL Training, Agent Traces |
 
 - **Neo4j integration**: `Neo4jBackend` in `src/nomos/ontology/neo4j_backend.py` is fully wired into the Streamlit dashboard. When `NEO4J_URI` is present in `.env`, the dashboard auto-detects and uses Neo4j Aura for persistent ontology storage and decision logging. Falls back to `MemoryBackend` otherwise. Decision logging records each replayed step's scores, vetoes, and metadata as ontology entities. (Issue #21 — Integrated into dashboard per Option A.)
 
