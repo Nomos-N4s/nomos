@@ -152,6 +152,15 @@ class TestPred06RevocationHarder:
         c = UlyssesContract("t", {7}, 0.66, 1.0)
         assert c.revocation_threshold > c.enactment_threshold
 
+    def test_inverted_pair_raises(self):
+        # The #306 regression: this construction used to succeed, enact, and
+        # mask actions while a 10% vote could dissolve it.
+        import pytest
+
+        from src.nomos.contracts.contract import UlyssesContract
+        with pytest.raises(ValueError):
+            UlyssesContract("inverted", {7}, enactment_threshold=1.0, revocation_threshold=0.1)
+
 
 class TestPred07Timelock:
     def test_timelock_blocks_early_revocation(self):
@@ -189,6 +198,20 @@ class TestPred10Tier4Multisig:
         assert TIER_RULES[MutabilityTier.CONSTITUTIONAL].requires_external_multisig is True
         assert TIER_RULES[MutabilityTier.OPERATIONAL].requires_external_multisig is False
         assert TIER_RULES[MutabilityTier.DYNAMIC].requires_external_multisig is False
+
+    def test_constitutional_refused_without_multisig_and_accepted_with_it(self):
+        # The #306 regression: apply_modification honoured none of the tier
+        # flags, so the refusal below could not happen.
+        from src.nomos.identity.tiers import MutabilityTier, TieredMutability
+        tm = TieredMutability()
+        tm.register_parameter("never_harm_humans", True, MutabilityTier.CONSTITUTIONAL)
+        assert not tm.apply_modification("never_harm_humans", False)
+        assert tm.get_value("never_harm_humans") is True
+        assert tm.apply_modification(
+            "never_harm_humans", False,
+            multisig_signatures=3, parliament_unanimous=True, days_since_proposal=30,
+        )
+        assert tm.get_value("never_harm_humans") is False
 
 
 class TestPred11GenesisMultisig:
