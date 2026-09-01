@@ -201,8 +201,14 @@ the agenda. Hypotheses, metrics, and thresholds were
 | # | Hypothesis | Metric | Result |
 |---|---|---|---|
 | H1 | Budgets bound proposals (κ₂) | over-budget cycles | **PASS** — 0, cap held at 3 under 6-proposal floods |
-| H2 | `CRITICAL_SAFETY` ordering holds | spoofed poison executed | **PASS** — 0.000 (threshold ≤ 0.01) |
-| H3 | Falsification is deterred | detection rate | **PASS** — 1.000 across 7,546 spoof attempts |
+| H2 | `CRITICAL_SAFETY` ordering holds | spoofed poison executed | **PASS**† — 0.000 (threshold ≤ 0.01) |
+| H3 | Falsification is deterred | detection rate | **PASS**† — 1.000 across 7,546 spoof attempts |
+
+† Conditional on the one committee that verifies against ground truth
+([Appendix E §E.5.1](book/appendix-e-rl-adversary.md)): the metadata-trusting
+committee fell completely, and no spoof that could have beaten the grounded
+verifier was reachable in the adversary's vocabulary, so H3's PASS is
+partially by construction. Do not quote the verdicts without this line.
 
 **Zero of 4,762 adversarial poison attempts executed**, on every seed. But the
 adversary did win something: it **silenced the Safety committee on 100% of its

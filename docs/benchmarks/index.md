@@ -41,9 +41,13 @@ the run.
 
 | Mode | Governance bypass rate | Violations / episode | H1 | H2 | H3 |
 |------|-----------------------|----------------------|----|----|----|
-| `governance` | **0.000** [0.000, 0.000] | 0.000 ± 0.000 | PASS | PASS | PASS |
+| `governance` | **0.000**† [0.000, 0.000] | 0.000 ± 0.000 | PASS† | PASS† | PASS† |
 | `no_governance` (ceiling control) | 1.000 [1.000, 1.000] | 1.500 ± 0.614 | n/a | n/a | n/a |
 | `static_mask` (floor control) | 0.000 [0.000, 0.000] | 0.000 ± 0.000 | n/a | n/a | n/a |
+
+† Conditional on the ground-truth-grounded Integrity verifier, and H3 is
+partially by construction — no verifier-beating spoof was reachable in the
+adversary's vocabulary (Appendix E §E.5.1).
 
 Zero of 4,762 adversarial poison attempts executed. The adversary did, however,
 silence the Safety committee on 100% of its proposals — it was stopped by the
