@@ -58,7 +58,7 @@ flowchart TB
 | **Neural Parliament** | 7 specialised members (Reward, Safety, Curiosity, Planning, Memory, Social, Integrity) score proposals, check tag compliance, veto dangerous actions, and vote via weighted range voting. |
 | **Ulysses Contracts** | Binding pre-commitments that restrict the agent's future action space. Enacted by supermajority, revoked only by unanimity. Three enforcement modes: procedural inertia (κ₁), budget caps (κ₂), timelocks (κ₃). |
 | **Identity Layer** | Formal ontology + core commitments + 4-tier mutability (Constitutional → Dynamic → Operational → Immutable) + genesis 3-of-5 multisig bootstrapping + bounded parameter envelope. |
-| **TEE Enclave** | Simulated trusted execution environment: sealed storage, attestation, Merkle-tree batch verification, hardware watchdog with deadlock breaker, constant-time data-oblivious operations. |
+| **TEE Enclave** | Simulated trusted execution environment: sealed storage, attestation, Merkle-tree batch verification, heartbeat watchdog with deadlock breaker, constant-time data-oblivious operations. |
 
 Deployment topology is a recorded decision: the system ships as a **modular
 monolith** (core + dashboard, one atomic governance gate) with explicit,

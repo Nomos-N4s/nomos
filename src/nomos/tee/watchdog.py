@@ -23,7 +23,10 @@ from enum import Enum, auto
 
 
 class WatchdogState(Enum):
-    """Current state of the hardware watchdog timer.
+    """Current state of the watchdog timer.
+
+    A software simulation of Appendix A §9's hardware watchdog: a pure
+    Python ``time.time()`` timer, no hardware component (#311).
 
     States flow: ``NORMAL ↔ HEARTBEAT_MISSED``, or
     ``NORMAL → HEARTBEAT_MISSED → DEADLOCKED → COLD_BOOT``

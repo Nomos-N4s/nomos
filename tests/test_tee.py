@@ -71,7 +71,36 @@ class TestSimulatedEnclave:
 
         assert enclave.unseal("persistent") is None
         assert enclave.is_attested is False
-        assert enclave._measurement != old_hash
+        # A reboot of unchanged code re-measures the same code, which is what
+        # lets verify_measurement confirm identity continuity across cold
+        # boot. The pre-#311 behaviour — a fresh random measurement per boot —
+        # made that continuity check impossible by construction.
+        assert enclave._measurement == old_hash
+
+    def test_two_enclaves_of_the_same_code_agree_on_measurement(self):
+        # The #311 regression: the measurement used to be a hash of fresh
+        # entropy, so two instances of identical code always disagreed and
+        # verify_measurement could not detect code tampering even in
+        # simulation.
+        a = SimulatedEnclave()
+        b = SimulatedEnclave()
+        assert a._measurement == b._measurement
+        assert a.verify_measurement(b.attest().enclave_hash)
+
+    def test_caller_supplied_code_hash_is_the_measurement(self):
+        enclave = SimulatedEnclave(code_hash="a" * 64)
+        assert enclave.attest().enclave_hash == "a" * 64
+        assert enclave.verify_measurement("a" * 64)
+        assert not enclave.verify_measurement("b" * 64)
+
+    def test_measurement_tracks_the_module_source(self):
+        import hashlib
+        from pathlib import Path
+
+        import src.nomos.tee.enclave as enclave_module
+
+        expected = hashlib.sha256(Path(enclave_module.__file__).read_bytes()).hexdigest()
+        assert SimulatedEnclave()._measurement == expected
 
 
 class TestMerkleRoot:

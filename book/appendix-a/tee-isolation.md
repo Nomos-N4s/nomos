@@ -407,6 +407,9 @@ Instead of submitting one proposal per TEE entry, the optimization layer batches
    - Is aggregate risk within acceptable bounds?
    - Is action diversity sufficient? (Not all identical)
 5. If valid, TEE signs the root hash and returns {signature, attestation}
+   (specification: the reference implementation's BatchVerifier.validate_batch
+   returns an unsigned (bool, str) and no signing primitive exists in the
+   codebase - #311)
 6. Optimization layer may execute any a_i with:
    - The signed root
    - The Merkle proof path from a_i to root
@@ -421,6 +424,9 @@ graph LR
     Signed -->|6. Return signature + proof| Opt
     Opt -->|7. Execute actions with Merkle proofs| Env[Environment]
 ```
+
+*Diagram steps 5–6 are the specification; the reference implementation
+returns an unsigned `(bool, str)` and produces no signature (#311).*
 
 ### A.11.2 Throughput Analysis
 
