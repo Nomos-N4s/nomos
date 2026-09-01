@@ -75,6 +75,12 @@ class TierRule:
         return current_tier != MutabilityTier.IMMUTABLE
 
 
+#: Signatures the external genesis multisig must supply where a tier requires
+#: it — the 3 of the genesis 3-of-5 (`keys.GenesisMultisig`), and the same
+#: number `IdentityTiers.lean` fixes as `CONSTITUTIONAL_QUORUM` and derives
+#: from the genesis bar in `constitutional_change_meets_genesis_bar`.
+EXTERNAL_MULTISIG_QUORUM = 3
+
 TIER_RULES = {
     MutabilityTier.IMMUTABLE: TierRule(
         modification_threshold="impossible",
@@ -176,19 +182,53 @@ class TieredMutability:
             return f"Cannot modify immutable parameter: {name}"
         return f"Proposal accepted. Requires: {rule.modification_threshold}, cooling-off: {rule.cooling_off_days}d"
 
-    def apply_modification(self, name: str, new_value: Any) -> bool:
-        """Apply a parameter modification after the governance vote passes.
+    def apply_modification(
+        self,
+        name: str,
+        new_value: Any,
+        *,
+        multisig_signatures: int = 0,
+        parliament_unanimous: bool = False,
+        days_since_proposal: int = 0,
+    ) -> bool:
+        """Apply a parameter modification if the tier's procedural bar is met.
+
+        Until #306 this method gated on IMMUTABLE only, so a CONSTITUTIONAL
+        parameter could be rewritten with no multisig, no unanimity and no
+        cooling-off — while :meth:`propose_modification` on the same
+        parameter still described the full bar, and
+        ``IdentityTiers.lean``'s ``constitutional_requires_quorum_and_cooldown``
+        proved it for the model. The authorisation now travels with the
+        call, mirroring the model's ``Change`` record (its ``quorum`` is the
+        multisig count here, and Python additionally carries the unanimity
+        flag the model folds into the quorum).
 
         Args:
             name: The parameter to modify.
             new_value: The new value.
+            multisig_signatures: Distinct genesis-key signatures backing the
+                change. Checked against :data:`EXTERNAL_MULTISIG_QUORUM`
+                when the tier requires the external multisig.
+            parliament_unanimous: Whether the Parliament vote was unanimous
+                (100% weighted approval). Required when the tier says so.
+            days_since_proposal: Days elapsed since the proposal. Must reach
+                the tier's ``cooling_off_days``.
 
         Returns:
-            True if the modification was applied. False if the parameter
-            is IMMUTABLE or unknown.
+            True if the modification was applied. False if the parameter is
+            IMMUTABLE or unknown, or if any element of the tier's bar —
+            multisig quorum, Parliament unanimity, cooling-off — is unmet.
+            A refusal leaves the stored value untouched.
         """
         tier = self._parameter_tiers.get(name)
         if tier is None or tier == MutabilityTier.IMMUTABLE:
+            return False
+        rule = TIER_RULES[tier]
+        if rule.requires_external_multisig and multisig_signatures < EXTERNAL_MULTISIG_QUORUM:
+            return False
+        if rule.requires_parliament_unanimity and not parliament_unanimous:
+            return False
+        if days_since_proposal < rule.cooling_off_days:
             return False
         self._values[name] = new_value
         return True
