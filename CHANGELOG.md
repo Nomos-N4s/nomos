@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [1.4.1](https://github.com/Nomos-N4s/nomos/compare/v1.4.0...v1.4.1) (2026-09-01)
+
+
+### Documentation
+
+* **book:** make the verdict tables wear the oracle caveat where they are quoted ([db9f705](https://github.com/Nomos-N4s/nomos/commit/db9f70535170ebb179c1e05ccf4f87c26e600e99))
+* **book:** make the verdict tables wear the oracle caveat where they are quoted ([7b5c33b](https://github.com/Nomos-N4s/nomos/commit/7b5c33b992b7d2b4258a68ebe96e0a9ce1097174)), closes [#276](https://github.com/Nomos-N4s/nomos/issues/276)
+* **book:** pin the pre-registration's ordering evidence and the timestamp rule ([f17c301](https://github.com/Nomos-N4s/nomos/commit/f17c3011cb289d9cc7360d83f0ae2510b70f9627))
+* **book:** pin the pre-registration's ordering evidence and the timestamp rule ([4b70a09](https://github.com/Nomos-N4s/nomos/commit/4b70a095d198b1f40d55682df7769cbefe259b3b))
+* lead with the negative result, one canonical phrasing, test-enforced ([a28109a](https://github.com/Nomos-N4s/nomos/commit/a28109a0c9ebe133ecea265de2fbe0bc7cc1cf35))
+* lead with the negative result, one canonical phrasing, test-enforced ([2f37796](https://github.com/Nomos-N4s/nomos/commit/2f377967fe32fa302e0034e18edb716e2338e13c)), closes [#278](https://github.com/Nomos-N4s/nomos/issues/278)
+
 ## [1.4.0](https://github.com/Nomos-N4s/nomos/compare/v1.3.0...v1.4.0) (2026-09-01)
 
 
