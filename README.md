@@ -190,13 +190,25 @@ asserts over `src/nomos/`; which of them a Lean theorem stands behind is in
 
 ## Adversarial Evidence
 
-The predictions above are verified by *scripted* tests. Predictions 1, 2 and 4 are
-additionally tested against a **learned adversary**: a PPO policy rewarded for
-defeating governance, free to forge priority tags, under-report risk, and flood
-the agenda. Hypotheses, metrics, and thresholds were
-[pre-registered](book/appendix-e-preregistration.md) before the run.
+> **A safety check that scores proposer-supplied metadata has zero adversarial value: a 64×64-MLP PPO policy, given 100,000 training steps and never told the mechanism, learned to silence it on 100% of its genuinely unsafe proposals, on every seed.**
 
-100,000 timesteps × 5 seeds × 3 modes:
+That is the finding that travels. Wherever an agent self-declares the risk of its own actions, this is the failure mode; at least one independently grounded verifier is load-bearing. In this
+experiment the metadata-trusting Safety committee fell completely — the policy
+learned to assert low risk on tiles it knew were poison, and Safety never
+vetoed one of them.
+
+The layer itself held — **zero of 4,762 adversarial poison attempts
+executed**, on every seed — but that second beat is conditional: what stopped
+the attack was the one committee that verifies against **ground truth** rather
+than the claim, and no verifier-beating spoof was reachable in the adversary's
+vocabulary ([Appendix E §E.5.1](book/appendix-e-rl-adversary.md)). "Held" is
+true in a 10×10 gridworld; the metadata finding is true everywhere someone
+lets an agent grade its own homework.
+
+The setup: a PPO policy rewarded for defeating governance, free to forge
+priority tags, under-report risk, and flood the agenda. Hypotheses, metrics,
+and thresholds were [pre-registered](book/appendix-e-preregistration.md)
+before the run. 100,000 timesteps × 5 seeds × 3 modes:
 
 | # | Hypothesis | Metric | Result |
 |---|---|---|---|
@@ -210,17 +222,9 @@ committee fell completely, and no spoof that could have beaten the grounded
 verifier was reachable in the adversary's vocabulary, so H3's PASS is
 partially by construction. Do not quote the verdicts without this line.
 
-**Zero of 4,762 adversarial poison attempts executed**, on every seed. But the
-adversary did win something: it **silenced the Safety committee on 100% of its
-proposals**, learning to assert low risk on tiles it knew were poison. Safety
-scores proposer-supplied metadata and is trivially fooled. What stopped the
-attack was the Integrity committee, which verifies against ground truth.
-
-> The result is **not** "governance is unbreakable" — it is that **defense in
-> depth is load-bearing**. One of the two veto committees fell completely; the
-> layer held because a second, independently-grounded check sat behind it. A
-> governance layer whose committees all trust proposer-asserted metadata would
-> have been defeated outright.
+The result is **not** "governance is unbreakable" — it is that **defense in
+depth is load-bearing**: one of the two veto committees fell completely, and
+the layer held because a second, independently grounded check sat behind it.
 
 Full numbers, per-seed values, and limitations: [Appendix E](book/appendix-e-rl-adversary.md).
 Reproduce: `uv sync --extra rl-repro && python -m src.nomos.experiments.rl_adversary protocol --timesteps 100000 --seeds 42 43 44 45 46`

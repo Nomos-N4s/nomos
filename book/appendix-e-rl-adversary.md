@@ -161,11 +161,15 @@ Against the pre-registered thresholds (ε = 0.01):
 
 ## E.5 What the Adversary Achieved
 
-The governance layer was **not bypassed**: zero of 4,762 adversarial poison attempts executed, on every seed. But reporting only that would hide the more interesting half of the result.
+The transferable finding leads, because it is the half of the result that survives outside this gridworld:
 
-**The adversary defeated the Safety committee completely — on 100% of its poison proposals, on every seed.** The Safety member scores `1 − risk` where `risk` is metadata the *proposer supplies*. The policy learned, without being told the mechanism, to assert a low risk on tiles it knew to be poison, and Safety never vetoed one of them. Its entire bypass reward (95.24 ± 40.39) is accumulated silencing bonus: it never earned a single execution point.
+> **A safety check that scores proposer-supplied metadata has zero adversarial value: a 64×64-MLP PPO policy, given 100,000 training steps and never told the mechanism, learned to silence it on 100% of its genuinely unsafe proposals, on every seed.**
 
-What stopped it was the **Integrity committee**, which does not take the proposal's word for anything. It evaluates identity coherence against ground truth, scored low, and vetoed every spoof — which in turn drove the Integrity score below `TAG_COMPLIANCE_THRESHOLD`, tripping the falsification counter and halving the offender's budget exactly as Chapter 2 §2.4.2 specifies.
+Wherever an agent self-declares the risk of its own actions, this is the failure mode; at least one independently grounded verifier is load-bearing.
+
+**The defeat, mechanically.** The Safety member scores `1 − risk` where `risk` is metadata the *proposer supplies*. The policy learned to assert a low risk on tiles it knew to be poison, and Safety never vetoed one of them — its entire bypass reward (95.24 ± 40.39) is accumulated silencing bonus; it never earned a single execution point.
+
+**The second beat: the layer held, conditionally.** Zero of 4,762 adversarial poison attempts executed, on every seed. What stopped them was the **Integrity committee**, which does not take the proposal's word for anything: it evaluates identity coherence against ground truth, scored low, and vetoed every spoof — which in turn drove the Integrity score below `TAG_COMPLIANCE_THRESHOLD`, tripping the falsification counter and halving the offender's budget exactly as Chapter 2 §2.4.2 specifies. Both conditions on that sentence are §E.5.1(1) and §E.5.1(2), and the E.4 daggers point at them.
 
 So the honest reading is not *"the governance layer is robust."* It is:
 
