@@ -29,11 +29,14 @@ T = TypeVar("T")
 
 
 def cmov(condition: bool, a: T, b: T) -> T:
-    """Constant-time conditional move (no branch).
+    """Branchless-selection pattern: both paths are always computed.
 
-    Returns ``a`` if ``condition`` is True, ``b`` otherwise. Both arithmetic
-    paths are always computed, so the CPU branch predictor cannot leak
-    the condition.
+    Returns ``a`` if ``condition`` is True, ``b`` otherwise. This is the
+    *pattern* of a constant-time conditional move, not a timing guarantee:
+    the mask derivation below is itself a Python branch, and CPython's
+    interpreter gives no constant-cycle behaviour either way (#311). In a
+    compiled implementation this shape is what keeps the branch predictor
+    blind to the condition.
 
     Args:
         condition: The selection condition.
@@ -48,12 +51,15 @@ def cmov(condition: bool, a: T, b: T) -> T:
 
 
 def constant_time_compare(a: bytes, b: bytes) -> bool:
-    """Compare two byte strings in constant time.
+    """Compare two byte strings without a data-dependent early exit.
 
     Returns False early if lengths differ (this leaks the length, which
     is acceptable since lengths are typically public). Otherwise, every
     byte is XOR-ed and OR-ed together, so all bytes are always compared
-    regardless of when a mismatch occurs.
+    regardless of when a mismatch occurs. As with everything in this
+    module, that is the data-oblivious discipline, not a CPython timing
+    guarantee (#311); ``hmac.compare_digest`` is the primitive a real
+    deployment would use.
 
     Args:
         a: First byte string.
@@ -76,8 +82,9 @@ def fixed_iteration_map(
     """Apply a function over exactly ``max_size`` iterations.
 
     If the list is shorter than ``max_size``, the remaining iterations
-    use the ``sentinel`` value. This ensures the iteration count does
-    not leak the actual list size.
+    use the ``sentinel`` value, so the iteration *count* is independent of
+    the actual list size. The per-iteration work still runs under CPython,
+    which makes no constant-cycle promise (#311).
 
     Args:
         items: The list to map over.
@@ -96,10 +103,12 @@ def fixed_iteration_map(
 
 
 def oblivious_access(data: list[T], index: int, default: T) -> T:
-    """Data-oblivious array access.
+    """Data-oblivious array access: every element is always read.
 
-    Every element of the array is always read, preventing cache-based
-    side channels from revealing which index was accessed.
+    The access *pattern* is independent of ``index`` — the discipline that,
+    in a compiled enclave, denies cache-based side channels the accessed
+    location. Under CPython this specifies the shape without carrying the
+    guarantee (#311).
 
     Args:
         data: The array to access.

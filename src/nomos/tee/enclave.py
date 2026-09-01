@@ -81,7 +81,7 @@ class SimulatedEnclave:
     def __init__(self, genesis: GenesisManifest | None = None, code_hash: str | None = None):
         self._genesis = genesis
         self._sealed_storage: dict[str, Any] = {}
-        self._measurement = code_hash or _MODULE_MEASUREMENT
+        self._measurement = code_hash if code_hash is not None else _MODULE_MEASUREMENT
         self._attested = False
 
     def attest(self) -> AttestationReport:

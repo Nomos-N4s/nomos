@@ -8,8 +8,10 @@ optimisation layer can then pair with Merkle proofs to execute individual
 actions without further TEE round-trips. This module implements the
 validation and the tree, not the signature: ``validate_batch`` returns an
 unsigned ``(bool, str)``, and no signing primitive exists anywhere in this
-codebase (#311). ``merkle_root`` is production code (audit-log chaining in
-``nomos.audit``); ``BatchVerifier``, ``BatchProposal`` and
+codebase — the genesis multisig's ``sign`` records a simulated quorum vote,
+not signature bytes over a message (#311). ``merkle_root`` is shipped
+library code, called by ``nomos.audit``'s log chaining;
+``BatchVerifier``, ``BatchProposal`` and
 ``compute_diversity`` are executable specification exercised by their unit
 tests - nothing in the governance path constructs them.
 
@@ -150,9 +152,10 @@ class BatchVerifier:
 
     The Appendix A protocol's step 5 - "TEE signs the root hash" - is not
     implemented: :meth:`validate_batch` returns an unsigned ``(bool, str)``
-    with the root pasted into the message, and nothing here or elsewhere in
-    the codebase signs anything (#311). Executable specification, not a
-    security mechanism.
+    with a truncated root prefix pasted into the message (the full root
+    comes from :func:`merkle_root`, not from the message), and nothing here
+    or elsewhere in the codebase produces a cryptographic signature (#311).
+    Executable specification, not a security mechanism.
 
     Args:
         risk_threshold: Maximum acceptable aggregate risk (default 0.7).
