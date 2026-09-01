@@ -74,7 +74,7 @@ Prediction tests (Python):       12 / 12 pass
 Lean 4 theorems proven:          budget_invariant_holds, budget_preserves_positive,
                                  vote_resolution_determined_by_tallies,
                                  falsification_params_unchanged_at_immutable_tier
-Reference implementation:        ~2,800 lines · 50+ files · 10 subpackages
+Reference implementation:        ~22,300 lines · 90+ files · 12 subpackages
 Benchmark coverage:              4 scenarios × 5 strategies (19 valid combinations) × 20 seeds × 1,000 steps
                                  most of those combinations repeat rather than sample — see below
 Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual risks acknowledged
