@@ -1,6 +1,6 @@
 [project]
 name = "nomos"
-version = "1.3.0"
+version = "1.4.0"
 description = "Nomos: A Formal Framework for Self-Governing AI"
 license = "Apache-2.0"
 authors = [
