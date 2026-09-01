@@ -128,6 +128,16 @@ class TestTieredMutability:
         )
         assert tm.get_value("never_harm_humans") is False
 
+    def test_constitutional_applies_above_the_bar(self):
+        # The Lean bar is >= — a 5-of-5 signing on day 45 must not be refused.
+        tm = TieredMutability()
+        tm.register_parameter("never_harm_humans", True, MutabilityTier.CONSTITUTIONAL)
+        assert tm.apply_modification(
+            "never_harm_humans", False,
+            multisig_signatures=5, parliament_unanimous=True, days_since_proposal=45,
+        )
+        assert tm.get_value("never_harm_humans") is False
+
     def test_operational_needs_only_its_cooling_off(self):
         tm = TieredMutability()
         tm.register_parameter("risk_limit", 0.3, MutabilityTier.OPERATIONAL)
@@ -135,6 +145,39 @@ class TestTieredMutability:
         assert not tm.apply_modification("risk_limit", 0.5, days_since_proposal=6)
         assert tm.apply_modification("risk_limit", 0.5, days_since_proposal=7)
         assert tm.get_value("risk_limit") == 0.5
+        assert tm.apply_modification("risk_limit", 0.6, days_since_proposal=8)
+        assert tm.get_value("risk_limit") == 0.6
+
+    def test_each_flag_gates_only_its_own_requirement(self):
+        # In TIER_RULES the two flags are only ever set together, so a
+        # miswiring (multisig check reading the unanimity flag, or vice
+        # versa) would pass every tier-based test. Synthetic rules pin the
+        # wiring flag by flag.
+        from unittest import mock
+
+        from src.nomos.identity.tiers import TIER_RULES, TierRule
+
+        multisig_only = TierRule(
+            modification_threshold="test",
+            cooling_off_days=0,
+            requires_external_multisig=True,
+            requires_parliament_unanimity=False,
+        )
+        unanimity_only = TierRule(
+            modification_threshold="test",
+            cooling_off_days=0,
+            requires_external_multisig=False,
+            requires_parliament_unanimity=True,
+        )
+        tm = TieredMutability()
+        tm.register_parameter("p", 1, MutabilityTier.OPERATIONAL)
+
+        with mock.patch.dict(TIER_RULES, {MutabilityTier.OPERATIONAL: multisig_only}):
+            assert not tm.apply_modification("p", 2, parliament_unanimous=True)
+            assert tm.apply_modification("p", 2, multisig_signatures=3)
+        with mock.patch.dict(TIER_RULES, {MutabilityTier.OPERATIONAL: unanimity_only}):
+            assert not tm.apply_modification("p", 3, multisig_signatures=5)
+            assert tm.apply_modification("p", 3, parliament_unanimous=True)
 
     def test_unknown_parameter(self):
         tm = TieredMutability()

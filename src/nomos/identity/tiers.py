@@ -77,8 +77,9 @@ class TierRule:
 
 #: Signatures the external genesis multisig must supply where a tier requires
 #: it — the 3 of the genesis 3-of-5 (`keys.GenesisMultisig`), and the same
-#: number `IdentityTiers.lean` fixes as `CONSTITUTIONAL_QUORUM` and derives
-#: from the genesis bar in `constitutional_change_meets_genesis_bar`.
+#: number `IdentityTiers.lean` fixes as `CONSTITUTIONAL_QUORUM` and proves
+#: dominates the genesis bar (`constitutional_change_meets_genesis_bar` — a
+#: comparison of two configured constants, not a derivation of either).
 EXTERNAL_MULTISIG_QUORUM = 3
 
 TIER_RULES = {
@@ -199,9 +200,18 @@ class TieredMutability:
         parameter still described the full bar, and
         ``IdentityTiers.lean``'s ``constitutional_requires_quorum_and_cooldown``
         proved it for the model. The authorisation now travels with the
-        call, mirroring the model's ``Change`` record (its ``quorum`` is the
-        multisig count here, and Python additionally carries the unanimity
-        flag the model folds into the quorum).
+        call. What is enforced is exactly the three structured
+        :class:`TierRule` fields: the external-multisig quorum, the
+        Parliament-unanimity flag (which the Lean model omits — its
+        ``Change`` record carries only a quorum and a cooldown), and the
+        cooling-off. The *vote-share* bars of the lower tiers — the
+        "supermajority (2/3)" and "majority (1/2 + 1)" of
+        ``modification_threshold`` — are strings this method takes no input
+        for and does not check: the Lean model refuses a zero-quorum
+        operational or dynamic change, and Python currently cannot, because
+        counting the Parliament's vote is the Speaker's job and the wiring
+        does not exist yet. That residual gap is stated here rather than
+        implied closed.
 
         Args:
             name: The parameter to modify.

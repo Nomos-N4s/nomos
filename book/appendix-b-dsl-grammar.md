@@ -80,7 +80,7 @@ Unquoted values matching integer or float patterns are parsed as numbers. All ot
 2. `budget` must be a positive integer (max proposals per cycle).
 3. `veto_threshold` must be in `[0.0, 1.0]`.
 4. `weight` must be in `[0.0, 1.0]`.
-5. `enactment_threshold` and `revocation_threshold` must be in `[0.0, 1.0]`.
+5. `enactment_threshold` and `revocation_threshold` must be in `[0.0, 1.0]`, and `revocation_threshold` must be **strictly greater** than `enactment_threshold` — revocation is intentionally harder than enactment, and the validator rejects an inverted or flat pair (#306).
 6. `restricted_indices` refers to action indices in the ontology.
 7. `max_rounds` must be a positive integer.
 8. Comments start with `#` and extend to end of line.

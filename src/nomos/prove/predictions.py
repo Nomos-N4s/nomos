@@ -273,10 +273,14 @@ LEAN_COVERAGE: dict[int, LeanCoverage] = {
             "(constitutional_requires_quorum_and_cooldown's bar). The "
             "encodings still differ: the Lean Change record carries only a "
             "quorum and a cooldown, while the Python bar additionally "
-            "demands a Parliament-unanimity flag the model folds into its "
-            "quorum abstraction, and the Python refusal is a returned False "
-            "where the model's is an unprovable isPermitted. Same numbers, "
-            "same direction of refusal, two encodings."
+            "demands a Parliament-unanimity flag the model omits, and the "
+            "Python refusal is a returned False where the model's is an "
+            "unprovable isPermitted. The correspondence is the "
+            "constitutional bar only: the model also refuses a zero-quorum "
+            "operational or dynamic change, and Python takes no vote-share "
+            "input at those tiers — their thresholds remain prose. Same "
+            "numbers at the constitutional bar, same direction of refusal, "
+            "two encodings."
         ),
     ),
     11: LeanCoverage(
@@ -674,10 +678,13 @@ def pred_10_tier4_multisig() -> PredictionResult:
     parameter could be rewritten with no multisig, no unanimity and no
     cooling-off. It now drives the enforcement through the same bar
     ``IdentityTiers.lean`` proves: refuse below the 3-signature quorum,
-    refuse inside the 30-day cooling-off, accept at the full bar, and leave
-    the value untouched on every refusal."""
+    refuse inside the 30-day cooling-off, accept at the full bar, leave the
+    value untouched on every refusal, and confirm both lower tiers apply
+    without any multisig — OPERATIONAL after its own cooling-off, DYNAMIC
+    bare."""
     tm = TieredMutability()
     tm.register_parameter("never_harm_humans", True, MutabilityTier.CONSTITUTIONAL)
+    tm.register_parameter("risk_limit", 0.3, MutabilityTier.OPERATIONAL)
     tm.register_parameter("exploration_rate", 0.1, MutabilityTier.DYNAMIC)
 
     unauthorised = tm.apply_modification("never_harm_humans", False)
@@ -703,6 +710,7 @@ def pred_10_tier4_multisig() -> PredictionResult:
         parliament_unanimous=True,
         days_since_proposal=30,
     )
+    operational_no_multisig = tm.apply_modification("risk_limit", 0.5, days_since_proposal=7)
     dynamic_unencumbered = tm.apply_modification("exploration_rate", 0.5)
 
     passed = (
@@ -712,6 +720,7 @@ def pred_10_tier4_multisig() -> PredictionResult:
         and value_held
         and full_bar
         and tm.get_value("never_harm_humans") is False
+        and operational_no_multisig
         and dynamic_unencumbered
     )
     return PredictionResult(
@@ -725,6 +734,7 @@ def pred_10_tier4_multisig() -> PredictionResult:
             f"2-of-5={not two_of_five}, day-29={not inside_cooldown}, "
             f"value held through refusals={value_held}; "
             f"accepted at 3-of-5 + unanimity + 30d={full_bar}; "
+            f"OPERATIONAL applies without multisig at 7d={operational_no_multisig}; "
             f"DYNAMIC applies bare={dynamic_unencumbered}"
         ),
     )

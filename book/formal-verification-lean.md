@@ -157,7 +157,10 @@ Reading the four coverage values:
   does not share, so the theorem and the assert are not two statements of one
   claim. Both cases are numeric: a `Nat` coherence score against a 0–100
   threshold where the Python uses a `float` on 0.0–1.0, and a bar stated as a
-  quorum count and a cooldown in days where the Python reads a `bool` flag.
+  quorum count and a cooldown in days, which the Python has checked
+  numerically since #306 — the residual differences are a
+  Parliament-unanimity flag the model omits, and a refusal that is a returned
+  `False` where the model's is an unprovable `isPermitted`.
 - **modelled, no theorem** — the definitions are there and the constants
   agree, but no theorem states what the prediction asserts.
 - **no counterpart** — nothing in the corpus models this at all.
