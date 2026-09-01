@@ -96,6 +96,14 @@ steps on every seed, so the spike window never reaches its agenda.
 
 ## Output
 
+Every path in this table is a **local, gitignored** output: `.gitignore`
+excludes `results/*` and `git ls-files results/` returns only `.gitkeep`.
+Running the commands in this document regenerates each file in place; none of
+them is fetched from the repository, and none should be looked for on `main`.
+The committed record of the published benchmark run is the table under
+[Verifying Results](#verifying-results); the committed record of the RL
+campaigns is `book/appendix-e-data/` and `book/appendix-f-data/` (#308).
+
 | File | Description |
 |---|---|
 | `results/benchmark_results.json` | Raw per-run data (reward, violations, deadlocks) |
@@ -385,8 +393,14 @@ Run the following to associate results with the exact code version:
 git log --oneline -1
 ```
 
-Results are committed to the repository under `results/` and tagged
-with the release version (e.g., `v0.1.0`).
+Results are **not** committed under `results/` — that directory is
+gitignored and holds only what your own runs write into it (see
+[Output](#output)). What the repository commits instead is the published
+per-cell table in this document, the RL campaign summaries under
+`book/appendix-e-data/` and `book/appendix-f-data/`, and the agent-run
+schema contract and manifest conventions. Earlier revisions of this
+section claimed committed, release-tagged results (`v0.1.0`); no such
+artifacts or tag ever existed (#308).
 
 ## Citation
 

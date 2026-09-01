@@ -240,10 +240,12 @@ The residue is correspondingly narrow. Of the 2,090 episodes the amended rule re
 - [x] Hyperparameters for all scenarios (Section D.3)
 - [x] Baseline strategies defined (Section D.4)
 - [x] Statistical analysis plan pre-registered (Section D.5)
-- [x] Raw results: `results/benchmark_results.json`
-- [x] Aggregated results: `results/benchmark_summary.csv`
-- [x] Figures: `results/figures/`
-- [x] Source code tagged at registration point: `v0.1.0-preregistered`
+- [ ] Raw results: `results/benchmark_results.json` — **not committed.** `results/` is gitignored and `git ls-files results/` returns only `.gitkeep`; the file is regenerated locally by the command in `REPRODUCIBILITY.md`. The committed record of the published run is the per-cell table in `REPRODUCIBILITY.md` § Verifying Results.
+- [ ] Aggregated results: `results/benchmark_summary.csv` — same status: regenerated locally, not committed.
+- [ ] Figures: `results/figures/` — same status: regenerated locally, not committed.
+- [x] Amendment history recorded in place: the D.5 reward-hacking correction (#304) and the D.3.2/D.3.4 scenario amendments (#303) are stated in this appendix next to what they amend, not left to git archaeology.
+
+Until #308 the last four boxes read as delivered artifacts: three ticked paths that were never committed, and a registration tag (`v0.1.0-preregistered`) that does not exist and never did — the repository's earliest tag is `v0.8.0`. The boxes now state what the repository actually holds.
 
 ---
 
@@ -277,7 +279,7 @@ silent breakage of the harness between paper revisions.
 |----------|----------|----------|
 | Trained model checkpoint | `results/rl_adversary/ppo_<mode>_seed<seed>.zip` | no (gitignored working file) |
 | Per-seed machine-readable result | `results/rl_adversary/result_<mode>_seed<seed>.json` | no |
-| Aggregate (mean ± CI, verdicts) | `results/rl_adversary/adversary_protocol.json` | no |
+| Aggregate (mean ± CI, per-seed raw counts, verdicts) | `results/rl_adversary/adversary_protocol.json` | no |
 | **Published summary + manifest** | `book/appendix-e-data/` | **yes** |
 
 The exact command line, seed set, and library versions are captured inside the
@@ -285,3 +287,11 @@ aggregate JSON (`protocol` and `environment` blocks) and copied into
 `book/appendix-e-data/` for the published run. See
 `book/appendix-e-data/README.md` and the pre-registration in
 `book/appendix-e-preregistration.md`.
+
+Since #308 the aggregate also carries, per mode, a `per_seed` block (raw
+poison-attempt, execution, falsification and detection counts for every run)
+and a `totals` block summing them, so the tracked copy under
+`book/appendix-e-data/` backs every count the appendices quote instead of only
+the rates. The published Appendix E/F campaign predates this: its committed
+aggregates store rates only, and the affected tables carry that caveat in
+place (Appendix E §E.4.2, Appendix F).

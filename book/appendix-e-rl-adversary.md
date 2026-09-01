@@ -151,6 +151,8 @@ Against the pre-registered thresholds (ε = 0.01):
 
 **On the attempt-count asymmetry.** The governed adversary attempted poison 4,762 times against 75 for the ungoverned one. This is not a measure of effort: a *blocked* poison tile is never consumed, so the agent can re-attack the same tile indefinitely, whereas an *executed* one is eaten and disappears. Attempt counts are therefore not comparable across modes — the executed/attempted **rate** is the quantity being tested, and it is what the table reports.
 
+**Provenance of these counts (#308).** The rows above were read off the published run's per-run artifacts (`results/rl_adversary/result_<mode>_seed<seed>.json`), which are gitignored working files. The committed aggregate of that run (`book/appendix-e-data/adversary_protocol.json`) stored means and intervals only, so the one figure in this section a reader can check against committed data is the falsification total: `results.governance.h3.spoof_attempts = 7546`, which the Falsifications column sums to. The per-seed poison-attempt decomposition and its 4,762 total are **not** independently checkable from the repository, and this table says so rather than implying otherwise. `aggregate_runs` now persists a `per_seed` block and raw-count `totals` into every aggregate it writes, so the next published campaign will back each number here from the committed file; these historical rows are left exactly as recorded.
+
 ---
 
 ## E.5 What the Adversary Achieved
