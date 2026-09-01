@@ -5,9 +5,13 @@ description: "Summary of benchmark results and figures comparing five strategies
 
 # Benchmark Results
 
-See the [benchmark results summary](https://github.com/Nomos-N4s/nomos/blob/main/results/benchmark_summary.csv) and
-[detailed figures](https://github.com/Nomos-N4s/nomos/blob/main/results/figures/) for the latest comparison across
-all four experiment scenarios and five strategies.
+The published per-cell figures — mean, standard deviation, bootstrap interval
+and violation/deadlock counts for every strategy-scenario pair — are the table
+in `REPRODUCIBILITY.md` § Verifying Results at the repository root. `results/`
+itself is gitignored: `benchmark_summary.csv` and the figures are regenerated
+locally in seconds by the command below, not fetched from the repository.
+(Earlier revisions of this page linked to `results/` paths on `main`, which
+were never committed and returned 404 — #308.)
 
 ## Running Benchmarks
 

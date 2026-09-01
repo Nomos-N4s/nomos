@@ -300,6 +300,13 @@ def aggregate_runs(
     recorded in the ``protocol`` block so a result can never be read without the
     accuracy it was produced at. ``None`` records the oracle, which is what the
     published Appendix E run used.
+
+    Alongside every mean ± CI, each mode carries a ``per_seed`` block with the
+    raw attempt, execution and detection counts of every run, and a ``totals``
+    block summing them. Published tables quote those counts, and an aggregate
+    that stored only rates could not back them: the per-run JSONs that held the
+    counts were gitignored working files, so nothing a reader could reach
+    reproduced a number like a per-seed poison-attempt column (#308).
     """
     per_mode: dict[str, Any] = {}
     for mode in modes:
@@ -308,8 +315,34 @@ def aggregate_runs(
             continue
         hyps = [r["hypotheses"] for r in mode_runs]
         cans = [r["canonical"] for r in mode_runs]
+        per_seed = [
+            {
+                "seed": r["seed"],
+                "poison_attempts": h["poison_attempts"],
+                "poison_executed": h["poison_executed"],
+                "governance_bypass_rate": h["governance_bypass_rate"],
+                "ambiguous_poison_attempts": h["ambiguous_poison_attempts"],
+                "ambiguous_poison_executed": h["ambiguous_poison_executed"],
+                "spoof_attempts": h["h3_spoof_attempts"],
+                "spoof_detected": h["h3_spoof_detected"],
+                "detection_rate": h["h3_detection_rate"],
+                "avg_reward": c["avg_reward"],
+                "avg_violations": c["avg_violations"],
+            }
+            for r, h, c in zip(mode_runs, hyps, cans)
+        ]
+        totals = {
+            "poison_attempts": sum(s["poison_attempts"] for s in per_seed),
+            "poison_executed": sum(s["poison_executed"] for s in per_seed),
+            "ambiguous_poison_attempts": sum(s["ambiguous_poison_attempts"] for s in per_seed),
+            "ambiguous_poison_executed": sum(s["ambiguous_poison_executed"] for s in per_seed),
+            "spoof_attempts": sum(s["spoof_attempts"] for s in per_seed),
+            "spoof_detected": sum(s["spoof_detected"] for s in per_seed),
+        }
         per_mode[mode] = {
             "n_seeds": len(mode_runs),
+            "per_seed": per_seed,
+            "totals": totals,
             "avg_reward": _mean_ci([c["avg_reward"] for c in cans]),
             "avg_violations": _mean_ci([c["avg_violations"] for c in cans]),
             "veto_precision": _mean_ci([c["veto_precision"] for c in cans]),

@@ -15,7 +15,7 @@ committed here, so the published figures are versioned with the book.
 
 | File | Contents |
 |------|----------|
-| `verifier_frontier.json` | The curve: one record per (ε, arm) with mean ± 95% CI for every reported metric, the H4–H7 verdicts, the curve-shape analysis, the control brackets, and the `preregistration` provenance block. |
+| `verifier_frontier.json` | The curve: one record per (ε, arm) with mean ± 95% CI for every reported metric, the H4–H7 verdicts, the curve-shape analysis, the control brackets, and the `preregistration` provenance block. A fresh sweep's points also carry `per_seed` and raw-count `totals` blocks (#308); the published curve predates that and stores rates only — see the provenance note in Appendix F. |
 | `RUN.md` | The exact commands, seed set, environment, and provenance for the published run. |
 
 ## Verifying the pre-registration

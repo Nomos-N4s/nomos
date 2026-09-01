@@ -96,6 +96,14 @@ steps on every seed, so the spike window never reaches its agenda.
 
 ## Output
 
+Every path in this table is a **local, gitignored** output: `.gitignore`
+excludes `results/*` and `git ls-files results/` returns only `.gitkeep`.
+Running the commands in this document regenerates each file in place; none of
+them is fetched from the repository, and none should be looked for on `main`.
+The committed record of the published benchmark run is the table under
+[Verifying Results](#verifying-results); the committed record of the RL
+campaigns is `book/appendix-e-data/` and `book/appendix-f-data/` (#308).
+
 | File | Description |
 |---|---|
 | `results/benchmark_results.json` | Raw per-run data (reward, violations, deadlocks) |
@@ -335,7 +343,7 @@ Verification steps:
 # 1. Re-run with the same cache; expect "Cache: {'hits': N, 'misses': 0}"
 python -m src.nomos.runner agent --seeds 20 --steps 100 --backend pydanticai
 
-# 2. Check the committed manifest against the cache directory
+# 2. Check the local manifest against the cache directory
 python -m src.nomos.agents.schema check results/agent
 
 # 3. Manual digest comparison (Linux/macOS)
@@ -343,9 +351,13 @@ python -m src.nomos.agents.schema check results/agent
 ```
 
 The cache manifest (`results/agent/cache_manifest.json`) maps every
-entry to its SHA-256 digest and is committed with full runs, so
-reviewers can verify replay determinism. The cache directory itself is
-git-ignored.
+entry to its SHA-256 digest. Like everything under `results/`, both the
+manifest and the cache directory are **local, gitignored artifacts**
+(see [Output](#output)) — earlier revisions of this section said the
+manifest "is committed with full runs", which was never true of any ref
+(#308). Replay determinism is therefore a same-machine check: the
+manifest verifies the cache it was written next to, not a repository
+copy.
 
 ### Artifact contract
 
@@ -353,10 +365,8 @@ The committed reference for the agent artifacts is the schema contract
 in `src/nomos/agents/schema.py`. CI compares new runs against
 this contract (keys, types, non-emptiness) — **never values**, which
 change when model versions change. Schema stability is the CI
-contract; a run may also be rejected on a digest mismatch against the
-committed manifest.
-
-## Output
+contract; a run may also be rejected on a digest mismatch between the
+local manifest and the local cache it describes.
 
 ## Lean Proofs
 
@@ -385,8 +395,14 @@ Run the following to associate results with the exact code version:
 git log --oneline -1
 ```
 
-Results are committed to the repository under `results/` and tagged
-with the release version (e.g., `v0.1.0`).
+Results are **not** committed under `results/` — that directory is
+gitignored and holds only what your own runs write into it (see
+[Output](#output)). What the repository commits instead is the published
+per-cell table in this document, the RL campaign summaries under
+`book/appendix-e-data/` and `book/appendix-f-data/`, and the agent-run
+schema contract and manifest conventions. Earlier revisions of this
+section claimed committed, release-tagged results (`v0.1.0`); no such
+artifacts or tag ever existed (#308).
 
 ## Citation
 

@@ -200,6 +200,15 @@ executed it **299** times. Every single one of those 299 bypasses was on an
 **ambiguous** tile. In **65,245 attempts against ordinary poison, across every ε
 down to a coin flip, not one succeeded.**
 
+**Provenance of these counts (#308).** The three totals were summed from the
+sweep's per-run artifacts, which are gitignored working files. The committed
+`book/appendix-f-data/verifier_frontier.json` of this campaign stores rates
+only — the attempt denominators are absent — so 79,264 / 299 / 65,245 cannot
+be reconstructed from the repository, and this caveat sits on their face
+rather than in an issue tracker. The sweep now persists per-point `per_seed`
+and raw-count `totals` blocks, so a future campaign's committed frontier will
+back these sums directly; the historical figures are left as recorded.
+
 That is the transferable finding, and it is not the one the epic set out to
 measure:
 
