@@ -293,5 +293,6 @@ poison-attempt, execution, falsification and detection counts for every run)
 and a `totals` block summing them, so the tracked copy under
 `book/appendix-e-data/` backs every count the appendices quote instead of only
 the rates. The published Appendix E/F campaign predates this: its committed
-aggregates store rates only, and the affected tables carry that caveat in
-place (Appendix E §E.4.2, Appendix F).
+aggregates carry no per-seed counts (Appendix E's one raw count is the
+falsification total; Appendix F's stores rates only), and the affected
+tables carry that caveat in place (Appendix E §E.4.2, Appendix F).

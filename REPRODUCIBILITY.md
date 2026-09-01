@@ -343,7 +343,7 @@ Verification steps:
 # 1. Re-run with the same cache; expect "Cache: {'hits': N, 'misses': 0}"
 python -m src.nomos.runner agent --seeds 20 --steps 100 --backend pydanticai
 
-# 2. Check the committed manifest against the cache directory
+# 2. Check the local manifest against the cache directory
 python -m src.nomos.agents.schema check results/agent
 
 # 3. Manual digest comparison (Linux/macOS)
@@ -351,9 +351,13 @@ python -m src.nomos.agents.schema check results/agent
 ```
 
 The cache manifest (`results/agent/cache_manifest.json`) maps every
-entry to its SHA-256 digest and is committed with full runs, so
-reviewers can verify replay determinism. The cache directory itself is
-git-ignored.
+entry to its SHA-256 digest. Like everything under `results/`, both the
+manifest and the cache directory are **local, gitignored artifacts**
+(see [Output](#output)) — earlier revisions of this section said the
+manifest "is committed with full runs", which was never true of any ref
+(#308). Replay determinism is therefore a same-machine check: the
+manifest verifies the cache it was written next to, not a repository
+copy.
 
 ### Artifact contract
 
@@ -361,10 +365,8 @@ The committed reference for the agent artifacts is the schema contract
 in `src/nomos/agents/schema.py`. CI compares new runs against
 this contract (keys, types, non-emptiness) — **never values**, which
 change when model versions change. Schema stability is the CI
-contract; a run may also be rejected on a digest mismatch against the
-committed manifest.
-
-## Output
+contract; a run may also be rejected on a digest mismatch between the
+local manifest and the local cache it describes.
 
 ## Lean Proofs
 
