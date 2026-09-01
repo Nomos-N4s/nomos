@@ -92,7 +92,7 @@ from ..contracts.contract import ContractState, UlyssesContract
 from ..contracts.enforcement import enforce_timelock
 from ..contracts.merger import apply_restrictions
 from ..identity.keys import GenesisMultisig
-from ..identity.tiers import TIER_RULES, MutabilityTier
+from ..identity.tiers import MutabilityTier, TieredMutability
 from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from ..tee.watchdog import DeadlockBreaker
@@ -259,22 +259,28 @@ LEAN_COVERAGE: dict[int, LeanCoverage] = {
         status=LeanStatus.DIFFERENT_ENCODING,
         declarations=(
             "constitutional_requires_quorum_and_cooldown",
+            "two_of_five_insufficient_for_constitutional",
+            "insufficient_cooldown_insufficient_for_constitutional",
             "constitutional_change_meets_genesis_bar",
-            "dynamic_requires_only_majority",
         ),
         note=(
-            "IdentityTiers.lean states the constitutional bar as numbers -- at "
-            "least 3 signatures and at least 30 days -- and derives that any "
-            "permitted constitutional change carries at least the genesis "
-            "quorum, which is as close as the corpus comes to 'requires "
-            "external multisig'. This test reads a bool flag on TIER_RULES "
-            "instead, and the Lean model has no such flag. The TierRule "
-            "records it indexes do carry a cooling_off_days at the same "
-            "numbers the Lean model uses -- 30 days constitutional, 7 "
-            "operational -- and a modification_threshold string naming the "
-            "same 3-of-5 multisig, but the test asserts neither and nothing "
-            "ties either to the model, so the theorem and the assert are "
-            "still not two statements of one claim."
+            "Since #306 this test drives apply_modification against the same "
+            "numeric bar the theorems state: it asserts a CONSTITUTIONAL "
+            "change is refused bare, refused at 2-of-5 signatures (the "
+            "two_of_five theorem's case), refused on day 29 (the "
+            "insufficient_cooldown theorem's case), and accepted at 3 "
+            "signatures with the 30-day cooling-off "
+            "(constitutional_requires_quorum_and_cooldown's bar). The "
+            "encodings still differ: the Lean Change record carries only a "
+            "quorum and a cooldown, while the Python bar additionally "
+            "demands a Parliament-unanimity flag the model omits, and the "
+            "Python refusal is a returned False where the model's is an "
+            "unprovable isPermitted. The correspondence is the "
+            "constitutional bar only: the model also refuses a zero-quorum "
+            "operational or dynamic change, and Python takes no vote-share "
+            "input at those tiers — their thresholds remain prose. Same "
+            "numbers at the constitutional bar, same direction of refusal, "
+            "two encodings."
         ),
     ),
     11: LeanCoverage(
@@ -522,20 +528,53 @@ def pred_05_contract_restricts() -> PredictionResult:
 
 
 def pred_06_revocation_harder() -> PredictionResult:
+    """Until #306 this compared the two literals it had just written into the
+    constructor — an assertion that could not fail while an inverted contract
+    (enact at 1.0, revoke at 0.1) constructed and enforced normally. It now
+    tests the enforcement: the constructor must refuse inverted and flat
+    threshold pairs and accept the canonical asymmetric one."""
     contract = UlyssesContract(
         contract_id="test_revoke",
         restricted_indices={7},
         enactment_threshold=0.66,
         revocation_threshold=1.0,
     )
-    passed = contract.revocation_threshold > contract.enactment_threshold
+    valid_ok = contract.revocation_threshold > contract.enactment_threshold
+
+    inverted_rejected = False
+    try:
+        UlyssesContract(
+            contract_id="inverted",
+            restricted_indices={7},
+            enactment_threshold=1.0,
+            revocation_threshold=0.1,
+        )
+    except ValueError:
+        inverted_rejected = True
+
+    flat_rejected = False
+    try:
+        UlyssesContract(
+            contract_id="flat",
+            restricted_indices={7},
+            enactment_threshold=0.66,
+            revocation_threshold=0.66,
+        )
+    except ValueError:
+        flat_rejected = True
+
+    passed = valid_ok and inverted_rejected and flat_rejected
     return PredictionResult(
         id=6,
         chapter="Ch3",
         section="2.3",
         description="Revocation harder than enactment",
         passed=passed,
-        evidence=f"Enactment threshold={contract.enactment_threshold}, Revocation threshold={contract.revocation_threshold}",
+        evidence=(
+            f"valid 0.66/1.0 constructs={valid_ok}, "
+            f"inverted 1.0/0.1 rejected={inverted_rejected}, "
+            f"flat 0.66/0.66 rejected={flat_rejected}"
+        ),
     )
 
 
@@ -633,17 +672,71 @@ def pred_09_coherence_veto() -> PredictionResult:
 
 
 def pred_10_tier4_multisig() -> PredictionResult:
-    constitutional = TIER_RULES[MutabilityTier.CONSTITUTIONAL].requires_external_multisig
-    operational = TIER_RULES[MutabilityTier.OPERATIONAL].requires_external_multisig
-    dynamic = TIER_RULES[MutabilityTier.DYNAMIC].requires_external_multisig
-    passed = constitutional is True and operational is False and dynamic is False
+    """Until #306 this read three booleans out of TIER_RULES and compared
+    them with the literals declared a few lines above — while
+    ``apply_modification`` honoured none of them, so a CONSTITUTIONAL
+    parameter could be rewritten with no multisig, no unanimity and no
+    cooling-off. It now drives the enforcement through the same bar
+    ``IdentityTiers.lean`` proves: refuse below the 3-signature quorum,
+    refuse inside the 30-day cooling-off, accept at the full bar, leave the
+    value untouched on every refusal, and confirm both lower tiers apply
+    without any multisig — OPERATIONAL after its own cooling-off, DYNAMIC
+    bare."""
+    tm = TieredMutability()
+    tm.register_parameter("never_harm_humans", True, MutabilityTier.CONSTITUTIONAL)
+    tm.register_parameter("risk_limit", 0.3, MutabilityTier.OPERATIONAL)
+    tm.register_parameter("exploration_rate", 0.1, MutabilityTier.DYNAMIC)
+
+    unauthorised = tm.apply_modification("never_harm_humans", False)
+    two_of_five = tm.apply_modification(
+        "never_harm_humans",
+        False,
+        multisig_signatures=2,
+        parliament_unanimous=True,
+        days_since_proposal=30,
+    )
+    inside_cooldown = tm.apply_modification(
+        "never_harm_humans",
+        False,
+        multisig_signatures=3,
+        parliament_unanimous=True,
+        days_since_proposal=29,
+    )
+    value_held = tm.get_value("never_harm_humans") is True
+    full_bar = tm.apply_modification(
+        "never_harm_humans",
+        False,
+        multisig_signatures=3,
+        parliament_unanimous=True,
+        days_since_proposal=30,
+    )
+    operational_no_multisig = tm.apply_modification("risk_limit", 0.5, days_since_proposal=7)
+    dynamic_unencumbered = tm.apply_modification("exploration_rate", 0.5)
+
+    passed = (
+        not unauthorised
+        and not two_of_five
+        and not inside_cooldown
+        and value_held
+        and full_bar
+        and tm.get_value("never_harm_humans") is False
+        and operational_no_multisig
+        and dynamic_unencumbered
+    )
     return PredictionResult(
         id=10,
         chapter="Ch4",
         section="2.5",
         description="Tier-4 (Constitutional) requires external multisig; lower tiers do not",
         passed=passed,
-        evidence=f"CONSTITUTIONAL.requires_external_multisig={constitutional}, OPERATIONAL.requires_external_multisig={operational}, DYNAMIC.requires_external_multisig={dynamic}",
+        evidence=(
+            f"CONSTITUTIONAL refused: bare={not unauthorised}, "
+            f"2-of-5={not two_of_five}, day-29={not inside_cooldown}, "
+            f"value held through refusals={value_held}; "
+            f"accepted at 3-of-5 + unanimity + 30d={full_bar}; "
+            f"OPERATIONAL applies without multisig at 7d={operational_no_multisig}; "
+            f"DYNAMIC applies bare={dynamic_unencumbered}"
+        ),
     )
 
 

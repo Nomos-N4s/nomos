@@ -140,7 +140,7 @@ has to say about the same property, and where it has nothing to say.
 | P07 | Ch3 §2.4 — Timelock holds until its unlock cycle | no counterpart | — |
 | P08 | Ch3 §3.0 — Mask composition: allowed − restricted | no counterpart | — |
 | P09 | Ch4 §2.1 — Low-coherence proposal triggers integrity veto | modelled under a different encoding | `acceptable_iff_ge`, `below_threshold_rejection_leaves_state`, `rejected_action_does_not_mutate_identity` |
-| P10 | Ch4 §2.5 — Tier-4 requires external multisig; lower tiers do not | modelled under a different encoding | `constitutional_requires_quorum_and_cooldown`, `constitutional_change_meets_genesis_bar`, `dynamic_requires_only_majority` |
+| P10 | Ch4 §2.5 — Tier-4 requires external multisig; lower tiers do not | modelled under a different encoding | `constitutional_requires_quorum_and_cooldown`, `two_of_five_insufficient_for_constitutional`, `insufficient_cooldown_insufficient_for_constitutional`, `constitutional_change_meets_genesis_bar` |
 | P11 | Ch4 §3.1 — Genesis 3-of-5: 2 sigs insufficient, 3 sigs authorises | proved of the Lean model | `two_signatures_insufficient`, `three_signatures_sufficient`, `double_signing_cannot_reach_quorum_alone`, `quorumCount_bounded_by_five` |
 | P12 | Ch4 §3.6 — Deadlock breaker fires after N defaults, resets | no counterpart | — |
 
@@ -157,7 +157,10 @@ Reading the four coverage values:
   does not share, so the theorem and the assert are not two statements of one
   claim. Both cases are numeric: a `Nat` coherence score against a 0–100
   threshold where the Python uses a `float` on 0.0–1.0, and a bar stated as a
-  quorum count and a cooldown in days where the Python reads a `bool` flag.
+  quorum count and a cooldown in days, which the Python has checked
+  numerically since #306 — the residual differences are a
+  Parliament-unanimity flag the model omits, and a refusal that is a returned
+  `False` where the model's is an unprovable `isPermitted`.
 - **modelled, no theorem** — the definitions are there and the constants
   agree, but no theorem states what the prediction asserts.
 - **no counterpart** — nothing in the corpus models this at all.
