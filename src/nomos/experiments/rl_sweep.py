@@ -79,10 +79,19 @@ PREREGISTRATION_PATH = _PREREGISTRATION_PATH
 
 
 def _point_metrics(aggregate: dict[str, Any], mode: str = "governance") -> dict[str, Any]:
-    """Reduce one protocol aggregate to the quantities the curve plots."""
+    """Reduce one protocol aggregate to the quantities the curve plots.
+
+    ``per_seed`` and ``totals`` ride along untouched: the published frontier
+    quotes raw attempt and execution counts (79k-scale sums across the grid),
+    and a point that carried only rates could not back them (#308). ``.get``
+    rather than indexing, so a pre-#308 aggregate still assembles — it simply
+    carries no counts to quote.
+    """
     result = aggregate["results"][mode]
     return {
         "n_seeds": result["n_seeds"],
+        "per_seed": result.get("per_seed"),
+        "totals": result.get("totals"),
         "effective_accuracy": aggregate["protocol"]["verifier"]["effective_accuracy"],
         "observed_accuracy": result.get("verifier_observed_accuracy"),
         "bypass_rate": result["governance_bypass_rate"],

@@ -372,6 +372,7 @@ def hypothesis_metrics(
             ambiguous_executed / ambiguous_attempts if ambiguous_attempts else None
         ),
         "h3_spoof_attempts": spoof_attempts,
+        "h3_spoof_detected": spoof_detected,
         "h3_applicable": h3_applicable,
         "h3_detection_rate": detection_rate,
         "h3_bypass_rate": governance_bypass_rate,
