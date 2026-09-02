@@ -29,6 +29,7 @@ SURFACES = [
     "README.md",
     "docs/index.md",
     "book/appendix-e-rl-adversary.md",
+    "paper/ai4good-2026-draft.md",
 ]
 
 
