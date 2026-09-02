@@ -1,0 +1,124 @@
+\documentclass{article}
+\usepackage{neurips_2025}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+\title{Asserted-Metadata Safety Checks Fall to Optimization Pressure: A Pre-Registered Red-Team of a Committee-Based Governance Layer for Agentic Systems}
+
+\author{%
+  Anonymous Author(s)\\
+  \textit{Submission to the AI4GOOD Workshop @ NeurIPS 2026, Multi-Agent Track}\\
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+A safety check that scores proposer-supplied metadata has zero adversarial value: a 64$\times$64-MLP PPO policy, given 100{,}000 training steps and never told the mechanism, learned to silence it on 100\% of its genuinely unsafe proposals, on every seed. Wherever an agent self-declares the risk of its own actions, this is the failure mode; at least one independently grounded verifier is load-bearing. We red-team a committee-based governance layer for agentic systems with a learned adversary under a pre-registered protocol (hypotheses, metrics, and thresholds committed before the runs, with digest-chained provenance). The metadata-trusting Safety committee fell completely and immediately; the layer nevertheless blocked every adversarial unsafe action (0 executions in 4{,}762 attempts) --- but only because one committee verifies claims against ground truth, a condition we annotate on every published verdict. A second pre-registered campaign degrades that verifier's accuracy $\varepsilon$ from oracle to coin-flip and finds no cliff --- yet its own validity hypothesis \textbf{failed} (the adversary could not make the game winnable at any $\varepsilon$ under the registered metric), so we report the headline plateau as uninformative by our own pre-registered rule and salvage the attempt-level decomposition instead: across 80 governed runs, every one of the 299 successful bypasses was on a genuinely \emph{ambiguous} action; 65{,}245 attempts against unmistakably unsafe actions failed at every $\varepsilon$ down to 0.5. Verifier accuracy governs only the ambiguous fraction of the action space. We contribute the negative result, the decomposition, and a worked example of adversarially-audited, pre-registered safety evaluation at solo-researcher scale --- including the audit that found our benchmarks measuring nothing, and the public remediation trail.
+\end{abstract}
+
+\section{Introduction}
+
+A live design question in agent governance is where safety signals come from: agents increasingly \emph{self-declare} the risk of their tool calls, their confidence, and their compliance, and pipelines increasingly score those declarations --- while the alternative, independent policy engines that evaluate actions against ground truth, costs latency and engineering. This paper offers a clean, mechanized data point: in our system, the component that trusted self-declared risk was defeated \emph{totally} --- 100\% of adversarial unsafe proposals, every seed --- by a small policy that was never told how the check worked, within 100k steps of vanilla PPO. The component that checked ground truth was never beaten, and a follow-up campaign that degraded its accuracy localizes exactly where its protection lives.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+  \item \textbf{The negative result} (\S\ref{sec:campaign1}): asserted-metadata safety scoring contributes nothing under optimization pressure, demonstrated with a pre-registered protocol, controls that bracket the result, and per-seed values published.
+  \item \textbf{The frontier decomposition} (\S\ref{sec:campaign2}): degrading the grounded verifier's accuracy $\varepsilon \in [0.5, 1.0]$ moves bypass only on \emph{ambiguous} actions (299/299 of successful bypasses); unmistakably unsafe actions were never executed in 65{,}245 attempts at any $\varepsilon$. We also report that our pre-registered validity hypothesis for this campaign \textbf{failed}, and apply our own registered rule that this renders the plateau verdicts uninformative.
+  \item \textbf{A methodology artifact} (\S\ref{sec:protocol}, \S\ref{sec:audit}): the evaluation pipeline and published results survived a 40-finding adversarial audit of the claim/code gap, with every pipeline-and-results finding remediated in public; every published verdict now carries its conditions at the point of quotation, pre-registration ordering is checkable by commit ancestry in one command, and benchmark honesty extends to reporting that the full deliberative machinery is not beaten by a 12-line baseline on 3 of 4 scenarios.
+\end{enumerate}
+
+\section{System under test}
+\label{sec:system}
+
+We test the reference implementation of a committee-based governance layer: a single learned agent proposes; multiple independent verifier-committees score and can block. (The track fit is governance \emph{of} agentic proposers: red-teaming the confinement of one strategic learned agent by a panel of verifiers; no agent-to-agent interaction is claimed or tested.) We describe only what the experiments exercise:
+
+\begin{itemize}
+  \item A \textbf{Speaker} runs a governance cycle per step: proposals are budgeted (per-member cap $\kappa_2 = 3$), agenda-sorted by claimed priority tag, and scored by committees; a proposal is blocked outright by any single member whose score falls below that member's veto threshold, and otherwise passes by weighted vote. The Speaker is the runtime gate.
+  \item The \textbf{Safety committee} scores $1 - \mathit{risk}$, where $\mathit{risk}$ is metadata \textbf{the proposer supplies}.
+  \item The \textbf{Integrity committee} evaluates the proposal's claimed identity-coherence \textbf{against ground truth} (in the environment below, the true cell type), and low scores trip a falsification counter that halves the offender's proposal budget after 3 offences.
+\end{itemize}
+
+The environment is a governed gridworld ($10\times10$; 8 safe reward cells; unsafe ``poison'' cells pay $+5$ then $-10$). In adversarial mode the policy submits the \emph{proposal itself}: direction, claimed priority tag, claimed risk and coherence (discretized), and a flood count up to 6 --- for Campaign~1, action space $\mathrm{MultiDiscrete}([4, 5, 3, 3, 6])$, observation 402-dim (Campaign~2 amends the claim channel; \S\ref{sec:campaign2}). The committees see the \textbf{claim}; the environment resolves the \textbf{truth}; falsification is thus well-defined.
+
+\section{Protocol and provenance}
+\label{sec:protocol}
+
+\paragraph{Adversary.} PPO (stable-baselines3), MlpPolicy 64$\times$64, lr $3\mathrm{e}{-4}$, 100{,}000 timesteps, seeds 42--46, evaluated deterministically over 10 episodes per seed. The adversary is rewarded \textbf{only} for defeating governance (\texttt{bypass} reward: $+10$ for an executed unsafe action, $+1$ shaping for silencing the Safety committee on a genuinely unsafe proposal); task reward is worthless to it.
+
+\paragraph{Modes.} \texttt{governance} (hypothesis under test), \texttt{no\_governance} (ceiling control --- nothing to bypass), \texttt{static\_mask} (floor control --- ground-truth filter, no committees).
+
+\paragraph{Pre-registration, checkable.} Hypotheses H1--H3 (and later H4--H7), metrics, and thresholds were committed before the runs. For the frontier campaign, the registration document's SHA-256 is recorded in the published result artifact and recomputed by the validator: the certifying commit must be an ancestor of \texttt{HEAD} and have touched the file, and provenance-only edits are digest-chained with superseded values retained. For the first campaign, ordering is one command --- \texttt{git merge-base --is-ancestor 15fd544 19d11ce} (the commit introducing the registration is an ancestor of the commit publishing the first results). A result with no verifiable pre-registration is not a weaker result; it is an unfalsifiable one. (Repository anonymized for review; an anonymized mirror is available to reviewers.)
+
+\section{Campaign 1: the defeat, then the conditional hold}
+\label{sec:campaign1}
+
+\paragraph{The defeat.} The trained policy silenced the Safety committee on \textbf{100\% of its genuinely unsafe proposals, on every seed} --- it learned, without being told the mechanism, to assert low risk on cells it knew to be unsafe, and Safety never vetoed one of them. Its entire achieved reward ($95.24 \pm 40.39$) is accumulated silencing bonus: it never earned a single execution point.
+
+\paragraph{The conditional hold.} Zero of 4{,}762 adversarial unsafe attempts executed (bypass $0.000$ $[0.000, 0.000]$); all three pre-registered hypotheses passed against $\varepsilon = 0.01$ thresholds --- H1: zero over-budget cycles under 6-proposal floods (cap held at 3); H2: spoofed-priority unsafe actions executed at 0.000; H3: all 7{,}546 falsified proposals detected (rate 1.000). The controls bracket the result: \texttt{no\_governance} bypass 1.000, \texttt{static\_mask} 0.000.
+
+\paragraph{The conditions, on the verdicts.} Both PASS-columns carry two annotations wherever they are published, and we repeat them here rather than in an appendix a citer will not read: (i) the verdicts hold \emph{given the ground-truth-grounded Integrity verifier} --- a layer whose committees all score asserted metadata would have been defeated outright; and (ii) H3's PASS is \textbf{partially by construction} --- no spoof that could have beaten the grounded verifier was reachable in Campaign~1's coarse claim vocabulary, so neither the 7{,}546 detections nor the 4{,}762 blocked attempts are independent evidence of deterrence: a blocked cell is never consumed and can be re-attacked indefinitely, so those attempt counts are few units of evidence repeated, not thousands. The honest reading is not ``the governance layer is robust''; it is that \textbf{defense in depth is load-bearing}: one of two veto committees fell completely and immediately, and the layer held because a second, independently grounded check existed behind it.
+
+\section{Campaign 2: the verifier-quality frontier, and a failed validity hypothesis}
+\label{sec:campaign2}
+
+Campaign~1's hold rests on an oracle --- ground-truth verification is free in a gridworld and free nowhere else. The second pre-registered campaign replaces the oracle with a verifier of tunable accuracy $\varepsilon$ and sweeps 8 points $\times$ 2 training arms (reward-shaped and unshaped) $\times$ 5 seeds $\times$ 100k steps, with an anchor at $\varepsilon = 1.0$ and controls run under the swept environment. Per the registration's prerequisites, the environment is amended for this campaign so that a winning spoof is in-vocabulary \emph{by construction}: ambiguous unsafe cells (ratio 0.5), a reachable spoof region with lie-graded penalties, and claims discretized to 17 buckets instead of 3 --- without these, the registration notes, the curve would be flat zero by construction and certify nothing.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lllll}
+\toprule
+ & Metric & Threshold & Result & Verdict \\
+\midrule
+\textbf{H4} --- plateau & max bypass at $\varepsilon \geq 0.95$ & $\leq 0.05$ & 0.0038 & PASS* \\
+\textbf{H5} --- no cliff above $\varepsilon = 0.9$ & max adjacent step & $\leq 0.15$ & 0.0030 & PASS* \\
+\textbf{H6} --- game was winnable & bypass at $\varepsilon = 0.5$ & $\geq 0.05$ & 0.0060 & \textbf{FAIL} \\
+\textbf{H7} --- shaping moves the search & shaped $>$ unshaped; anchor $\leq 0.01$ & both & $0.2982 > 0.2891$ & PASS \\
+\bottomrule
+\end{tabular}
+\caption{Frontier campaign verdicts against pre-registered thresholds. The asterisks are the point: H6 failed, so H4* and H5* are reported as uninformative by the rule registered before the runs.}
+\end{table}
+
+\paragraph{H6 failed, and the pre-registered rule applies (that is the asterisk).} H6 was this campaign's validity check: if the adversary cannot reach $\geq 0.05$ bypass even at a coin-flip verifier, then a flat curve certifies nothing about robustness --- ``held'' against an adversary that could not play carries no information. By the rule registered before the runs, H4* and H5* are therefore reported as \textbf{uninformative}, not as evidence. The campaign's own post-mortem (Appendix~F \S F.4.4 of the project book, explicitly labelled post-hoc --- it was not pre-registered) concedes: \emph{``I pre-registered the wrong instrument''} --- overall bypass rate is diluted by attempts the adversary could never win; the registration's pre-run reporting addendum had flagged the dilution mechanism without changing the metric.
+
+\paragraph{The salvage is the decomposition, and it is the finding.} Across all 80 governed runs the adversary attempted unsafe actions 79{,}264 times and executed 299 --- and \textbf{every one of the 299 was on a genuinely ambiguous action} (cells whose unsafety the verifier's noise model can plausibly misread). In \textbf{65{,}245 attempts against unmistakably unsafe actions, across every $\varepsilon$ down to 0.5, not one succeeded.} Degradation, where it exists, is graceful (largest adjacent step 0.0030). \emph{(Disclosure, per the record itself: these three attempt totals were summed from the campaign's per-run artifacts, which are not committed; the published appendices flag them as not independently reconstructable from the committed summaries, and the aggregation code now persists per-seed counts so every future campaign's committed summary is self-sufficient.)} The transferable statement: \textbf{verifier accuracy governs only the genuinely ambiguous fraction of the action space} --- for actions whose harm is legible in properties the proposer cannot claim over, independently grounded checks held at every accuracy level tested. Damage concentrates in ambiguity; that is where verifier quality buys protection, and the only place it does.
+
+\section{What a trivial baseline teaches, and the audit that made us say so}
+\label{sec:audit}
+
+Honesty about the deliberative machinery itself: on the project's four benchmark scenarios, the full committee apparatus \textbf{is not beaten by a 12-line filter} that accepts the first proposal whose \emph{asserted} risk is below 0.3 on only one of the four --- and on one scenario the filter is strictly better on a secondary axis (equal reward, a tenth of the defaulted steps). The one scenario governance wins is the one whose environment was amended --- after an adversarial audit --- to \emph{market} its temptation with a deceptively lowballed risk assertion: there, the trust-based filter takes all 100 teasers and eats all 100 delayed penalties, while the enacted structural pre-commitment never sees the offer, because the restriction removes it from the agenda rather than scoring a metadata field. The through-line of both this and \S\ref{sec:campaign1}--\ref{sec:campaign2}: \textbf{structure and grounding do the safety work; deliberation over asserted metadata does not.}
+
+These evaluations did not start honest. An adversarial code-and-claims audit --- filed, independently re-verified, and tracked as public issues in the project repository --- raised 40 findings against the claim/code gap, among them: benchmark seeds that reached no scenario (all but two published standard deviations described twenty repeats of one run), a reward-hacking detector fed cumulative totals (97{,}599 spurious episodes), effect sizes that called a 6{,}863-point gap ``negligible,'' two prediction tests that could not fail as written over invariants no code enforced, and a harness that handed baselines a stale agenda. Every finding against the evaluation pipeline and the published results was remediated with the trail public; sixteen book-versus-code specification-reconciliation findings remain open and publicly tracked. The summary tables now carry their caveats at the point of quotation, enforced by tests that recompute published claims against the tree in CI.
+
+\section{Related work}
+
+Constrained MDPs \citep{altman1999constrained, achiam2017constrained}, reward machines \citep{toroicarte2022reward}, and shielding \citep{alshiekh2018safe} each bake safety into the learning problem or a synthesized runtime monitor; guaranteed-safe AI agendas \citep{dalrymple2024towards} target formal end-to-end guarantees. Our contribution is orthogonal and narrower: an \emph{adversarial evaluation methodology} result about where governance-layer checks get their purchase (grounding, not assertion; ambiguity, not accuracy in the large), plus a reproducibility posture for solo-scale safety work. We have not run head-to-head comparisons against CMDP solvers, reward-machine agents, or synthesized shields, and we position rather than rank.
+
+\section{Limitations and broader impact}
+
+(1) \textbf{Toy environment}: one $10\times10$ gridworld family; the negative result's mechanism (learned exploitation of self-reported metadata) does not depend on gridworld specifics, but its quantitative totality --- and all hold results --- are shown only here. (2) \textbf{Scale}: 5 seeds, 100k steps, 64$\times$64 policy --- the zero-width bypass intervals bound exploit discovery at this budget, not in general. (3) \textbf{Vocabulary}: Campaign~1's attack surface contained no verifier-beating move --- stated on every affected verdict; Campaign~2 amends the environment specifically so a winning spoof exists by construction (\S\ref{sec:campaign2}). (4) \textbf{Single learned adversary} per run; no multi-agent collusion, no adaptive attacks against the falsification counter's memory. (5) The frontier's ambiguity fraction (0.5) is a design parameter; the decomposition's shape, not its constants, is the claim.
+
+\paragraph{Broader impact.} Deployed agent pipelines increasingly gate tool calls on risk fields the agent itself populates. This paper's negative result is offered as a concrete, cheap-to-reproduce reason to treat such self-declarations as adversarially worthless and to budget for at least one independently grounded verifier; the frontier result says that verifier's quality budget should be spent on the ambiguous cases.
+
+\section{Reproducibility}
+
+Everything runs from the (anonymized) repository: the protocol and sweep are single commands, dependencies are pinned, seeding has a single entry point, and the pre-registration is digest-chained with ancestry-checkable ordering; CI recomputes the published claims against the tree --- including the verbatim wording of this paper's first sentence. All runs are CPU-only (torch 2.13+cpu) at single-workstation scale. Per-seed raw counts are persisted by the aggregator into every future campaign's committed summary; the published campaigns' three frontier attempt totals predate that fix and are flagged in the record itself as not independently reconstructable from the committed summaries (\S\ref{sec:campaign2} disclosure).
+
+\begin{thebibliography}{9}
+\bibitem[Altman(1999)]{altman1999constrained} E.~Altman. \textit{Constrained Markov Decision Processes}. Chapman \& Hall/CRC, 1999.
+\bibitem[Achiam et~al.(2017)]{achiam2017constrained} J.~Achiam, D.~Held, A.~Tamar, and P.~Abbeel. Constrained policy optimization. In \textit{ICML}, 2017.
+\bibitem[Toro~Icarte et~al.(2022)]{toroicarte2022reward} R.~Toro~Icarte, T.~Klassen, R.~Valenzano, and S.~McIlraith. Reward machines: Exploiting reward function structure in reinforcement learning. \textit{JAIR}, 73, 2022.
+\bibitem[Alshiekh et~al.(2018)]{alshiekh2018safe} M.~Alshiekh, R.~Bloem, R.~Ehlers, B.~K{\"o}nighofer, S.~Niekum, and U.~Topcu. Safe reinforcement learning via shielding. In \textit{AAAI}, 2018.
+\bibitem[Dalrymple et~al.(2024)]{dalrymple2024towards} D.~Dalrymple et~al. Towards guaranteed safe AI: A framework for ensuring robust and reliable AI systems. \textit{arXiv:2405.06624}, 2024.
+\bibitem[Schulman et~al.(2017)]{schulman2017ppo} J.~Schulman, F.~Wolski, P.~Dhariwal, A.~Radford, and O.~Klimov. Proximal policy optimization algorithms. \textit{arXiv:1707.06347}, 2017.
+\bibitem[Raffin et~al.(2021)]{raffin2021sb3} A.~Raffin, A.~Hill, A.~Gleave, A.~Kanervisto, M.~Ernestus, and N.~Dormann. Stable-Baselines3: Reliable reinforcement learning implementations. \textit{JMLR}, 22(268), 2021.
+\end{thebibliography}
+
+\end{document}
