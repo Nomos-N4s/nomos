@@ -196,15 +196,25 @@ def _load_condition_series(spec: tuple[str, str]) -> pd.DataFrame | None:
         if reward_col not in df.columns:
             return None
 
-        return df[["step", reward_col]].rename(
+        out = df[["step", reward_col]].rename(
             columns={reward_col: "reward"}
         ).copy()
+    else:
+        df = pd.read_csv(ref)
+        if "total_reward" not in df.columns:
+            return None
+        out = df.reset_index().rename(
+            columns={"index": "step", "total_reward": "reward"}
+        )[["step", "reward"]].copy()
 
-    df = pd.read_csv(ref)
-    if "total_reward" not in df.columns:
+    out["step"] = pd.to_numeric(out["step"], errors="coerce")
+    out["reward"] = pd.to_numeric(out["reward"], errors="coerce")
+    out = out.dropna(subset=["step", "reward"])
+
+    if out.empty:
         return None
-    out = df.reset_index().rename(columns={"index": "step", "total_reward": "reward"})
-    return out[["step", "reward"]]
+
+    return out
 
 
 def _condition_reward_chart(df: pd.DataFrame, label: str, scale: alt.Scale) -> alt.Chart:
@@ -266,6 +276,14 @@ def _render_rl_comparison(
 
     y_min = min(df_a["reward"].min(), df_b["reward"].min())
     y_max = max(df_a["reward"].max(), df_b["reward"].max())
+
+    # Altair requires a meaningful domain. Expand a flat range slightly so
+    # constant-reward data still renders correctly.
+    if y_min == y_max:
+        padding = max(abs(y_min) * 0.05, 1.0)
+        y_min -= padding
+        y_max += padding
+
     shared_scale = alt.Scale(domain=[y_min, y_max])
 
     col1, col2 = st.columns(2)

@@ -142,9 +142,20 @@ def _log_benchmark_to_backend(backend: OntologyBackend | None, benchmarks: dict)
 
 
 def _format_optional_metric(value: Any) -> str:
-    if pd.isna(value):
+    """Format an optional benchmark metric for display."""
+    if value is None or pd.isna(value):
         return "N/A"
     return str(value)
+
+
+def _numeric_optional_metric(value: Any) -> float | None:
+    """Return a finite numeric metric, or None when it is unavailable."""
+    if value is None or pd.isna(value):
+        return None
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return None
+    return float(numeric)
 
 
 def _render_benchmark_comparison(rows: list[dict]):
@@ -202,13 +213,28 @@ def _render_benchmark_comparison(rows: list[dict]):
         lambda row: (
             row[label_a] - row[label_b]
             if pd.notna(row[label_a]) and pd.notna(row[label_b])
-            else None
+            else pd.NA
         ),
         axis=1,
     )
 
+    # Keep unavailable optional metrics visible in the table, but do not
+    # pass missing values to the comparison chart as if they were zero.
+    chart_df = diff_df.dropna(subset=["Δ"]).copy()
+
+    if chart_df.empty:
+        st.info(
+            "No comparable numeric metrics are available for the selected rows."
+        )
+        st.dataframe(
+            diff_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+        return
+
     bar = (
-        alt.Chart(diff_df)
+        alt.Chart(chart_df)
         .mark_bar()
         .encode(
             x=alt.X("Metric:N"),
@@ -375,8 +401,12 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
                         "scenario": scenario,
                         "strategy": row["Strategy"],
                         "reward": row["Reward"],
-                        "violations": row.get("Violations", pd.NA),
-                        "deadlocks": row.get("Deadlocks", pd.NA),
+                        "violations": _numeric_optional_metric(
+                            row.get("Violations", pd.NA)
+                        ),
+                        "deadlocks": _numeric_optional_metric(
+                            row.get("Deadlocks", pd.NA)
+                        ),
                     }
                 )
 
