@@ -60,6 +60,13 @@ def _validate_contracts(contracts: tuple[DSLContractConfig, ...]) -> None:
                 f"contract '{contract.contract_id}': revocation_threshold must be in "
                 f"[0.0, 1.0], got {contract.revocation_threshold}"
             )
+        if contract.revocation_threshold <= contract.enactment_threshold:
+            raise DSLValidationError(
+                f"contract '{contract.contract_id}': revocation_threshold "
+                f"({contract.revocation_threshold}) must be strictly greater than "
+                f"enactment_threshold ({contract.enactment_threshold}) — revocation "
+                f"is intentionally harder than enactment (#306)"
+            )
         if contract.enforcement_mode not in _VALID_ENFORCEMENT_MODES:
             raise DSLValidationError(
                 f"contract '{contract.contract_id}': enforcement_mode must be one of "

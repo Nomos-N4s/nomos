@@ -1,7 +1,14 @@
+import math
 import os
+import re
 import tempfile
+from pathlib import Path
+
+import pytest
 
 from src.nomos.benchmarks.analysis import (
+    _MIN_REPORTABLE_P,
+    _WILCOXON_EXACT_MAX_N,
     StrategyAggregate,
     _bonferroni_correct,
     _bootstrap_ci,
@@ -13,6 +20,7 @@ from src.nomos.benchmarks.analysis import (
     _mannwhitney_u,
     _mannwhitney_u_exact,
     _shapiro_wilk,
+    _wilcoxon_signed_rank,
     aggregate_reports,
     compute_effect_sizes,
     detect_hacking_episodes,
@@ -20,7 +28,11 @@ from src.nomos.benchmarks.analysis import (
     export_summary_csv,
     run_analysis,
 )
+from src.nomos.benchmarks.baselines import MonolithicRL, RandomBaseline
+from src.nomos.benchmarks.run_all import _run_scenario
 from src.nomos.experiments.base import ExperimentMetrics
+from src.nomos.experiments.drift_lab import DriftLab
+from src.nomos.experiments.grid_world import GridWorld
 from src.nomos.experiments.metrics import ExperimentReport
 
 
@@ -82,11 +94,11 @@ class TestCohensD:
 
     def test_small_samples(self):
         d = _cohens_d([1.0], [2.0])
-        assert d == 0.0
+        assert math.isnan(d)
 
     def test_zero_variance(self):
         d = _cohens_d([5.0, 5.0, 5.0], [3.0, 3.0, 3.0])
-        assert d == 0.0
+        assert math.isnan(d)
 
 
 class TestMannWhitneyU:
@@ -137,7 +149,7 @@ class TestMannWhitneyUExact:
     def test_separated_small(self):
         u, p = _mannwhitney_u_exact([5.0, 6.0], [1.0, 2.0])
         assert u == 0.0
-        assert p == 0.3333
+        assert abs(p - 2.0 / 6.0) < 1e-12
 
     def test_falls_back_large(self):
         u, p = _mannwhitney_u_exact(list(range(10)), list(range(10, 20)))
@@ -165,10 +177,25 @@ class TestHolmBonferroni:
 
     def test_two_strong_signals(self):
         results = _holm_bonferroni_correct([0.01, 0.01], alpha=0.05)
-        # rank 1: 0.01 * 2 = 0.02; rank 2: 0.01 * 1 = 0.01
+        # rank 1: 0.01 * 2 = 0.02; rank 2: max(0.02, 0.01 * 1) = 0.02
         assert results[0]["corrected_p"] == 0.02
         assert results[0]["significant"] is True
-        assert results[1]["corrected_p"] == 0.01
+        assert results[1]["corrected_p"] == 0.02
+        assert results[1]["significant"] is True
+
+    def test_step_down_stops_at_the_first_failure(self):
+        results = _holm_bonferroni_correct([0.03, 0.031], alpha=0.05)
+        # rank 1: 0.03 * 2 = 0.06 fails; rank 2 inherits max(0.06, 0.031 * 1)
+        assert results[0]["corrected_p"] == 0.06
+        assert results[0]["significant"] is False
+        assert results[1]["corrected_p"] == 0.06
+        assert results[1]["significant"] is False
+
+    def test_adjusted_p_is_monotone_in_rank(self):
+        results = _holm_bonferroni_correct([0.04, 0.001, 0.03, 0.0005])
+        by_rank = sorted(results, key=lambda r: r["rank"])
+        for earlier, later in zip(by_rank, by_rank[1:]):
+            assert later["corrected_p"] >= earlier["corrected_p"]
 
     def test_first_significant_rest_not(self):
         p_vals = [0.01, 0.04, 0.10]
@@ -203,7 +230,7 @@ class TestCohensDCI:
 
     def test_small_samples(self):
         ci = _cohens_d_ci([1.0], [2.0])
-        assert ci["d"] == 0.0
+        assert all(math.isnan(v) for v in ci.values())
 
     def test_ci_structure(self):
         ci = _cohens_d_ci([1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0])
@@ -249,20 +276,26 @@ class TestShapiroWilk:
 
 
 class TestIsPaired:
-    def test_equal_counts_paired(self):
-        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5, 6]}
+    def test_matched_seeds_paired(self):
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {0: [4.0], 1: [5.0], 2: [6.0]},
+        }
         assert _is_paired(groups, "A", "gov", "ran") is True
 
     def test_unequal_counts_not_paired(self):
-        groups = {("gov", "A"): [1, 2, 3], ("ran", "A"): [4, 5]}
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {0: [4.0], 1: [5.0]},
+        }
         assert _is_paired(groups, "A", "gov", "ran") is False
 
     def test_empty_group_not_paired(self):
-        groups = {("gov", "A"): []}
+        groups = {("gov", "A"): {}}
         assert _is_paired(groups, "A", "gov", "ran") is False
 
     def test_different_scenario(self):
-        groups = {("gov", "A"): [1, 2], ("ran", "B"): [3, 4]}
+        groups = {("gov", "A"): {0: [1.0], 1: [2.0]}, ("ran", "B"): {0: [3.0], 1: [4.0]}}
         assert _is_paired(groups, "A", "gov", "ran") is False
 
 
@@ -329,6 +362,145 @@ class TestDetectRewardHacking:
 
     def test_empty_records(self):
         assert _detect_reward_hacking([]) == []
+
+
+class TestNonPositiveCumulativeSeriesRaisesNoEpisodes:
+    """A flat or falling cumulative series must raise no episodes (#304).
+
+    Before the fix the benchmark producer wrote running totals under the
+    per-step ``reward``/``violations`` keys. The failure modes below are
+    properties of that series, not of any agent behaviour.
+
+    The name is deliberately narrow, because the detector does not reject
+    cumulative input in general. A *rising positive* running total still
+    clears the ratio test — the trailing mean really is above the
+    preceding one — and no arithmetic on the series can tell that apart
+    from a genuine per-step spike. The third test below flags episodes
+    off exactly such a fixture and pins only that their spike is
+    positive. That residual gap is held by the producer emitting
+    per-step values, not by the detector; see the
+    ``_detect_reward_hacking`` docstring.
+    """
+
+    @staticmethod
+    def _cumulative(per_step_reward, steps=40):
+        """A cumulative series: running reward total, monotone violation counter."""
+        return [
+            {
+                "step": i,
+                "reward": per_step_reward * (i + 1),
+                "violations": i + 1,
+            }
+            for i in range(steps)
+        ]
+
+    def test_declining_cumulative_series_yields_no_episodes(self):
+        # Every step violates (the counter never returns to zero) and the
+        # running total falls, so the 1.5x test fires on a negative baseline.
+        assert _detect_reward_hacking(self._cumulative(-13.0)) == []
+
+    def test_flat_negative_plateau_yields_no_episodes(self):
+        # The shape that produced most of the bogus episodes: a run whose
+        # cumulative reward stops moving. -13.0 > -13.0 * 1.5 is true, so a
+        # perfectly flat series used to report a "spike" of size 0.0.
+        records = [{"step": i, "reward": -13.0, "violations": i + 1} for i in range(30)]
+        assert _detect_reward_hacking(records) == []
+
+    def test_no_episode_is_ever_exported_with_a_non_positive_spike(self):
+        # The headline number of an episode has to say something happened.
+        for per_step in (-13.0, -1.0, 0.0, 1.0, 7.5):
+            for episode in _detect_reward_hacking(self._cumulative(per_step)):
+                assert episode["reward_spike"] > 0, (per_step, episode)
+
+
+class TestRewardHackingProducerContract:
+    """Exercise the detector on records the real benchmark runner wrote (#304).
+
+    Every other test here hand-builds step records, and that is how the
+    units mismatch survived a green suite: the fixtures were per-step
+    while the one production producer emitted running totals. A unit test
+    whose fixture disagrees with the producer cannot catch a producer bug,
+    so these call ``_run_scenario`` and read what it actually stores.
+    """
+
+    @staticmethod
+    def _real_records(steps=120):
+        """Records from the arm that produced most of the bogus episodes.
+
+        GridWorld under ``monolithic_rl`` earns a little, violates twice,
+        and then plateaus at a negative total for the rest of the run —
+        the shape the 1.5x ratio test used to read as a spike on every
+        remaining step.
+        """
+        report = _run_scenario(
+            GridWorld,
+            {"size": 6},
+            "monolithic_rl",
+            steps=steps,
+            seed=0,
+            baseline=MonolithicRL(),
+        )
+        return report.metadata["step_records"]
+
+    @staticmethod
+    def _flagging_records(steps=40):
+        """Records from a real arm that does clear the detector's tests.
+
+        DriftLab under ``random`` violates on many steps and its per-step
+        reward moves both ways, so some windows genuinely spike out of a
+        positive baseline. Without an arm like this the per-episode
+        assertions below would iterate an empty list.
+        """
+        report = _run_scenario(
+            DriftLab,
+            {},
+            "random",
+            steps=steps,
+            seed=0,
+            baseline=RandomBaseline(seed=0),
+        )
+        return report.metadata["step_records"]
+
+    def test_producer_emits_the_keys_its_consumers_read(self):
+        record = self._real_records(steps=20)[0]
+        # _detect_reward_hacking reads the first two; plot_reward_curves
+        # and the --csv export read the cumulative ones.
+        assert {"reward", "violations", "cumulative_reward"} <= set(record)
+
+    def test_reward_and_violations_are_per_step_not_running_totals(self):
+        records = self._real_records()
+        assert records[-1]["cumulative_reward"] == pytest.approx(sum(r["reward"] for r in records))
+        assert records[-1]["cumulative_violations"] == sum(r["violations"] for r in records)
+        assert records[-1]["cumulative_deadlocks"] == sum(r["deadlocks"] for r in records)
+        # A running counter never returns to zero once it has moved; a
+        # per-step count does, and this arm violates on only a few steps.
+        assert records[-1]["cumulative_violations"] > 0
+        assert records[-1]["violations"] == 0
+
+    def test_the_gridworld_arm_reports_nothing_once_the_units_are_right(self):
+        # Asserted rather than left implicit, because it is the whole
+        # before/after of #304 on this arm and it is not a happy result:
+        # the poison tile books its -10 two steps after its +5, so each
+        # hack leaves the next one a negative baseline and the
+        # positive-baseline requirement drops it. Appendix D.5 records
+        # what that costs across the suite.
+        assert _detect_reward_hacking(self._real_records()) == []
+
+    def test_detector_on_real_records_reports_only_real_spikes(self):
+        records = self._flagging_records()
+        episodes = _detect_reward_hacking(records)
+        # Guard the loop: with no episodes every assertion below is dead
+        # code and this test would pass against `return []`.
+        assert episodes, "fixture must produce episodes for the assertions to mean anything"
+        for ep in episodes:
+            assert ep["reward_spike"] > 0, ep
+            # The violation belongs to the flagged step, not to the run.
+            assert ep["violation_count"] == records[ep["step"]]["violations"], ep
+            assert records[ep["step"]]["violations"] > 0, ep
+            # And it is not the running total under another name: the
+            # producer's own cumulative key is strictly larger by every
+            # step this deterministic fixture flags.
+            assert ep["violation_count"] < records[ep["step"]]["cumulative_violations"], ep
 
 
 class TestAggregateReports:
@@ -490,6 +662,7 @@ class TestExportFunctions:
             export_results_json([r], [agg], [], [], path)
             assert os.path.exists(path)
             import json
+
             with open(path) as f:
                 data = json.load(f)
             assert "aggregates" in data
@@ -579,3 +752,319 @@ class TestGovernanceLatencyExport:
                 data = json.load(f)
 
         assert data["aggregates"][0]["mean_governance_latency_seconds"] == 0.005
+
+
+def _cell(strategy, scenario, rewards, seeds=None):
+    """Build one strategy-scenario cell, one report per seed."""
+    seeds = list(range(len(rewards))) if seeds is None else seeds
+    out = []
+    for seed, reward in zip(seeds, rewards):
+        r = _make_report(f"{strategy}_{scenario}_{seed}", reward)
+        r.metadata["strategy"] = strategy
+        r.metadata["scenario"] = scenario
+        r.metadata["seed"] = seed
+        out.append(r)
+    return out
+
+
+class TestDegenerateEffectSizes:
+    """The published TemptationBank cell: two constants 6863.0 apart."""
+
+    def test_zero_pooled_variance_with_separation_is_undefined(self):
+        d = _cohens_d([1998.0] * 20, [-4865.0] * 20)
+        assert math.isnan(d)
+
+    def test_identical_constants_really_are_no_effect(self):
+        assert _cohens_d([5.0] * 4, [5.0] * 4) == 0.0
+
+    def test_ci_around_an_undefined_d_is_undefined(self):
+        ci = _cohens_d_ci([1998.0] * 20, [-4865.0] * 20)
+        assert all(math.isnan(v) for v in ci.values())
+
+    def test_record_marks_the_gap_undefined_and_keeps_the_direction(self):
+        reports = _cell("governance", "TemptationBank", [1998.0] * 20)
+        reports += _cell("monolithic_rl", "TemptationBank", [-4865.0] * 20)
+        es = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        (entry,) = [e for e in es if e["governance_vs"] == "monolithic_rl"]
+        assert entry["interpretation"] == "undefined (zero pooled variance)"
+        assert entry["cohens_d"] is None
+        assert entry["cohens_d_ci"] == [None, None]
+        assert entry["cohens_d_se"] is None
+        assert entry["mean_governance"] == 1998.0
+        assert entry["mean_baseline"] == -4865.0
+        assert entry["mean_diff"] == 6863.0
+
+    def test_equal_constants_keep_the_point_estimate_but_lose_the_interval(self):
+        ci = _cohens_d_ci([5.0] * 4, [5.0] * 4)
+        assert _cohens_d([5.0] * 4, [5.0] * 4) == 0.0
+        assert all(math.isnan(v) for v in ci.values())
+
+    def test_record_publishes_no_interval_on_a_deterministic_zero_effect(self):
+        reports = _cell("governance", "DeadlockMaze", [0.0] * 20)
+        reports += _cell("random", "DeadlockMaze", [0.0] * 20)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["cohens_d"] == 0.0
+        assert entry["interpretation"] == "negligible"
+        assert entry["cohens_d_ci"] == [None, None]
+        assert entry["cohens_d_se"] is None
+
+    def test_a_measured_zero_effect_keeps_its_interval(self):
+        rewards = [float(i) for i in range(20)]
+        reports = _cell("governance", "GridWorld", rewards)
+        reports += _cell("veto_only", "GridWorld", rewards)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["cohens_d"] == 0.0
+        assert entry["cohens_d_se"] is not None
+        assert entry["cohens_d_ci"] != [None, None]
+
+    def test_a_losing_degenerate_cell_is_distinguishable_from_a_winning_one(self):
+        reports = _cell("governance", "S", [10.0] * 6)
+        reports += _cell("random", "S", [1.0] * 6)
+        reports += _cell("veto_only", "S", [99.0] * 6)
+        es = {
+            e["governance_vs"]: e for e in compute_effect_sizes(aggregate_reports(reports), reports)
+        }
+
+        assert es["random"]["interpretation"] == es["veto_only"]["interpretation"]
+        assert es["random"]["mean_diff"] == 9.0
+        assert es["veto_only"]["mean_diff"] == -89.0
+
+
+class TestPValuePrecision:
+    def test_normal_approximation_keeps_a_sub_1e_4_tail(self):
+        u, p = _mannwhitney_u([1998.0] * 20, [-4865.0] * 20)
+        assert u == 0.0
+        # math.erfc varies in the last ulp across platform libms.
+        assert p == pytest.approx(4.2380554260794744e-10, rel=1e-9)
+
+    def test_exact_path_is_not_rounded_to_four_places(self):
+        u, p = _mannwhitney_u_exact([5.0, 6.0, 7.0, 8.0], [1.0, 2.0, 3.0, 4.0])
+        assert u == 0.0
+        assert abs(p - 2.0 / 70.0) < 1e-15
+        assert p != round(p, 4)
+
+    def test_an_underflowed_tail_is_floored_rather_than_zero(self):
+        # |z| passes 38.5 here, so math.erfc really does return 0.0.
+        u, p = _mannwhitney_u(
+            [float(i) for i in range(1000)], [float(i) + 1e4 for i in range(1000)]
+        )
+        assert u == 0.0
+        assert p > 0.0
+        assert p == _MIN_REPORTABLE_P
+
+    def test_holm_keeps_full_precision(self):
+        results = _holm_bonferroni_correct([1e-10, 0.5])
+        assert results[0]["corrected_p"] == 2e-10
+
+    def test_bonferroni_keeps_full_precision(self):
+        results = _bonferroni_correct([1e-10, 0.5])
+        assert results[0]["corrected_p"] == 2e-10
+
+
+class TestSignificanceInvariant:
+    """No record may claim zero probability and significance at once."""
+
+    @staticmethod
+    def _suite():
+        reports = _cell("governance", "TemptationBank", [1998.0] * 20)
+        reports += _cell("monolithic_rl", "TemptationBank", [-4865.0] * 20)
+        reports += _cell("static_masking", "TemptationBank", [2000.0] * 20)
+        reports += _cell("governance", "GridWorld", [float(i) for i in range(20)])
+        reports += _cell("random", "GridWorld", [float(i) - 100 for i in range(20)])
+        return reports
+
+    def test_no_zero_raw_p_is_flagged_significant(self):
+        reports = self._suite()
+        es = compute_effect_sizes(aggregate_reports(reports), reports)
+        assert es
+        assert not any(e["p_value_raw"] == 0.0 and e["significant_holm"] for e in es)
+        assert not any(e["p_value_raw"] == 0.0 and e["significant"] for e in es)
+
+    def test_the_invariant_is_not_vacuous(self):
+        reports = self._suite()
+        es = compute_effect_sizes(aggregate_reports(reports), reports)
+        tiny = [e for e in es if e["significant_holm"] and e["p_value_raw"] < 1e-4]
+        assert tiny, "expected at least one genuinely tiny significant p-value"
+        assert all(e["p_value_raw"] > 0.0 for e in tiny)
+
+
+class TestSeedKeyedPairing:
+    def test_equal_counts_over_disjoint_seeds_are_not_paired(self):
+        groups = {
+            ("gov", "A"): {0: [1.0], 1: [2.0], 2: [3.0]},
+            ("ran", "A"): {100: [4.0], 101: [5.0], 102: [6.0]},
+        }
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_a_repeated_seed_inside_a_cell_is_not_paired(self):
+        groups = {
+            ("gov", "A"): {0: [1.0, 2.0], 1: [3.0, 4.0]},
+            ("ran", "A"): {0: [5.0, 6.0], 1: [7.0, 8.0]},
+        }
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_unlabelled_seeds_are_not_paired(self):
+        groups = {("gov", "A"): {None: [1.0, 2.0]}, ("ran", "A"): {None: [3.0, 4.0]}}
+        assert _is_paired(groups, "A", "gov", "ran") is False
+
+    def test_record_reports_unpaired_when_the_seed_sets_differ(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0], seeds=[0, 1, 2, 3])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0], seeds=[7, 8, 9, 10])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["paired"] is False
+        assert entry["wilcoxon_w"] is None
+        assert entry["wilcoxon_p"] is None
+        assert entry["wilcoxon_method"] is None
+
+    def test_record_reports_paired_and_tests_it_when_seeds_match(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0], seeds=[0, 1, 2, 3])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0], seeds=[0, 1, 2, 3])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["paired"] is True
+        assert entry["wilcoxon_method"] == "exact"
+        assert entry["wilcoxon_p"] == 2.0 / 2**4
+
+
+class TestWilcoxonPairCounts:
+    """The p-value rests on the surviving pairs, so the record says how many."""
+
+    def test_dropped_ties_are_visible_on_the_record(self):
+        seeds = list(range(20))
+        governance = [5.0] * 12 + [5.0 + k for k in range(1, 9)]
+        reports = _cell("governance", "S", governance, seeds=seeds)
+        reports += _cell("random", "S", [5.0] * 20, seeds=seeds)
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["n_governance"] == 20
+        assert entry["wilcoxon_n_pairs"] == 8
+        assert entry["wilcoxon_n_zero_diffs"] == 12
+        assert entry["wilcoxon_p"] == 2.0 / 2**8
+
+    def test_an_unpaired_comparison_reports_no_counts(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0], seeds=[0, 1, 2, 3])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0], seeds=[7, 8, 9, 10])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        assert entry["paired"] is False
+        assert entry["wilcoxon_n_pairs"] is None
+        assert entry["wilcoxon_n_zero_diffs"] is None
+
+
+class TestWilcoxonSignedRank:
+    @staticmethod
+    def _brute_force(diffs):
+        import itertools
+
+        nonzero = [d for d in diffs if d != 0]
+        n = len(nonzero)
+        order = sorted(range(n), key=lambda i: abs(nonzero[i]))
+        ranks = [0.0] * n
+        i = 0
+        while i < n:
+            j = i
+            while j < n and abs(nonzero[order[j]]) == abs(nonzero[order[i]]):
+                j += 1
+            for k in range(i, j):
+                ranks[order[k]] = (i + 1 + j) / 2.0
+            i = j
+        total = sum(ranks)
+        w_plus = sum(ranks[i] for i in range(n) if nonzero[i] > 0)
+        w = min(w_plus, total - w_plus)
+        extreme = 0
+        for signs in itertools.product((0, 1), repeat=n):
+            t = sum(ranks[i] for i in range(n) if signs[i])
+            if min(t, total - t) <= w + 1e-12:
+                extreme += 1
+        return w, min(1.0, extreme / 2**n)
+
+    def test_exact_distribution_matches_brute_force_enumeration(self):
+        cases = [
+            [1.0, 2.0, 3.0, 4.0],
+            [-1.0, -2.0, 3.0, 4.0, 5.0],
+            [2.0, 2.0, 2.0, -2.0, 5.0],
+            [0.0, 1.0, -1.0, 3.0, 0.0, 4.0],
+            [-5.0, -4.0, -3.0, -2.0, -1.0, 6.0, 7.0],
+        ]
+        for diffs in cases:
+            result = _wilcoxon_signed_rank(diffs, [0.0] * len(diffs))
+            expected_w, expected_p = self._brute_force(diffs)
+            assert result["method"] == "exact"
+            assert abs(result["w"] - expected_w) < 1e-12, diffs
+            assert abs(result["p_value"] - expected_p) < 1e-12, diffs
+
+    def test_every_pair_favouring_one_side_gives_two_over_two_to_the_n(self):
+        result = _wilcoxon_signed_rank([float(i) for i in range(1, 11)], [0.0] * 10)
+        assert result["w"] == 0.0
+        assert result["n_pairs"] == 10
+        assert result["p_value"] == 2.0 / 2**10
+
+    def test_a_deterministic_cell_reduces_to_a_sign_test(self):
+        result = _wilcoxon_signed_rank([1998.0] * 20, [-4865.0] * 20)
+        assert result["method"] == "exact"
+        assert result["w"] == 0.0
+        assert result["p_value"] == 2.0 / 2**20
+
+    def test_all_zero_differences_are_no_evidence(self):
+        result = _wilcoxon_signed_rank([3.0] * 5, [3.0] * 5)
+        assert result["method"] == "all-zero-differences"
+        assert result["p_value"] == 1.0
+        assert result["n_zero_diffs"] == 5
+
+    def test_dropped_zero_pairs_are_counted(self):
+        result = _wilcoxon_signed_rank([1.0, 2.0, 3.0, 4.0], [1.0, 0.0, 3.0, 0.0])
+        assert result["n_pairs"] == 2
+        assert result["n_zero_diffs"] == 2
+
+    def test_unequal_lengths_are_undefined(self):
+        result = _wilcoxon_signed_rank([1.0, 2.0], [1.0])
+        assert result["w"] is None
+        assert result["p_value"] is None
+        assert result["method"] == "undefined"
+
+    def test_large_samples_use_the_normal_approximation(self):
+        result = _wilcoxon_signed_rank(
+            [float(i) + 5.0 for i in range(30)], [float(i) for i in range(30)]
+        )
+        assert result["method"] == "normal"
+        assert result["n_pairs"] == 30
+        assert 0.0 < result["p_value"] < 1e-6
+
+
+APPENDIX_D = Path(__file__).parent.parent / "book" / "appendix-d-experiment-protocol.md"
+
+
+class TestPublishedStatisticsClaims:
+    """Appendix D.5 spells out the record and the method; hold it to the code.
+
+    Both claims are hand-maintained prose about a machine-generated record,
+    which is exactly the kind of sentence that goes stale beneath its subject.
+    """
+
+    @staticmethod
+    def _appendix_text():
+        return APPENDIX_D.read_text(encoding="utf-8")
+
+    def test_the_documented_record_keys_are_the_emitted_ones(self):
+        reports = _cell("governance", "S", [10.0, 11.0, 12.0, 13.0])
+        reports += _cell("random", "S", [1.0, 2.0, 3.0, 4.0])
+        (entry,) = compute_effect_sizes(aggregate_reports(reports), reports)
+
+        sentence = next(
+            line
+            for line in self._appendix_text().splitlines()
+            if line.startswith("Each entry returned by `compute_effect_sizes()` includes:")
+        )
+        documented = set(re.findall(r"`([a-z_]+)`", sentence)) - {"compute_effect_sizes()"}
+        assert documented == set(entry)
+
+    def test_the_documented_exact_wilcoxon_cutoff_is_the_code_constant(self):
+        cutoff = re.search(
+            r"exact null distribution up to (\d+) non-zero differences", self._appendix_text()
+        )
+        assert cutoff, "Appendix D.5 no longer states the Wilcoxon exact cutoff"
+        assert int(cutoff.group(1)) == _WILCOXON_EXACT_MAX_N

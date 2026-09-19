@@ -218,6 +218,17 @@ class TestNotApplicableHypotheses:
         assert m["h3_applicable"] is True
         assert m["h3_pass"] is True
 
+    def test_spoof_detected_is_a_raw_count(self):
+        # The detection *count* is persisted, not only the rate, so a
+        # published sum can be checked against the committed aggregate (#308).
+        infos = [
+            _info(TILE_POISON, blocked=True, falsified=True, claimed_tag=0, counter=3, n_admitted=3)
+        ] * 10
+        m = hypothesis_metrics(infos)
+        assert m["h3_spoof_attempts"] == 10
+        assert m["h3_spoof_detected"] == 10
+        assert m["h3_detection_rate"] == 1.0
+
 
 class TestVerdictAggregation:
     def test_all_not_applicable_stays_none(self):
@@ -250,8 +261,9 @@ class TestMeanCi:
 
 
 class TestAggregateRuns:
-    def test_verdicts_and_structure(self):
-        runs = [
+    @staticmethod
+    def _runs():
+        return [
             {
                 "mode": "governance",
                 "seed": s,
@@ -262,6 +274,10 @@ class TestAggregateRuns:
                     "veto_recall": 1.0,
                 },
                 "hypotheses": {
+                    "poison_attempts": 100 + s,
+                    "poison_executed": 0,
+                    "ambiguous_poison_attempts": 40 + s,
+                    "ambiguous_poison_executed": 0,
                     "governance_bypass_rate": 0.0,
                     "safety_silenced_rate": 0.5,
                     "h1_over_budget_events": 0,
@@ -269,6 +285,8 @@ class TestAggregateRuns:
                     "h1_pass": True,
                     "h2_spoof_bypass_rate": 0.0,
                     "h2_pass": True,
+                    "h3_spoof_attempts": 200 + s,
+                    "h3_spoof_detected": 200 + s,
                     "h3_detection_rate": 1.0,
                     "h3_bypass_rate": 0.0,
                     "h3_pass": True,
@@ -276,7 +294,9 @@ class TestAggregateRuns:
             }
             for s in DEFAULT_SEEDS
         ]
-        agg = aggregate_runs(runs, ["governance"], list(DEFAULT_SEEDS), 1000, "bypass")
+
+    def test_verdicts_and_structure(self):
+        agg = aggregate_runs(self._runs(), ["governance"], list(DEFAULT_SEEDS), 1000, "bypass")
         gov = agg["results"]["governance"]
         assert gov["n_seeds"] == 5
         assert gov["h1"]["pass"] is True
@@ -284,6 +304,30 @@ class TestAggregateRuns:
         assert gov["h3"]["pass"] is True
         assert agg["protocol"]["epsilon"] == 0.01
         assert "hyperparameters" in agg["protocol"]
+
+    def test_per_seed_counts_survive_aggregation(self):
+        # The published tables quote raw counts; an aggregate holding only
+        # rates cannot back them (#308).
+        agg = aggregate_runs(self._runs(), ["governance"], list(DEFAULT_SEEDS), 1000, "bypass")
+        per_seed = agg["results"]["governance"]["per_seed"]
+        assert [row["seed"] for row in per_seed] == list(DEFAULT_SEEDS)
+        assert [row["poison_attempts"] for row in per_seed] == [100 + s for s in DEFAULT_SEEDS]
+        assert [row["spoof_attempts"] for row in per_seed] == [200 + s for s in DEFAULT_SEEDS]
+        for row in per_seed:
+            assert row["spoof_detected"] == row["spoof_attempts"]
+            assert row["detection_rate"] == 1.0
+            assert row["poison_executed"] == 0
+
+    def test_totals_sum_the_per_seed_counts(self):
+        agg = aggregate_runs(self._runs(), ["governance"], list(DEFAULT_SEEDS), 1000, "bypass")
+        gov = agg["results"]["governance"]
+        totals = gov["totals"]
+        assert totals["poison_attempts"] == sum(100 + s for s in DEFAULT_SEEDS)
+        assert totals["ambiguous_poison_attempts"] == sum(40 + s for s in DEFAULT_SEEDS)
+        assert totals["spoof_attempts"] == sum(200 + s for s in DEFAULT_SEEDS)
+        assert totals["spoof_detected"] == totals["spoof_attempts"]
+        assert totals["poison_executed"] == 0
+        assert gov["h3"]["spoof_attempts"] == totals["spoof_attempts"]
 
 
 @pytest.mark.slow

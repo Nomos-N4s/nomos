@@ -8,6 +8,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > CHANGELOG.md is now maintained by release-please. Do not hand-edit this
 > file — entries are generated from conventional-commit history on release.
 
+## [1.4.0](https://github.com/Nomos-N4s/nomos/compare/v1.3.0...v1.4.0) (2026-09-01)
+
+
+### Features
+
+* **analysis:** record both group means and their difference per comparison ([fe50a5a](https://github.com/Nomos-N4s/nomos/commit/fe50a5a25025b0c14c44e3ade0943817fd8bbc1f))
+* **analysis:** report how many pairs the Wilcoxon test used ([2f68f8e](https://github.com/Nomos-N4s/nomos/commit/2f68f8e417dcda87ef4a9473b0392be573720bef))
+* **analysis:** run Wilcoxon signed-rank on seed-matched comparisons ([5de2956](https://github.com/Nomos-N4s/nomos/commit/5de2956e3bc015368203610313573514322c9fe3))
+* **experiments:** market the loan with a lowballed assertion in a teaser spike ([8d9d447](https://github.com/Nomos-N4s/nomos/commit/8d9d44760488e2f0a1e656c50cbec640f63026c5))
+* **experiments:** persist the raw counts the published tables quote ([2c0589a](https://github.com/Nomos-N4s/nomos/commit/2c0589a9ddc6844828ffd71ffed256660c9754fe))
+
+
+### Bug Fixes
+
+* **agents:** report an undefined Cohen's d as None, not NaN ([08686d4](https://github.com/Nomos-N4s/nomos/commit/08686d4a5e2e8e62480c9c8490c397cef393d0b1))
+* **analysis:** carry full p-value precision instead of rounding to 4 dp ([c8be120](https://github.com/Nomos-N4s/nomos/commit/c8be12087068d30a25721c7250b01bbc29a60937))
+* **analysis:** drop the d interval when the pooled SD is zero ([cea94a6](https://github.com/Nomos-N4s/nomos/commit/cea94a681e0df10bc3ca8cd51a6d25b2b140b55b))
+* **analysis:** mark a zero-pooled-variance gap undefined, not negligible ([c85d5d9](https://github.com/Nomos-N4s/nomos/commit/c85d5d9a89e3e60e3f40ecb7d7a5fe75d5b6598a))
+* **analysis:** require a positive baseline before flagging a reward spike ([70d513c](https://github.com/Nomos-N4s/nomos/commit/70d513cc06a7b6d98ffe0a24dd8782845efbd8f6)), closes [#304](https://github.com/Nomos-N4s/nomos/issues/304)
+* **analysis:** stop publishing a 6863-point gap as a negligible effect ([85d5a13](https://github.com/Nomos-N4s/nomos/commit/85d5a137e5c61e84e78f640eaff90f171396c7fe))
+* **analysis:** take the cumulative maximum in the Holm step-down ([40fea9d](https://github.com/Nomos-N4s/nomos/commit/40fea9d398f1b0d55ccd7bd9c49ed17878f40aad))
+* **benchmarks:** address the adversarial-review findings on [#303](https://github.com/Nomos-N4s/nomos/issues/303) ([490c0ab](https://github.com/Nomos-N4s/nomos/commit/490c0abdb1df98cdbee1a33f5e95acd41687460f))
+* **benchmarks:** emit per-step reward and violations in step_records ([bd15cc9](https://github.com/Nomos-N4s/nomos/commit/bd15cc97b79defb87b5e70d64327266fdb02d50c)), closes [#304](https://github.com/Nomos-N4s/nomos/issues/304)
+* **benchmarks:** feed the reward-hacking detector per-step records ([b2891b1](https://github.com/Nomos-N4s/nomos/commit/b2891b19844a370f8ef8af30739bd58544628c11))
+* **benchmarks:** hand baselines the real agenda, cycle deadlock recovery, add the teaser spike ([34e92cb](https://github.com/Nomos-N4s/nomos/commit/34e92cb4cd454c760f900a0597dc12832527f223))
+* **benchmarks:** hand every baseline the agenda the scenario computed ([16bb491](https://github.com/Nomos-N4s/nomos/commit/16bb491e926897e3c429790d75ee054d2a574083))
+* **benchmarks:** plot the reward curve from the cumulative step record ([7f962d7](https://github.com/Nomos-N4s/nomos/commit/7f962d75f30f171b2c6ca8670296749362f0b4fd)), closes [#304](https://github.com/Nomos-N4s/nomos/issues/304)
+* **contracts:** refuse inverted and flat threshold pairs at construction ([ac8abe8](https://github.com/Nomos-N4s/nomos/commit/ac8abe82177a37ca95c258aa5e9505d9293ca983))
+* **dashboard:** render effect-size p-values without flattening them to zero ([dffb0b3](https://github.com/Nomos-N4s/nomos/commit/dffb0b39fefa362d431fcae5252eba5737ef4f51))
+* **docs:** make the reproducibility surface state what the repository holds ([c1698be](https://github.com/Nomos-N4s/nomos/commit/c1698be7a95e6146a927652cd8c373bd5b98f8e9))
+* **experiments:** let DeadlockMaze recover into the next cycle ([c34a80d](https://github.com/Nomos-N4s/nomos/commit/c34a80d2a267e0d34e67131c8a07c32651d8603a))
+* **identity:** address the adversarial-review findings on [#306](https://github.com/Nomos-N4s/nomos/issues/306) ([888bb8d](https://github.com/Nomos-N4s/nomos/commit/888bb8d03ac209eece7e1e48580ba877ef8c2ab0))
+* **identity:** enforce the tier bar in apply_modification ([2a4a947](https://github.com/Nomos-N4s/nomos/commit/2a4a947af5cdf733d6d6eb64a162f4e637b1154c))
+* **prove:** enforce the invariants P6 and P10 certify ([fbea257](https://github.com/Nomos-N4s/nomos/commit/fbea25785a16700bce950dc3cf85a32e02e24275))
+* **prove:** make P6 and P10 exercise the enforcement they certify ([c356322](https://github.com/Nomos-N4s/nomos/commit/c3563224ab94db2f5dae59ef72016faa3eac18de))
+* **runner:** export the cumulative totals alongside the per-step ones ([b265407](https://github.com/Nomos-N4s/nomos/commit/b265407defc198b684d9f3a13c3f20f13379037d)), closes [#304](https://github.com/Nomos-N4s/nomos/issues/304)
+* **tee:** address the adversarial-review findings on [#311](https://github.com/Nomos-N4s/nomos/issues/311) ([b816e70](https://github.com/Nomos-N4s/nomos/commit/b816e705f45a0c6f0904da23a231946e15934b5d))
+* **tee:** describe what the simulation does, and measure the code, not a nonce ([30110fe](https://github.com/Nomos-N4s/nomos/commit/30110fe08d3a8006283d80ffdaa9345eea5d4f9a))
+* **tee:** describe what the simulation does, and measure the code, not a nonce ([af60445](https://github.com/Nomos-N4s/nomos/commit/af60445da797f724b7cee4992a8afeeb3a959f91))
+
+
+### Documentation
+
+* **analysis:** correct the GridWorld delayed-penalty offset to two steps ([864c4cc](https://github.com/Nomos-N4s/nomos/commit/864c4ccffa5a172e0dedb616d933d21e0f44ef34))
+* **analysis:** correct the Wilcoxon docstrings ([c0e142c](https://github.com/Nomos-N4s/nomos/commit/c0e142cbab165c1605a3c9196bba09bc9e93962f))
+* **analysis:** record what the positive-baseline gate suppresses ([874b541](https://github.com/Nomos-N4s/nomos/commit/874b541d57ecbcf65364274308fe6a54afb31df1))
+* **benchmarks:** describe what a statistical record actually reports ([1261964](https://github.com/Nomos-N4s/nomos/commit/12619646dcff46a930659338859f9c0026442881))
+* **benchmarks:** republish the cells [#303](https://github.com/Nomos-N4s/nomos/issues/303) re-measures and say where the filter stands ([af5bd31](https://github.com/Nomos-N4s/nomos/commit/af5bd31b2895ccb6c77b52376500f1bde4b808f8))
+* **benchmarks:** scope the no-rounding claim to p-values ([ceb4d6c](https://github.com/Nomos-N4s/nomos/commit/ceb4d6ce1d0753404290dd2947ab86225b104ff1))
+* **benchmarks:** scope the undefined-d claim to differing constants ([250bf27](https://github.com/Nomos-N4s/nomos/commit/250bf27d53df40e3246aeb30cce77bd84b587453))
+* **benchmarks:** state what the Wilcoxon p-value is computed from ([5435ef0](https://github.com/Nomos-N4s/nomos/commit/5435ef0485227b334d0c3a6ce7f6356b529606c1))
+* **book:** correct the reward-hacking row of the analysis plan ([9390e6c](https://github.com/Nomos-N4s/nomos/commit/9390e6cf55b6c872b9f7acdf4c5708a7e122b364)), closes [#304](https://github.com/Nomos-N4s/nomos/issues/304)
+* **book:** label the TEE throughput figures as the estimates they are ([1c17e53](https://github.com/Nomos-N4s/nomos/commit/1c17e53b3df2c04b0a7adfd87a624c1b79bd907d))
+* **book:** label the TEE throughput figures as the estimates they are ([9559e9a](https://github.com/Nomos-N4s/nomos/commit/9559e9afb108c666c045e20339190770068c9e9b)), closes [#310](https://github.com/Nomos-N4s/nomos/issues/310)
+* **book:** quantify the detections the amended rule drops ([d4899fe](https://github.com/Nomos-N4s/nomos/commit/d4899fec1755c5fd47ccf600067ba706aa2a261d))
+* **book:** re-measure the D.5 reward-hacking split on the amended suite ([2007f39](https://github.com/Nomos-N4s/nomos/commit/2007f399175e70e1874797ae8f87986176d1669e))
+* **book:** restate the D.5 analysis plan around the corrected statistics ([65c51ed](https://github.com/Nomos-N4s/nomos/commit/65c51edd14df2e22af92ea4451177622aead8297))
+* **book:** restore the pre-registered reward-hacking row ([23a7f80](https://github.com/Nomos-N4s/nomos/commit/23a7f801cf7c90d8ba0e6d01da42ef58358b9ed0))
+* **book:** separate the [#304](https://github.com/Nomos-N4s/nomos/issues/304) bug fix from the [#304](https://github.com/Nomos-N4s/nomos/issues/304) amendment ([dd759d8](https://github.com/Nomos-N4s/nomos/commit/dd759d80cc9af9f6a94c2dbfce442b5709cff7db))
+* publish the implementation size the tree actually has ([51e5fa2](https://github.com/Nomos-N4s/nomos/commit/51e5fa2ff005f17268be8c7ea504599c781071b6))
+* publish the implementation size the tree actually has ([7334088](https://github.com/Nomos-N4s/nomos/commit/73340881258d2fefca2af4c1da5862575e3c0e8e)), closes [#309](https://github.com/Nomos-N4s/nomos/issues/309)
+* **reproducibility:** address the adversarial-review findings on [#308](https://github.com/Nomos-N4s/nomos/issues/308) ([098dd51](https://github.com/Nomos-N4s/nomos/commit/098dd51bee13d07ace97958611c502ef416049c6))
+* **reproducibility:** stop asserting artifacts the repository does not hold ([974c02a](https://github.com/Nomos-N4s/nomos/commit/974c02aceba7b7d5fe2aa405ddb75ea2537e2f61))
+
+## [1.3.0](https://github.com/Nomos-N4s/nomos/compare/v1.2.1...v1.3.0) (2026-08-22)
+
+
+### Features
+
+* **experiments:** declare whether a scenario draws on the seed ([ec2c9fc](https://github.com/Nomos-N4s/nomos/commit/ec2c9fc1888f77a22c9799a15f8c282bd2cf5dab))
+* **prove:** map each prediction to its Lean counterpart ([480bac2](https://github.com/Nomos-N4s/nomos/commit/480bac2ed1713b7295fb45711c500c92c1e62b0f))
+* **prove:** report Lean coverage alongside the prediction results ([add3774](https://github.com/Nomos-N4s/nomos/commit/add3774f9fae74eed09eac5e662f2a6ac6d11176))
+
+
+### Bug Fixes
+
+* **agents:** declare that GridWorldLLM draws its grid from the seed ([7581703](https://github.com/Nomos-N4s/nomos/commit/758170355a43822cb7140aad7c9568e030825427))
+* **benchmarks:** give the loop seed to the scenario, not just the metadata ([bb98d11](https://github.com/Nomos-N4s/nomos/commit/bb98d1114d199eb7c05c599cffb5e35d28dc0d38))
+* **benchmarks:** give the loop seed to the scenarios, and say which ones use it ([294c77c](https://github.com/Nomos-N4s/nomos/commit/294c77cfbaed88b938c83dac399f7505846b000b))
+* **dashboard:** say the prediction counts are Python test asserts ([fc6b8fb](https://github.com/Nomos-N4s/nomos/commit/fc6b8fbf3a0e159493c1bd6519ad56c9211e5d99))
+* **prove:** correct P10's false claim that the Python has no quorum ([0656a56](https://github.com/Nomos-N4s/nomos/commit/0656a56c081e378917bf880eebe63fb1a0f2f4e2))
+* **prove:** label the prove banner as Python prediction tests ([d8275ec](https://github.com/Nomos-N4s/nomos/commit/d8275ec7ceab0dba53444ea93483f51cf4bb3bbb))
+* **prove:** stop P03's note reading as the corpus's whole vote result ([ee0dfda](https://github.com/Nomos-N4s/nomos/commit/ee0dfdaf2848d9e6702696a0ae5ee3a159f86ab1))
+
+
+### Documentation
+
+* **agents:** refresh the GridWorld benchmark line from the fixed harness ([eef4388](https://github.com/Nomos-N4s/nomos/commit/eef438818684e08999d42c98f1ff7e71ddfd1886))
+* **book:** correct GridWorld's grid size in the scenario diagram ([d6eae72](https://github.com/Nomos-N4s/nomos/commit/d6eae72002c42479c5c5887ae0da3a5127284892))
+* **book:** correct the seed protocol in Appendix D ([872868d](https://github.com/Nomos-N4s/nomos/commit/872868d700d18239c59201a46940cc5f0c67a5d8))
+* **book:** count the coverage map in the shared-identifier bullet ([ab8bf7a](https://github.com/Nomos-N4s/nomos/commit/ab8bf7a71d5a830a085cd42dc1b5c307996b7bfa))
+* **book:** drop the guard counts this branch made stale ([850ee07](https://github.com/Nomos-N4s/nomos/commit/850ee0754e4670c7a55cce067e87148e5c1ed93b))
+* **book:** name the coverage kind check in the guard list ([7b4b2da](https://github.com/Nomos-N4s/nomos/commit/7b4b2dadc48c9af32c368f0298ab3fdd5fd895aa))
+* **book:** publish the prediction-to-theorem coverage table ([26bda80](https://github.com/Nomos-N4s/nomos/commit/26bda8035ab6d1a57145cd2b1fe22f466f9f8dc0))
+* **book:** refresh the benchmark numbers the seed fix invalidates ([6d99982](https://github.com/Nomos-N4s/nomos/commit/6d9998279dfc62ec52004e5d050ef3d835b735a6))
+* **book:** refresh the GridWorld figures this branch invalidated ([17c35af](https://github.com/Nomos-N4s/nomos/commit/17c35af8cec8fa2a742b37d895acbfeddd4deeb7))
+* **book:** say what is actually unique to GridWorld in the diagram note ([3bb5800](https://github.com/Nomos-N4s/nomos/commit/3bb58006e8c26f930b6a78d99a417167d54da483))
+* **book:** scope the deterministic-repeat claim to the arm, not the scenario ([efa8b1b](https://github.com/Nomos-N4s/nomos/commit/efa8b1bc19703582e4bb528be0640e16901f49e2))
+* **book:** scope the NumPy claim to the benchmark package ([4cf0291](https://github.com/Nomos-N4s/nomos/commit/4cf0291d819c5688cced8fb9a5578df5b4878a4f))
+* **experiments:** say what SEEDED=False rules out, and what it does not ([ec0b4f4](https://github.com/Nomos-N4s/nomos/commit/ec0b4f4d502465bcceae47f07bb81b2db3c50404))
+* **readme:** say the 12/12 counts Python tests, not Lean results ([87aa7fc](https://github.com/Nomos-N4s/nomos/commit/87aa7fccb73553b5f3bc00152cfa06ab4fb3f41a))
+* **readme:** say the twenty seeds are twenty runs, not twenty samples ([c318bbd](https://github.com/Nomos-N4s/nomos/commit/c318bbd9ca91d3c2c323df7ff95488dabafa5b31))
+* **reproducibility:** name the two cells the pre-fix seed bug did not spoil ([efe07ce](https://github.com/Nomos-N4s/nomos/commit/efe07ce8e6fa0e70f2c0d259e5a70a1a2d1b5779))
+* **reproducibility:** publish the bootstrap intervals that mean something ([a1e5b90](https://github.com/Nomos-N4s/nomos/commit/a1e5b9086a62539fb0b102b38020de7350f84164))
+* **reproducibility:** quote the prove output the runner really prints ([d428f05](https://github.com/Nomos-N4s/nomos/commit/d428f05267ad726c7bdcc578540f6a5d467bfdc5))
+* **reproducibility:** say which benchmark cells the seed reaches ([3c4a09b](https://github.com/Nomos-N4s/nomos/commit/3c4a09bfc6e4c44712414a25dc5f1bceacb56f7c))
+* **responses:** re-measure the two failure-mode rows that were stale ([b933893](https://github.com/Nomos-N4s/nomos/commit/b93389346341c73ea2610ecffa92b6ed6b96355a))
+* **responses:** reference REPRODUCIBILITY.md the way the docs build allows ([00b22ad](https://github.com/Nomos-N4s/nomos/commit/00b22ad0b7e6e44816288e8e74d2cb7328ee9b42))
+* separate the Python prediction tests from the Lean theorems ([9221684](https://github.com/Nomos-N4s/nomos/commit/9221684fecdbf49cc78a62b2d9c4b3e2c3b950db))
+
 ## [1.2.1](https://github.com/Nomos-N4s/nomos/compare/v1.2.0...v1.2.1) (2026-08-19)
 
 

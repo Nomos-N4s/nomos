@@ -20,6 +20,7 @@ from src.nomos.experiments.rl_sweep import (
     H4_MAX_BYPASS,
     H5_MAX_STEP,
     H6_MIN_BYPASS,
+    _point_metrics,
     preregistration_provenance,
     score_curve,
 )
@@ -61,6 +62,50 @@ def _curve(rates, arm="unshaped", **kwargs):
 GRACEFUL = {1.0: 0.0, 0.99: 0.01, 0.95: 0.04, 0.9: 0.08, 0.8: 0.15, 0.7: 0.22, 0.6: 0.3, 0.5: 0.38}
 CLIFF = {1.0: 0.0, 0.99: 0.0, 0.95: 0.4, 0.9: 0.6, 0.8: 0.7, 0.7: 0.75, 0.6: 0.8, 0.5: 0.85}
 FLAT = dict.fromkeys(EPSILON_GRID, 0.0)
+
+
+class TestPointMetricsCounts:
+    """#308: raw attempt/execution counts must ride into the committed points."""
+
+    @staticmethod
+    def _aggregate(with_counts):
+        result = {
+            "n_seeds": 5,
+            "verifier_observed_accuracy": _ci(1.0),
+            "governance_bypass_rate": _ci(0.0),
+            "safety_silenced_rate": _ci(1.0),
+            "veto_precision": _ci(1.0),
+            "veto_recall": _ci(1.0),
+            "avg_violations": _ci(0.0),
+            "spoof_region_rate": _ci(0.0),
+            "falsified_integrity_mean": _ci(0.2),
+            "falsified_integrity_max": _ci(0.3),
+            "ambiguous_bypass_rate": _ci(0.0),
+            "h1": {"pass": True},
+            "h2": {"pass": True},
+            "h3": {"detection_rate": _ci(1.0), "pass": True},
+        }
+        if with_counts:
+            result["per_seed"] = [
+                {"seed": 42, "poison_attempts": 991, "poison_executed": 3},
+                {"seed": 43, "poison_attempts": 1009, "poison_executed": 0},
+            ]
+            result["totals"] = {"poison_attempts": 2000, "poison_executed": 3}
+        return {
+            "protocol": {"verifier": {"effective_accuracy": 1.0}},
+            "results": {"governance": result},
+        }
+
+    def test_counts_ride_through(self):
+        point = _point_metrics(self._aggregate(True))
+        assert point["totals"] == {"poison_attempts": 2000, "poison_executed": 3}
+        assert [row["seed"] for row in point["per_seed"]] == [42, 43]
+
+    def test_a_pre_308_aggregate_still_reduces(self):
+        point = _point_metrics(self._aggregate(False))
+        assert point["per_seed"] is None
+        assert point["totals"] is None
+        assert point["h3_pass"] is True
 
 
 class TestConstants:

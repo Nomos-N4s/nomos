@@ -58,7 +58,7 @@ flowchart TB
 | **Neural Parliament** | 7 specialised members (Reward, Safety, Curiosity, Planning, Memory, Social, Integrity) score proposals, check tag compliance, veto dangerous actions, and vote via weighted range voting. |
 | **Ulysses Contracts** | Binding pre-commitments that restrict the agent's future action space. Enacted by supermajority, revoked only by unanimity. Three enforcement modes: procedural inertia (κ₁), budget caps (κ₂), timelocks (κ₃). |
 | **Identity Layer** | Formal ontology + core commitments + 4-tier mutability (Constitutional → Dynamic → Operational → Immutable) + genesis 3-of-5 multisig bootstrapping + bounded parameter envelope. |
-| **TEE Enclave** | Simulated trusted execution environment: sealed storage, attestation, Merkle-tree batch verification, hardware watchdog with deadlock breaker, constant-time data-oblivious operations. |
+| **TEE Enclave** | Simulated trusted execution environment: sealed storage, attestation, Merkle-tree batch verification, heartbeat watchdog with deadlock breaker, constant-time data-oblivious operations. |
 
 Deployment topology is a recorded decision: the system ships as a **modular
 monolith** (core + dashboard, one atomic governance gate) with explicit,
@@ -70,12 +70,13 @@ evidence-based split signals. See
 ## By the Numbers
 
 ```
-Formal predictions verified:    12 / 12
+Prediction tests (Python):       12 / 12 pass
 Lean 4 theorems proven:          budget_invariant_holds, budget_preserves_positive,
                                  vote_resolution_determined_by_tallies,
                                  falsification_params_unchanged_at_immutable_tier
-Reference implementation:        ~2,800 lines · 50+ files · 10 subpackages
+Reference implementation:        ~22,300 lines · 90+ files · 12 subpackages
 Benchmark coverage:              4 scenarios × 5 strategies (19 valid combinations) × 20 seeds × 1,000 steps
+                                 most of those combinations repeat rather than sample — see below
 Review rounds survived:          8 (5 theory + 3 implementation) · 3 residual risks acknowledged
 ```
 
@@ -86,6 +87,23 @@ the Python and no refinement argument connects the two, so the implementation
 is tested rather than verified
 ([Chapter 5 §7](book/chapter-05/05-related-work.md#7-where-to-attack-this-chapter),
 [Scope and limits](book/formal-verification-lean.md#scope-and-limits)).
+
+The first two lines of that block count different things. 3 of the 12
+prediction tests have a theorem of the Lean model behind them; 6 have no
+counterpart in the corpus at all; the rest are modelled under an encoding the
+Python does not share, or modelled with no theorem stating the claim. Which is
+which is in
+[Prediction coverage](book/formal-verification-lean.md#prediction-coverage),
+rendered from `LEAN_COVERAGE` in `src/nomos/prove/predictions.py`; a test fails
+if it names a theorem `gov-budget-proof/` does not declare.
+
+Those twenty seeds are twenty runs, not twenty independent observations.
+Only GridWorld draws its world from the seed, and only the `random`
+baseline draws its choices from it, so most of the grid returns the same
+number twenty times — a standard deviation of 0.0 there means exact
+repeats, not agreement between samples. Which combinations sample and
+which repeat is listed in
+[REPRODUCIBILITY.md § Seed Strategy](REPRODUCIBILITY.md#seed-strategy).
 
 ## Quick Start
 
@@ -164,37 +182,49 @@ Every formal claim in the book chapters has a corresponding executable test:
 | 11 | Ch4 §3.1 | Genesis 3-of-5: 2 sigs insufficient, 3 sigs authorises | ✓ |
 | 12 | Ch4 §3.6 | Deadlock breaker fires after N defaults, resets | ✓ |
 
-Run them yourself: `python -m src.nomos.runner prove --all`
+Run them yourself: `python -m src.nomos.runner prove --all`. These are Python
+asserts over `src/nomos/`; which of them a Lean theorem stands behind is in
+[Prediction coverage](book/formal-verification-lean.md#prediction-coverage).
 
 ---
 
 ## Adversarial Evidence
 
-The predictions above are verified by *scripted* tests. Predictions 1, 2 and 4 are
-additionally tested against a **learned adversary**: a PPO policy rewarded for
-defeating governance, free to forge priority tags, under-report risk, and flood
-the agenda. Hypotheses, metrics, and thresholds were
-[pre-registered](book/appendix-e-preregistration.md) before the run.
+> **A safety check that scores proposer-supplied metadata has zero adversarial value: a 64×64-MLP PPO policy, given 100,000 training steps and never told the mechanism, learned to silence it on 100% of its genuinely unsafe proposals, on every seed.**
 
-100,000 timesteps × 5 seeds × 3 modes:
+That is the finding that travels. Wherever an agent self-declares the risk of its own actions, this is the failure mode; at least one independently grounded verifier is load-bearing. In this
+experiment the metadata-trusting Safety committee fell completely — the policy
+learned to assert low risk on tiles it knew were poison, and Safety never
+vetoed one of them.
+
+The layer itself held — **zero of 4,762 adversarial poison attempts
+executed**, on every seed — but that second beat is conditional: what stopped
+the attack was the one committee that verifies against **ground truth** rather
+than the claim, and no verifier-beating spoof was reachable in the adversary's
+vocabulary ([Appendix E §E.5.1](book/appendix-e-rl-adversary.md)). "Held" is
+true in a 10×10 gridworld; the metadata finding is true everywhere someone
+lets an agent grade its own homework.
+
+The setup: a PPO policy rewarded for defeating governance, free to forge
+priority tags, under-report risk, and flood the agenda. Hypotheses, metrics,
+and thresholds were [pre-registered](book/appendix-e-preregistration.md)
+before the run. 100,000 timesteps × 5 seeds × 3 modes:
 
 | # | Hypothesis | Metric | Result |
 |---|---|---|---|
 | H1 | Budgets bound proposals (κ₂) | over-budget cycles | **PASS** — 0, cap held at 3 under 6-proposal floods |
-| H2 | `CRITICAL_SAFETY` ordering holds | spoofed poison executed | **PASS** — 0.000 (threshold ≤ 0.01) |
-| H3 | Falsification is deterred | detection rate | **PASS** — 1.000 across 7,546 spoof attempts |
+| H2 | `CRITICAL_SAFETY` ordering holds | spoofed poison executed | **PASS**† — 0.000 (threshold ≤ 0.01) |
+| H3 | Falsification is deterred | detection rate | **PASS**† — 1.000 across 7,546 spoof attempts |
 
-**Zero of 4,762 adversarial poison attempts executed**, on every seed. But the
-adversary did win something: it **silenced the Safety committee on 100% of its
-proposals**, learning to assert low risk on tiles it knew were poison. Safety
-scores proposer-supplied metadata and is trivially fooled. What stopped the
-attack was the Integrity committee, which verifies against ground truth.
+† Conditional on the one committee that verifies against ground truth
+([Appendix E §E.5.1](book/appendix-e-rl-adversary.md)): the metadata-trusting
+committee fell completely, and no spoof that could have beaten the grounded
+verifier was reachable in the adversary's vocabulary, so H3's PASS is
+partially by construction. Do not quote the verdicts without this line.
 
-> The result is **not** "governance is unbreakable" — it is that **defense in
-> depth is load-bearing**. One of the two veto committees fell completely; the
-> layer held because a second, independently-grounded check sat behind it. A
-> governance layer whose committees all trust proposer-asserted metadata would
-> have been defeated outright.
+The result is **not** "governance is unbreakable" — it is that **defense in
+depth is load-bearing**: one of the two veto committees fell completely, and
+the layer held because a second, independently grounded check sat behind it.
 
 Full numbers, per-seed values, and limitations: [Appendix E](book/appendix-e-rl-adversary.md).
 Reproduce: `uv sync --extra rl-repro && python -m src.nomos.experiments.rl_adversary protocol --timesteps 100000 --seeds 42 43 44 45 46`

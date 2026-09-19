@@ -127,6 +127,15 @@ def _resolve_csv_path(csv_arg: str | None) -> str | None:
 
 
 def _export_csv(reports: list[ExperimentReport], path: str):
+    """Write one row per benchmark step to ``path``.
+
+    ``reward``, ``violations`` and ``deadlocks`` are the values measured
+    at that step; ``cumulative_reward``, ``cumulative_violations`` and
+    ``cumulative_deadlocks`` are the run's running totals up to and
+    including it. Before #304 the three unprefixed columns carried the
+    running totals, so a CSV exported by an earlier version reads as a
+    cumulative series under the per-step names.
+    """
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
@@ -140,6 +149,9 @@ def _export_csv(reports: list[ExperimentReport], path: str):
                 "reward",
                 "violations",
                 "deadlocks",
+                "cumulative_reward",
+                "cumulative_violations",
+                "cumulative_deadlocks",
                 "runtime_ms",
             ]
         )
@@ -156,6 +168,9 @@ def _export_csv(reports: list[ExperimentReport], path: str):
                         row.get("reward", ""),
                         row.get("violations", ""),
                         row.get("deadlocks", ""),
+                        row.get("cumulative_reward", ""),
+                        row.get("cumulative_violations", ""),
+                        row.get("cumulative_deadlocks", ""),
                         row.get("runtime_ms", ""),
                     ]
                 )

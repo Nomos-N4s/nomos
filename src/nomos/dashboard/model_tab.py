@@ -61,7 +61,8 @@ def _generate_model_summary(
             f"The formal model currently contains {entity_count} ontology entities, "
             f"{commitment_count} core commitments, and {parameter_count} parameters. "
             f"The identity vector is {vector_status}. "
-            f"Formal verification has passed {passed}/{len(prediction_results)} predictions."
+            f"{passed}/{len(prediction_results)} predictions pass their Python test "
+            f"asserts; no Lean proof is checked."
         )
 
     except Exception:
@@ -170,13 +171,13 @@ def render_model_tab(backend: OntologyBackend):
 
     with col_prove:
         st.subheader("Formal Predictions")
-        st.caption("12 predictions from Chapters 2-4")
+        st.caption("12 predictions from Chapters 2-4, checked by Python asserts")
         results = run_all_safe()
         passed = sum(1 for r in results if r.passed)
         st.metric(
-            f"{passed}/12 PASS",
+            f"{passed}/12 tests pass",
             f"{passed * 100 // 12}%",
-            delta=f"{12 - passed} remaining" if passed < 12 else "All verified",
+            delta=f"{12 - passed} remaining" if passed < 12 else "All passing",
         )
         for r in results:
             status = "✅" if r.passed else "❌"

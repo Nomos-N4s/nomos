@@ -156,8 +156,8 @@ class UlyssesContract:
 |-------|------|-------------|-----------|
 | `contract_id` | `str` | Unique | Contract identifier |
 | `restricted_indices` | `Set[int]` | Non-empty | Action indices the contract constrains |
-| `enactment_threshold` | `float` | `[0, 1]` | Supermajority required to enact |
-| `revocation_threshold` | `float` | `[0, 1]` | Supermajority required to revoke |
+| `enactment_threshold` | `float` | `[0, 1]`; `< revocation_threshold` | Supermajority required to enact |
+| `revocation_threshold` | `float` | `[0, 1]`; `> enactment_threshold` | Supermajority required to revoke |
 | `is_active` | `bool` | — | Whether the contract is currently enforced |
 
 **Lifecycle:** `Created -> Enacted (is_active=True) -> Expired/Revoked -> Removed`

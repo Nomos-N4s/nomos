@@ -49,6 +49,11 @@ class GridWorld(ExperimentScenario):
     #: :class:`~.gym_env.GovernanceGridWorld` with ``static_mask=True``.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
 
+    #: The grid is drawn from the seed: :meth:`reset` rolls walls, poison and
+    #: apples per tile, so each seed is a different world. GridWorld is the
+    #: only scenario in the benchmark suite whose environment varies this way.
+    SEEDED: ClassVar[bool] = True
+
     def __init__(
         self, speaker: SpeakerStateMachine, size: int = 6, seed: int = 42, poison_ratio: float = 0.3
     ):
@@ -114,7 +119,9 @@ class GridWorld(ExperimentScenario):
                 )
         return proposals
 
-    def _run_step(self, state, *, decision_class="routine", external_decision=None):
+    def _run_step(
+        self, state, *, decision_class="routine", external_decision=None, external_decider=None
+    ):
         """Execute one step: propose moves, decide, apply reward and penalties.
 
         Poison apples give +5 immediate but create a 3-step timer that
@@ -123,10 +130,9 @@ class GridWorld(ExperimentScenario):
         """
         x, y = self._pos
         proposals = self.get_proposals(state)
-        if external_decision is not None:
-            decision = external_decision
-        else:
-            decision = self.speaker.run_governance_cycle(state, proposals, decision_class)
+        decision = self._resolve_decision(
+            state, proposals, decision_class, external_decision, external_decider
+        )
         reward = 0.0
         violations = 0
 

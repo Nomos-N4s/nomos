@@ -358,18 +358,32 @@ class TestPropertyMaskMerger:
 
 
 class TestPropertyEnforcementMonotonicity:
+    """Since #306 a contract refuses ``revocation <= enactment`` at
+    construction, so the drawn revocation threshold must be strictly
+    positive and the enactment threshold sits at 0.0: the properties under
+    test are about enforcement against the revocation bar alone."""
+
     @given(vote=VOTE_FRACTION, threshold=THRESHOLD)
     def test_inertia_matches_threshold_logic(self, vote, threshold):
+        assume(threshold > 0.0)
         contract = UlyssesContract(
-            contract_id="test", restricted_indices={1}, revocation_threshold=threshold,
+            contract_id="test", restricted_indices={1},
+            enactment_threshold=0.0, revocation_threshold=threshold,
         )
         result = enforce_procedural_inertia(contract, vote)
         assert result.compliant == (vote < threshold)
 
     @given(vote=VOTE_FRACTION, t1=THRESHOLD, t2=THRESHOLD)
     def test_monotonic_in_revocation_threshold(self, vote, t1, t2):
-        c1 = UlyssesContract(contract_id="a", restricted_indices={1}, revocation_threshold=t1)
-        c2 = UlyssesContract(contract_id="b", restricted_indices={1}, revocation_threshold=t2)
+        assume(t1 > 0.0 and t2 > 0.0)
+        c1 = UlyssesContract(
+            contract_id="a", restricted_indices={1},
+            enactment_threshold=0.0, revocation_threshold=t1,
+        )
+        c2 = UlyssesContract(
+            contract_id="b", restricted_indices={1},
+            enactment_threshold=0.0, revocation_threshold=t2,
+        )
         r1 = enforce_procedural_inertia(c1, vote)
         r2 = enforce_procedural_inertia(c2, vote)
         if t1 <= t2 and r1.compliant:
@@ -377,14 +391,25 @@ class TestPropertyEnforcementMonotonicity:
 
     @given(vote=VOTE_FRACTION, threshold=THRESHOLD)
     def test_stacked_short_circuits_on_inertia_failure(self, vote, threshold):
+        assume(threshold > 0.0)
         contract = UlyssesContract(
-            contract_id="test", restricted_indices={1}, revocation_threshold=threshold,
+            contract_id="test", restricted_indices={1},
+            enactment_threshold=0.0, revocation_threshold=threshold,
         )
         inertia = enforce_procedural_inertia(contract, vote)
         stacked = stacked_enforcement(contract, vote, [], 0, None, 0)
         if not inertia.compliant:
             assert not stacked.compliant
             assert stacked.reason == inertia.reason
+
+    @given(enactment=THRESHOLD, revocation=THRESHOLD)
+    def test_inverted_or_flat_pairs_never_construct(self, enactment, revocation):
+        assume(revocation <= enactment)
+        with pytest.raises(ValueError):
+            UlyssesContract(
+                contract_id="test", restricted_indices={1},
+                enactment_threshold=enactment, revocation_threshold=revocation,
+            )
 
 
 class TestPropertyTimelockSemantics:

@@ -1,7 +1,7 @@
 {
   "preregistration": {
     "path": "book/appendix-e-preregistration.md",
-    "sha256": "82189294404b5a2687c5f86f95a08b7ef60269d6440406f742d8918daea7ecb5",
+    "sha256": "72d40083fe4ab6c4bd4fd10996c222c3aad9a4dc8d5090e135ac002338d30fa1",
     "sha256_encoding": "newline-normalised (LF); equals the git blob digest",
     "commit": "5c66bc7d23d73ba214f71221d60dfcd74d32599a",
     "committed_at": "2026-08-13T18:25:41+02:00",
@@ -18,7 +18,14 @@
         "committed_at": "2026-08-13T12:14:29+02:00",
         "commit_note": "rebased into 5c66bc7 (identical blob e7270a54); not reachable from main"
       }
-    }
+    },
+    "provenance_only_edits": [
+      {
+        "issue": "https://github.com/Nomos-N4s/nomos/issues/277",
+        "reason": "Pinned the introducing commit (15fd544), the first-results commit (19d11ce), and an ancestry verification one-liner into the 'Provenance of this document' section, so ordering is checkable in one step. Provenance-only: the edit touches no hypothesis, threshold, or metric definition - git diff between the previous and current revisions of this file changes only that section.",
+        "superseded_sha256": "82189294404b5a2687c5f86f95a08b7ef60269d6440406f742d8918daea7ecb5"
+      }
+    ]
   },
   "sweep": {
     "epsilons": [

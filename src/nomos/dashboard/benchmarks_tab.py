@@ -229,6 +229,20 @@ def _render_benchmark_comparison(rows: list[dict]):
         use_container_width=True,
         hide_index=True,
     )
+    _P_VALUE_COLUMNS = ("p_value_raw", "p_value_corrected", "p_value_holm", "wilcoxon_p")
+
+def _format_effect_size_table(effect_sizes: list[dict]) -> pd.DataFrame:
+    """Build the effect-size display frame without flattening tiny p-values."""
+    df = pd.DataFrame(effect_sizes)
+
+    for column in _P_VALUE_COLUMNS:
+        if column in df.columns:
+            df[column] = df[column].map(
+                lambda v: "" if pd.isna(v) else f"{v:.4g}"
+            )
+
+    return df
+
 
 def render_benchmarks_tab(backend: OntologyBackend | None = None):
     st.header("📊 Benchmark Results")
@@ -411,10 +425,8 @@ def render_benchmarks_tab(backend: OntologyBackend | None = None):
         st.divider()
         st.subheader("Effect Sizes (Cohen's d)")
 
-        es_df = pd.DataFrame(effect_sizes)
-
         st.dataframe(
-            es_df,
+            _format_effect_size_table(effect_sizes),
             use_container_width=True,
             hide_index=True,
         )

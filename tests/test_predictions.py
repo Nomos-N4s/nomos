@@ -1,5 +1,7 @@
 from src.nomos.prove.predictions import (
     ALL_PREDICTIONS,
+    LEAN_COVERAGE,
+    LeanStatus,
     PredictionResult,
     _build_speaker,
     pred_01_budget_enforcement,
@@ -150,6 +152,15 @@ class TestPred06RevocationHarder:
         c = UlyssesContract("t", {7}, 0.66, 1.0)
         assert c.revocation_threshold > c.enactment_threshold
 
+    def test_inverted_pair_raises(self):
+        # The #306 regression: this construction used to succeed, enact, and
+        # mask actions while a 10% vote could dissolve it.
+        import pytest
+
+        from src.nomos.contracts.contract import UlyssesContract
+        with pytest.raises(ValueError):
+            UlyssesContract("inverted", {7}, enactment_threshold=1.0, revocation_threshold=0.1)
+
 
 class TestPred07Timelock:
     def test_timelock_blocks_early_revocation(self):
@@ -188,6 +199,20 @@ class TestPred10Tier4Multisig:
         assert TIER_RULES[MutabilityTier.OPERATIONAL].requires_external_multisig is False
         assert TIER_RULES[MutabilityTier.DYNAMIC].requires_external_multisig is False
 
+    def test_constitutional_refused_without_multisig_and_accepted_with_it(self):
+        # The #306 regression: apply_modification honoured none of the tier
+        # flags, so the refusal below could not happen.
+        from src.nomos.identity.tiers import MutabilityTier, TieredMutability
+        tm = TieredMutability()
+        tm.register_parameter("never_harm_humans", True, MutabilityTier.CONSTITUTIONAL)
+        assert not tm.apply_modification("never_harm_humans", False)
+        assert tm.get_value("never_harm_humans") is True
+        assert tm.apply_modification(
+            "never_harm_humans", False,
+            multisig_signatures=3, parliament_unanimous=True, days_since_proposal=30,
+        )
+        assert tm.get_value("never_harm_humans") is False
+
 
 class TestPred11GenesisMultisig:
     def test_genesis_3_of_5_multisig(self):
@@ -206,3 +231,46 @@ class TestPred12DeadlockBreaker:
         for _ in range(4):
             breaker.record_cycle(decision_produced=False)
             assert not breaker.check()
+
+
+class TestLeanCoverage:
+    """LEAN_COVERAGE is the repo's prediction-to-theorem map.
+
+    Whether the theorem names in it exist is a question about the Lean
+    corpus, so tests/test_lean_claims.py asks it. These tests only hold the
+    map to its own shape.
+    """
+
+    def test_covers_every_prediction_exactly_once(self):
+        ids = [fn().id for fn in ALL_PREDICTIONS]
+        assert sorted(LEAN_COVERAGE) == sorted(ids)
+
+    def test_named_declarations_are_distinct_within_a_row(self):
+        for pid, coverage in LEAN_COVERAGE.items():
+            names = coverage.declarations
+            assert len(set(names)) == len(names), f"P{pid:02d} repeats a declaration: {names}"
+
+    def test_only_uncovered_rows_name_no_declaration(self):
+        for pid, coverage in LEAN_COVERAGE.items():
+            named = bool(coverage.declarations)
+            uncovered = coverage.status is LeanStatus.NO_COUNTERPART
+            assert named is not uncovered, (
+                f"P{pid:02d} is {coverage.status.value} and names {coverage.declarations}: "
+                f"a row with no counterpart must name nothing, and every other "
+                f"status must say which declaration it means"
+            )
+
+    def test_every_row_explains_itself(self):
+        for pid, coverage in LEAN_COVERAGE.items():
+            assert coverage.note.strip(), f"P{pid:02d} has no note saying what the row is worth"
+
+    def test_result_carries_its_coverage_row(self):
+        for fn in ALL_PREDICTIONS:
+            result = fn()
+            assert result.lean is LEAN_COVERAGE[result.id]
+
+    def test_result_outside_the_registry_has_no_row(self):
+        stray = PredictionResult(
+            id=99, chapter="ERR", section="0", description="stray", passed=False, evidence=""
+        )
+        assert stray.lean is None

@@ -9,7 +9,10 @@ Each prediction function:
 
 The predictions are the bridge between formal theory and empirical
 verification — every invariant stated in the book chapters has a
-corresponding test here. Run them with:
+corresponding test here. They are Python asserts over ``src/nomos/``: no
+Lean runs when they do. :data:`LEAN_COVERAGE` records, per prediction, which
+theorem of the Lean corpus in ``gov-budget-proof/`` states the same property
+and which have no counterpart there at all. Run them with:
 
 .. code-block:: bash
 
@@ -76,6 +79,7 @@ corresponding test here. Run them with:
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum
 
 from ..committee.members import (
     ExampleCuriosityMember,
@@ -88,10 +92,237 @@ from ..contracts.contract import ContractState, UlyssesContract
 from ..contracts.enforcement import enforce_timelock
 from ..contracts.merger import apply_restrictions
 from ..identity.keys import GenesisMultisig
-from ..identity.tiers import TIER_RULES, MutabilityTier
+from ..identity.tiers import MutabilityTier, TieredMutability
 from ..models import PriorityTag, Proposal
 from ..speaker import SpeakerStateMachine
 from ..tee.watchdog import DeadlockBreaker
+
+
+class LeanStatus(str, Enum):
+    """What the Lean corpus in ``gov-budget-proof/`` says about a prediction.
+
+    The four values are exhaustive over :data:`LEAN_COVERAGE` and are rendered
+    verbatim in the coverage table of ``book/formal-verification-lean.md``.
+
+    Even :attr:`THEOREM` claims nothing about ``src/nomos/``: the theorem is
+    proved of a Lean model that nothing extracts from the Python, so the two
+    can drift apart without any check noticing. See the scope note in
+    ``book/formal-verification-lean.md``.
+    """
+
+    THEOREM = "proved of the Lean model"
+    DIFFERENT_ENCODING = "modelled under a different encoding"
+    MODELLED_ONLY = "modelled, no theorem"
+    NO_COUNTERPART = "no counterpart"
+
+
+@dataclass(frozen=True)
+class LeanCoverage:
+    """How one prediction relates to the Lean corpus.
+
+    Attributes:
+        status: Which of the four :class:`LeanStatus` cases this row is.
+        declarations: Lean declarations this prediction corresponds to, named
+            exactly as ``gov-budget-proof/`` declares them. For
+            :attr:`LeanStatus.THEOREM` and
+            :attr:`LeanStatus.DIFFERENT_ENCODING` these are theorems; for
+            :attr:`LeanStatus.MODELLED_ONLY` they are the definitions that
+            model the same object without a theorem stating the claim.
+        note: What the correspondence is and is not worth, in prose.
+
+    Editing convention: ``note`` names no Lean declaration that is absent from
+    ``declarations``, because ``declarations`` is the part
+    ``tests/test_lean_claims.py`` checks against the corpus. A name carried
+    only in the prose is a name nothing would catch going stale.
+    """
+
+    status: LeanStatus
+    declarations: tuple[str, ...]
+    note: str
+
+
+LEAN_COVERAGE: dict[int, LeanCoverage] = {
+    1: LeanCoverage(
+        status=LeanStatus.THEOREM,
+        declarations=("budget_invariant_holds", "budget_never_exceeded"),
+        note=(
+            "BudgetEnforcement.lean caps a per-member count the same way "
+            "set_agenda does: processing a cycle never lets a member's used "
+            "count exceed their budget, from any state that already satisfies "
+            "the invariant, and the corollary specialises that to the empty "
+            "initial state this test starts from. The kappa-2 budget is a Nat "
+            "count in the model and an int count in the implementation, so "
+            "this row is not type-mismatched -- only unlinked."
+        ),
+    ),
+    2: LeanCoverage(
+        status=LeanStatus.NO_COUNTERPART,
+        declarations=(),
+        note=(
+            "The corpus has no priority tag and no agenda order: a "
+            "case-insensitive search for 'priority' over gov-budget-proof/ "
+            "matches nothing, and no declaration sorts proposals."
+        ),
+    ),
+    3: LeanCoverage(
+        status=LeanStatus.MODELLED_ONLY,
+        declarations=("weightedSum", "totalWeight", "thresholdOf", "votePasses"),
+        note=(
+            "VoteAndFalsification.lean models the vote itself, and its routine "
+            "threshold of 1/2 is the 0.5 majority_threshold default of "
+            "SpeakerStateMachine. But the equivalence this test asserts -- "
+            "consensus exactly when the weighted average clears the threshold "
+            "-- is that definition rather than a theorem about it. Nothing "
+            "the corpus proves of the vote is that equivalence: its theorems "
+            "there are about the resolution itself, among them that it is "
+            "decidable and total, that it depends only on the tallies, that "
+            "clearing the identity bar clears the lower ones, and that an "
+            "empty ballot never passes."
+        ),
+    ),
+    4: LeanCoverage(
+        status=LeanStatus.THEOREM,
+        declarations=(
+            "budget_halving_formula",
+            "budget_unchanged_below_cutoff",
+            "budget_preserves_positive",
+        ),
+        note=(
+            "The cutoff is 3 falsifications in both models, and the Lean "
+            "theorems pin the new budget at max 1 (old / 2) at or above it and "
+            "at the old value below it -- strictly more than this test "
+            "asserts, which is only that the budget fell. What triggers the "
+            "halving is encoded differently: Lean thresholds a Nat integrity "
+            "score, the Python drives it with a float identity_coherence. The "
+            "budget arithmetic downstream of the trigger is a count on both "
+            "sides."
+        ),
+    ),
+    5: LeanCoverage(
+        status=LeanStatus.NO_COUNTERPART,
+        declarations=(),
+        note=(
+            "No Ulysses contract in the corpus. A case-insensitive search for "
+            "'restrict' over gov-budget-proof/ matches nothing, and no "
+            "declaration models an action set a contract removes members from."
+        ),
+    ),
+    6: LeanCoverage(
+        status=LeanStatus.NO_COUNTERPART,
+        declarations=(),
+        note=(
+            "Nothing models enactment or revocation thresholds: a "
+            "case-insensitive search for 'revocation' over gov-budget-proof/ "
+            "matches nothing. IdentityTiers.lean orders quorum bars across "
+            "tiers, which is a different ordering than revocation above "
+            "enactment within one contract."
+        ),
+    ),
+    7: LeanCoverage(
+        status=LeanStatus.NO_COUNTERPART,
+        declarations=(),
+        note=(
+            "No timelock and no contract state machine: a case-insensitive "
+            "search for 'timelock' over gov-budget-proof/ matches nothing. The "
+            "cooldown in IdentityTiers.lean is a cooling-off bar on identity "
+            "changes, not the kappa-3 unlock cycle this test steps a contract "
+            "through."
+        ),
+    ),
+    8: LeanCoverage(
+        status=LeanStatus.NO_COUNTERPART,
+        declarations=(),
+        note=(
+            "No mask composition in the corpus: a case-insensitive search for "
+            "'mask' over gov-budget-proof/ matches nothing, and no declaration "
+            "takes a difference of two action sets."
+        ),
+    ),
+    9: LeanCoverage(
+        status=LeanStatus.DIFFERENT_ENCODING,
+        declarations=(
+            "acceptable_iff_ge",
+            "below_threshold_rejection_leaves_state",
+            "rejected_action_does_not_mutate_identity",
+        ),
+        note=(
+            "IdentityCoherence.lean gates on a Nat coherence score against a "
+            "threshold of 70 on a 0-100 scale, and proves that a "
+            "below-threshold action leaves identity state untouched. This test "
+            "passes an identity_coherence of 0.1 on a 0.0-1.0 scale and "
+            "asserts a different consequent: that the cycle defaulted, or that "
+            "the integrity member scored below 0.8. Neither the scale nor the "
+            "conclusion is shared."
+        ),
+    ),
+    10: LeanCoverage(
+        status=LeanStatus.DIFFERENT_ENCODING,
+        declarations=(
+            "constitutional_requires_quorum_and_cooldown",
+            "two_of_five_insufficient_for_constitutional",
+            "insufficient_cooldown_insufficient_for_constitutional",
+            "constitutional_change_meets_genesis_bar",
+        ),
+        note=(
+            "Since #306 this test drives apply_modification against the same "
+            "numeric bar the theorems state: it asserts a CONSTITUTIONAL "
+            "change is refused bare, refused at 2-of-5 signatures (the "
+            "two_of_five theorem's case), refused on day 29 (the "
+            "insufficient_cooldown theorem's case), and accepted at 3 "
+            "signatures with the 30-day cooling-off "
+            "(constitutional_requires_quorum_and_cooldown's bar). The "
+            "encodings still differ: the Lean Change record carries only a "
+            "quorum and a cooldown, while the Python bar additionally "
+            "demands a Parliament-unanimity flag the model omits, and the "
+            "Python refusal is a returned False where the model's is an "
+            "unprovable isPermitted. The correspondence is the "
+            "constitutional bar only: the model also refuses a zero-quorum "
+            "operational or dynamic change, and Python takes no vote-share "
+            "input at those tiers — their thresholds remain prose. Same "
+            "numbers at the constitutional bar, same direction of refusal, "
+            "two encodings."
+        ),
+    ),
+    11: LeanCoverage(
+        status=LeanStatus.THEOREM,
+        declarations=(
+            "two_signatures_insufficient",
+            "three_signatures_sufficient",
+            "double_signing_cannot_reach_quorum_alone",
+            "quorumCount_bounded_by_five",
+        ),
+        note=(
+            "The closest correspondence in the repo: both sides count distinct "
+            "signers against a 3-of-5 bar. The two-signature, three-signature "
+            "and one-principal-signing-repeatedly clauses of this test each "
+            "have a theorem beside them, and the fixed five-key set the fourth "
+            "theorem bounds is the model's version of the holder cap. The two "
+            "registration clauses -- a sixth holder and a repeat holder both "
+            "refused -- are properties of the Python API, which the Lean model "
+            "does not have. tests/test_keys.py checks the same quorum property "
+            "of GenesisMultisig by hand: a second Python test, not a link."
+        ),
+    ),
+    12: LeanCoverage(
+        status=LeanStatus.NO_COUNTERPART,
+        declarations=(),
+        note=(
+            "No watchdog and no deadlock breaker in the corpus: a "
+            "case-insensitive search for 'deadlock' over gov-budget-proof/ "
+            "matches nothing."
+        ),
+    ),
+}
+"""Prediction-to-Lean correspondence, re-derived against the current corpus.
+
+Keyed by prediction id. This is the source the coverage table in
+``book/formal-verification-lean.md`` renders, and ``tests/test_lean_claims.py``
+fails if any name here is not declared in ``gov-budget-proof/``.
+
+Read it as a map between two artefacts that are not connected: the predictions
+are Python asserts over ``src/nomos/``, the theorems are proved of Lean models,
+and nothing checks that the two describe the same system.
+"""
 
 
 @dataclass
@@ -113,6 +344,15 @@ class PredictionResult:
     description: str
     passed: bool
     evidence: str
+
+    @property
+    def lean(self) -> LeanCoverage | None:
+        """This prediction's row in :data:`LEAN_COVERAGE`, or ``None``.
+
+        ``None`` only for an id outside 1-12, which
+        :func:`nomos.prove.runner.run_all` never produces.
+        """
+        return LEAN_COVERAGE.get(self.id)
 
 
 PredictionFn = Callable[[], PredictionResult]
@@ -288,20 +528,53 @@ def pred_05_contract_restricts() -> PredictionResult:
 
 
 def pred_06_revocation_harder() -> PredictionResult:
+    """Until #306 this compared the two literals it had just written into the
+    constructor — an assertion that could not fail while an inverted contract
+    (enact at 1.0, revoke at 0.1) constructed and enforced normally. It now
+    tests the enforcement: the constructor must refuse inverted and flat
+    threshold pairs and accept the canonical asymmetric one."""
     contract = UlyssesContract(
         contract_id="test_revoke",
         restricted_indices={7},
         enactment_threshold=0.66,
         revocation_threshold=1.0,
     )
-    passed = contract.revocation_threshold > contract.enactment_threshold
+    valid_ok = contract.revocation_threshold > contract.enactment_threshold
+
+    inverted_rejected = False
+    try:
+        UlyssesContract(
+            contract_id="inverted",
+            restricted_indices={7},
+            enactment_threshold=1.0,
+            revocation_threshold=0.1,
+        )
+    except ValueError:
+        inverted_rejected = True
+
+    flat_rejected = False
+    try:
+        UlyssesContract(
+            contract_id="flat",
+            restricted_indices={7},
+            enactment_threshold=0.66,
+            revocation_threshold=0.66,
+        )
+    except ValueError:
+        flat_rejected = True
+
+    passed = valid_ok and inverted_rejected and flat_rejected
     return PredictionResult(
         id=6,
         chapter="Ch3",
         section="2.3",
         description="Revocation harder than enactment",
         passed=passed,
-        evidence=f"Enactment threshold={contract.enactment_threshold}, Revocation threshold={contract.revocation_threshold}",
+        evidence=(
+            f"valid 0.66/1.0 constructs={valid_ok}, "
+            f"inverted 1.0/0.1 rejected={inverted_rejected}, "
+            f"flat 0.66/0.66 rejected={flat_rejected}"
+        ),
     )
 
 
@@ -399,17 +672,71 @@ def pred_09_coherence_veto() -> PredictionResult:
 
 
 def pred_10_tier4_multisig() -> PredictionResult:
-    constitutional = TIER_RULES[MutabilityTier.CONSTITUTIONAL].requires_external_multisig
-    operational = TIER_RULES[MutabilityTier.OPERATIONAL].requires_external_multisig
-    dynamic = TIER_RULES[MutabilityTier.DYNAMIC].requires_external_multisig
-    passed = constitutional is True and operational is False and dynamic is False
+    """Until #306 this read three booleans out of TIER_RULES and compared
+    them with the literals declared a few lines above — while
+    ``apply_modification`` honoured none of them, so a CONSTITUTIONAL
+    parameter could be rewritten with no multisig, no unanimity and no
+    cooling-off. It now drives the enforcement through the same bar
+    ``IdentityTiers.lean`` proves: refuse below the 3-signature quorum,
+    refuse inside the 30-day cooling-off, accept at the full bar, leave the
+    value untouched on every refusal, and confirm both lower tiers apply
+    without any multisig — OPERATIONAL after its own cooling-off, DYNAMIC
+    bare."""
+    tm = TieredMutability()
+    tm.register_parameter("never_harm_humans", True, MutabilityTier.CONSTITUTIONAL)
+    tm.register_parameter("risk_limit", 0.3, MutabilityTier.OPERATIONAL)
+    tm.register_parameter("exploration_rate", 0.1, MutabilityTier.DYNAMIC)
+
+    unauthorised = tm.apply_modification("never_harm_humans", False)
+    two_of_five = tm.apply_modification(
+        "never_harm_humans",
+        False,
+        multisig_signatures=2,
+        parliament_unanimous=True,
+        days_since_proposal=30,
+    )
+    inside_cooldown = tm.apply_modification(
+        "never_harm_humans",
+        False,
+        multisig_signatures=3,
+        parliament_unanimous=True,
+        days_since_proposal=29,
+    )
+    value_held = tm.get_value("never_harm_humans") is True
+    full_bar = tm.apply_modification(
+        "never_harm_humans",
+        False,
+        multisig_signatures=3,
+        parliament_unanimous=True,
+        days_since_proposal=30,
+    )
+    operational_no_multisig = tm.apply_modification("risk_limit", 0.5, days_since_proposal=7)
+    dynamic_unencumbered = tm.apply_modification("exploration_rate", 0.5)
+
+    passed = (
+        not unauthorised
+        and not two_of_five
+        and not inside_cooldown
+        and value_held
+        and full_bar
+        and tm.get_value("never_harm_humans") is False
+        and operational_no_multisig
+        and dynamic_unencumbered
+    )
     return PredictionResult(
         id=10,
         chapter="Ch4",
         section="2.5",
         description="Tier-4 (Constitutional) requires external multisig; lower tiers do not",
         passed=passed,
-        evidence=f"CONSTITUTIONAL.requires_external_multisig={constitutional}, OPERATIONAL.requires_external_multisig={operational}, DYNAMIC.requires_external_multisig={dynamic}",
+        evidence=(
+            f"CONSTITUTIONAL refused: bare={not unauthorised}, "
+            f"2-of-5={not two_of_five}, day-29={not inside_cooldown}, "
+            f"value held through refusals={value_held}; "
+            f"accepted at 3-of-5 + unanimity + 30d={full_bar}; "
+            f"OPERATIONAL applies without multisig at 7d={operational_no_multisig}; "
+            f"DYNAMIC applies bare={dynamic_unencumbered}"
+        ),
     )
 
 

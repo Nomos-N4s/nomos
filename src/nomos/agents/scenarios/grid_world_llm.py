@@ -19,7 +19,7 @@ Real-world analogy:
 """
 
 import random
-from typing import Any
+from typing import Any, ClassVar
 
 from ...experiments.base import ExperimentMetrics, StepResult
 from ...experiments.grid_world import TILE_APPLE, TILE_EMPTY, TILE_POISON, TILE_WALL
@@ -38,6 +38,12 @@ class GridWorldLLM(LLMScenario):
         poison_ratio: Proportion of poison-eligible tiles that become
             poison (default 0.3).
     """
+
+    #: The grid is drawn from the seed: :meth:`reset` rolls walls, poison
+    #: and apples per tile, so two seeds are two different worlds. Declared
+    #: rather than inherited, because the inherited default would claim the
+    #: scenario ignores the seed.
+    SEEDED: ClassVar[bool] = True
 
     scenario_name = "GridWorld"
     rules = [

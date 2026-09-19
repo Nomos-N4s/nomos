@@ -117,7 +117,9 @@ def build_scenario(
     Args:
         scenario_cls: One of the four LLM-native scenario classes.
         speaker: The governance Speaker.
-        seed: RNG seed for stochastic scenarios (GridWorld, DriftLab).
+        seed: RNG seed for the one scenario that draws on it.
+            GridWorldLLM rolls its grid from it; the other three hold
+            no RNG and ignore it (see ``ExperimentScenario.SEEDED``).
 
     Returns:
         A freshly constructed scenario instance.
@@ -133,7 +135,7 @@ def build_scenario(
                 affected_action_indices=[DRIFT_HARMFUL_ACTION_INDEX],
             )
         )
-        return DriftLabLLM(speaker, identity, seed=seed)
+        return DriftLabLLM(speaker, identity)
     if scenario_cls is DeadlockMazeLLM:
         return DeadlockMazeLLM(speaker, DeadlockBreaker(threshold_cycles=DEADLOCK_BREAKER_CYCLES))
     if scenario_cls is GridWorldLLM:

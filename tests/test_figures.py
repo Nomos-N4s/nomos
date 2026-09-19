@@ -1,6 +1,7 @@
 import os
 import tempfile
 
+import pytest
 from matplotlib.figure import Figure
 
 from src.nomos.benchmarks.figures import (
@@ -29,9 +30,33 @@ def _make_report(name, reward, violations=0, deadlocks=0, drate=0.0, steps=100, 
         metadata={
             "scenario": scenario,
             "strategy": strategy,
-            "step_records": [{"reward": i * (reward / max(steps, 1)), "violations": 0} for i in range(steps)],
+            "step_records": _step_records(reward, steps),
         },
     )
+
+
+def _step_records(reward, steps):
+    """Step records shaped the way ``run_all._run_scenario`` writes them.
+
+    Per-step values under ``reward``/``violations``/``deadlocks``, running
+    totals under the ``cumulative_*`` keys. The fixture has to mirror the
+    producer: when it did not, the reward-curve panel could read the wrong
+    key and no test here would notice (#304).
+    """
+    per_step = reward / max(steps, 1)
+    return [
+        {
+            "step": i,
+            "reward": per_step,
+            "violations": 0,
+            "deadlocks": 0,
+            "cumulative_reward": (i + 1) * per_step,
+            "cumulative_violations": 0,
+            "cumulative_deadlocks": 0,
+            "runtime_ms": 1.0,
+        }
+        for i in range(steps)
+    ]
 
 
 _REPORTS = [
@@ -116,6 +141,18 @@ def test_reward_curves_legend_has_strategies():
         assert "gov" in legend_texts
         assert "mono" in legend_texts
         assert "rand" in legend_texts
+
+
+def test_reward_curves_plot_the_running_total_not_the_per_step_reward():
+    """The axis says Cumulative Reward, so the line must be that series (#304)."""
+    report = _REPORTS[0]
+    with tempfile.TemporaryDirectory() as tmp:
+        fig = plot_reward_curves([report], tmp)
+    plotted = list(fig.axes[0].lines[0].get_ydata())
+    expected = [r["cumulative_reward"] for r in report.metadata["step_records"]]
+    assert plotted == pytest.approx(expected)
+    # And the per-step rewards are a different, flatter series entirely.
+    assert plotted != pytest.approx([r["reward"] for r in report.metadata["step_records"]])
 
 
 def test_reward_curves_saves_files():

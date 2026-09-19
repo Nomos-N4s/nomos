@@ -114,7 +114,38 @@ class UlyssesContract:
     current_cycle: int | None = None
 
     def __post_init__(self):
-        """Start the contract's clock at its creation cycle if unset."""
+        """Validate the threshold asymmetry and start the contract's clock.
+
+        Revocation must be strictly harder than enactment — that asymmetry
+        is the entire point of a pre-commitment, and until #306 nothing
+        enforced it: an inverted contract (enact at 1.0, revoke at 0.1)
+        constructed, enacted, and masked actions normally, and a 10% vote
+        would then dissolve it.
+
+        Raises:
+            ValueError: If either threshold is outside ``[0.0, 1.0]``, or if
+                ``revocation_threshold <= enactment_threshold``.
+        """
+        if not 0.0 <= self.enactment_threshold <= 1.0:
+            msg = (
+                f"contract '{self.contract_id}': enactment_threshold must be in "
+                f"[0.0, 1.0], got {self.enactment_threshold}"
+            )
+            raise ValueError(msg)
+        if not 0.0 <= self.revocation_threshold <= 1.0:
+            msg = (
+                f"contract '{self.contract_id}': revocation_threshold must be in "
+                f"[0.0, 1.0], got {self.revocation_threshold}"
+            )
+            raise ValueError(msg)
+        if self.revocation_threshold <= self.enactment_threshold:
+            msg = (
+                f"contract '{self.contract_id}': revocation "
+                f"({self.revocation_threshold}) must be strictly harder than "
+                f"enactment ({self.enactment_threshold}) — an inverted or flat "
+                f"pair lets a minority dissolve the pre-commitment"
+            )
+            raise ValueError(msg)
         if self.current_cycle is None:
             self.current_cycle = self.created_at_cycle
 

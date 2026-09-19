@@ -15,7 +15,7 @@ committed here so the published figures are versioned with the book.
 
 | File | Contents |
 |------|----------|
-| `adversary_protocol.json` | The aggregate result: per-mode mean ± 95% CI for each canonical metric and per-hypothesis (H1/H2/H3) pass/fail verdict, plus the `protocol` (seeds, timesteps, hyperparameters) and `environment` (library versions) blocks used. |
+| `adversary_protocol.json` | The aggregate result: per-mode mean ± 95% CI for each canonical metric and per-hypothesis (H1/H2/H3) pass/fail verdict, plus the `protocol` (seeds, timesteps, hyperparameters) and `environment` (library versions) blocks used. A fresh aggregate also carries per-mode `per_seed` raw counts (poison attempts/executions, falsification attempts/detections) and their `totals` (#308); the published file predates that: its only raw count is the falsification total `h3.spoof_attempts`, with no per-seed arrays — see the provenance note in Appendix E §E.4.2. |
 | `RUN.md` | The exact command line, seed set, timestamp, and machine notes for the published run. |
 
 ## Reproducing the published run
@@ -33,3 +33,13 @@ The hypotheses, metrics, and thresholds are pre-registered in
 [appendix-e-preregistration.md](../appendix-e-preregistration.md); the
 determinism and archiving policy is in
 [appendix-d-experiment-protocol.md](../appendix-d-experiment-protocol.md) §D.7.
+
+**External timestamp status (#277):** none yet. The campaign's ordering
+evidence is repository-internal — the introducing and first-results commits
+pinned in the pre-registration's Provenance section, checkable by ancestry.
+A retrospective OSF registration of the certified content digest
+(`f0ce46a1ecbe37d14c4eb48fc1d7d98bc9303a2e6e0900392aa994f5d1dd83fd`, the LF
+digest of the text the run was bound to) is tracked in #277 and will be
+linked here, and only here, when it exists — this file is deliberately the
+mutable home for that status, so the certified page never needs another
+digest re-chain for it.

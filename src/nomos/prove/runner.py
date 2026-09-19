@@ -4,6 +4,11 @@ CLI entry point for formal prediction verification.
 Runs the 12 executable predictions from :mod:`predictions` and prints
 a formatted summary. Supports chapter-level filtering and JSON export.
 
+The predictions are Python asserts. This command runs no Lean, so its
+summary counts passing tests and not proofs; each line carries the
+prediction's row from :data:`predictions.LEAN_COVERAGE` to say which
+theorem, if any, states the same property of the Lean model.
+
 Usage:
 
 .. code-block:: bash
@@ -24,8 +29,9 @@ Usage:
 import argparse
 import json
 import sys
+from collections import Counter
 
-from .predictions import ALL_PREDICTIONS, PredictionResult
+from .predictions import ALL_PREDICTIONS, LeanStatus, PredictionResult
 
 
 def run_all() -> list[PredictionResult]:
@@ -67,6 +73,25 @@ def filter_by_chapter(results: list[PredictionResult], chapter: str) -> list[Pre
     return [r for r in results if r.chapter == chapter]
 
 
+def lean_coverage_tally(results: list[PredictionResult]) -> str:
+    """Summarise how the given results relate to the Lean corpus.
+
+    Counted from :data:`predictions.LEAN_COVERAGE` at call time rather than
+    written down, so the line cannot drift from the map it reports on.
+
+    Args:
+        results: The prediction results to tally.
+
+    Returns:
+        One line, e.g. ``"3 proved of the Lean model | 6 no counterpart"``,
+        or the empty string when no result carries a coverage row.
+    """
+    counted = Counter(r.lean.status for r in results if r.lean is not None)
+    return " | ".join(
+        f"{counted[status]} {status.value}" for status in LeanStatus if counted[status]
+    )
+
+
 def print_summary(results: list[PredictionResult]):
     """Print a formatted test-runner-style summary to stdout.
 
@@ -74,22 +99,36 @@ def print_summary(results: list[PredictionResult]):
         Like ``pytest -v`` output — each test gets a PASS/FAIL line
         with its evidence string, followed by a summary count.
 
+    Each prediction also gets its Lean line, so a reader of this output is
+    never left to assume that a passing Python assert was checked by a proof.
+    The banner is labelled for the same reason: it is the line a reader is
+    most likely to quote, and on its own ``12/12 PASS`` says nothing about
+    what did the passing.
+
     Args:
         results: The prediction results to display.
     """
     passed = sum(1 for r in results if r.passed)
     total = len(results)
     print(f"\n{'=' * 60}")
-    print("  Formal Prediction Verification")
+    print("  Formal Prediction Tests (Python)")
     print(f"  {passed}/{total} PASS")
     print(f"{'=' * 60}\n")
     for r in results:
         status = "PASS" if r.passed else "FAIL"
         print(f"  [{status}] P{r.id:02d} ({r.chapter} \u00a7{r.section}) {r.description}")
         print(f"         {r.evidence}")
+        if r.lean is not None:
+            named = ": " + ", ".join(r.lean.declarations) if r.lean.declarations else ""
+            print(f"         Lean: {r.lean.status.value}{named}")
         print()
     print(f"{'=' * 60}")
-    print(f"  Summary: {passed}/{total} predictions verified")
+    print(f"  Summary: {passed}/{total} predictions verified by Python asserts")
+    tally = lean_coverage_tally(results)
+    if tally:
+        print(f"  Lean:    {tally}")
+    print("  No Lean proof is checked by this run; see")
+    print("  book/formal-verification-lean.md#prediction-coverage")
     print(f"{'=' * 60}")
 
 
@@ -111,6 +150,8 @@ def export_json(results: list[PredictionResult], path: str):
             "description": r.description,
             "passed": r.passed,
             "evidence": r.evidence,
+            "lean_status": r.lean.status.value if r.lean else None,
+            "lean_declarations": list(r.lean.declarations) if r.lean else [],
         }
         for r in results
     ]

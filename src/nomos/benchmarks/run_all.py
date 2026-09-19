@@ -77,15 +77,44 @@ def _run_scenario(
         scenario_kwargs: Keyword arguments for the scenario constructor.
         strategy_name: Label for this strategy (e.g. ``"governance"``).
         steps: Number of steps to run.
-        seed: Random seed (for reproducibility).
+        seed: The loop seed for this run. It reaches the scenario
+            constructor when the scenario declares
+            :attr:`~..experiments.base.ExperimentScenario.SEEDED`, and it
+            overrides any ``seed`` in ``scenario_kwargs`` so that no caller
+            can pin the whole suite to a single world. A scenario that
+            declares itself deterministic is constructed without a seed and
+            replays one trajectory across the loop; the seed still reaches
+            the ``random`` baseline through :func:`_get_baseline`.
         baseline: Optional :class:`BaselineGovernance` instance.
-            If None, the full Speaker is used.
+            If None, the full Speaker is used. A baseline decides through
+            ``scenario.step(..., external_decider=baseline.decide)``, so
+            it receives the same phase-dependent agenda the Speaker would
+            see, computed inside the scenario. The loop itself never
+            builds a proposal list — the pre-#303 loop did, which handed
+            every baseline DeadlockMaze's stale phase-0 proposal for the
+            whole run.
         config_path: Optional path to a .parliament config file.
 
     Returns:
         An :class:`~..experiments.metrics.ExperimentReport`.
 
     Note:
+        ``step_records[i]`` reports ``reward``, ``violations`` and
+        ``deadlocks`` **at step i**, read off the
+        :class:`~..experiments.base.StepResult` that
+        :meth:`~..experiments.base.ExperimentScenario.step` returns. The
+        running totals are separate keys: ``cumulative_reward``,
+        ``cumulative_violations`` and ``cumulative_deadlocks``.
+
+        The split is load-bearing rather than a convenience. Writing the
+        running totals under the per-step names is what produced the
+        bogus reward-hacking episodes of #304: the detector in
+        ``analysis._detect_reward_hacking`` reads the per-step keys, and
+        a monotone counter satisfies its violation gate on every step
+        after the first. The reward-curve figure and the ``--csv``
+        export read the cumulative keys, so both units have a name and
+        neither has to be inferred.
+
         ``step_records[i]["runtime_ms"]`` is kept alongside the report's
         ``governance_latency_avg``; the two measure different things and
         neither replaces the other. ``runtime_ms`` is the cumulative
@@ -103,6 +132,9 @@ def _run_scenario(
         cycle is a large fraction of the step, not a negligible one.
     """
     speaker = build_governance_layer(config_path)
+    kwargs = dict(scenario_kwargs or {})
+    if scenario_class.SEEDED:
+        kwargs["seed"] = seed
 
     if scenario_class.__name__ == "DriftLab":
         from ..identity.core import (
@@ -123,14 +155,14 @@ def _run_scenario(
                 affected_action_indices=[0],
             )
         )
-        scenario = scenario_class(speaker, identity, **(scenario_kwargs or {}))
+        scenario = scenario_class(speaker, identity, **kwargs)
     elif scenario_class.__name__ == "DeadlockMaze":
         from ..tee.watchdog import DeadlockBreaker
 
         breaker = DeadlockBreaker(threshold_cycles=5)
-        scenario = scenario_class(speaker, breaker, **(scenario_kwargs or {}))
+        scenario = scenario_class(speaker, breaker, **kwargs)
     else:
-        scenario = scenario_class(speaker, **(scenario_kwargs or {}))
+        scenario = scenario_class(speaker, **kwargs)
 
     scenario.reset()
     step_records = []
@@ -138,20 +170,21 @@ def _run_scenario(
 
     for i in range(steps):
         state = "normal"
-        proposals = scenario.get_proposals(state)
 
         if baseline is not None:
-            decision = baseline.decide(state, proposals)
-            scenario.step(state, external_decision=decision)
+            result = scenario.step(state, external_decider=baseline.decide)
         else:
-            scenario.step(state)
+            result = scenario.step(state)
 
         step_records.append(
             {
                 "step": i,
-                "reward": scenario.metrics.total_reward,
-                "violations": scenario.metrics.constraint_violations,
-                "deadlocks": scenario.metrics.deadlock_count,
+                "reward": result.reward,
+                "violations": int(result.metrics_delta.get("constraint_violations", 0)),
+                "deadlocks": int(result.decision.is_default),
+                "cumulative_reward": scenario.metrics.total_reward,
+                "cumulative_violations": scenario.metrics.constraint_violations,
+                "cumulative_deadlocks": scenario.metrics.deadlock_count,
                 "runtime_ms": (time.time() - t0) * 1000 / max(1, i + 1),
             }
         )
@@ -269,7 +302,7 @@ def run_gridworld_experiments(
     """Run GridWorld (poison fruit) experiments across strategies."""
     return _run_experiment_set(
         GridWorld,
-        {"size": 6, "seed": 42},
+        {"size": 6},
         steps=steps,
         seeds=seeds,
         strategies=strategies,

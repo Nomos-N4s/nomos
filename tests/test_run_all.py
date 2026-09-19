@@ -1,3 +1,5 @@
+import inspect
+
 import pytest
 
 from src.nomos.benchmarks.baselines import (
@@ -18,10 +20,12 @@ from src.nomos.benchmarks.run_all import (
     run_temptation_experiments,
 )
 from src.nomos.experiments.deadlock_maze import DeadlockMaze
+from src.nomos.experiments.base import ExperimentScenario
 from src.nomos.experiments.drift_lab import DriftLab
 from src.nomos.experiments.grid_world import GridWorld
 from src.nomos.experiments.temptation_bank import TemptationBank
 from src.nomos.identity.core import IdentityCore
+from src.nomos.runner import ALL_STRATEGIES
 from src.nomos.tee.watchdog import DeadlockBreaker
 
 
@@ -154,6 +158,101 @@ class TestRunScenario:
         assert report.total_steps == 5
 
 
+class TestAgendaParity:
+    """#303: a baseline decides over the agenda the scenario computed.
+
+    The pre-#303 loop called ``scenario.get_proposals`` itself, which on
+    DeadlockMaze handed every baseline the stale phase-0 ``tighten_quorum``
+    proposal for the whole run while the Speaker saw the phase-dependent
+    agenda. These tests pin the parity path.
+    """
+
+    def test_deadlock_baseline_agenda_is_phase_dependent(self):
+        seen = []
+
+        class SpyVeto(VetoOnly):
+            def decide(self, state, proposals):
+                seen.append([p.action for p in proposals])
+                return super().decide(state, proposals)
+
+        _run_scenario(DeadlockMaze, {}, "veto_only", steps=13, seed=0, baseline=SpyVeto())
+        assert seen[0] == ["tighten_quorum"]
+        assert seen[1:6] == [[]] * 5
+        assert seen[6] == ["tighten_quorum"]
+        assert seen[7:12] == [[]] * 5
+        assert seen[12] == ["tighten_quorum"]
+
+    def test_deadlock_agenda_matches_the_governance_run(self):
+        speaker = build_governance_layer()
+        breaker = DeadlockBreaker(threshold_cycles=5)
+        scenario = DeadlockMaze(speaker, breaker)
+        scenario.reset()
+        captured = []
+        original = speaker.run_governance_cycle
+
+        def recording(state, proposals, decision_class="routine"):
+            decision = original(state, proposals, decision_class)
+            captured.append(([p.action for p in proposals], decision))
+            return decision
+
+        speaker.run_governance_cycle = recording
+        for _ in range(13):
+            scenario.step("normal")
+
+        decisions = iter(decision for _, decision in captured)
+        replayed = []
+
+        class Replay:
+            name = "replay"
+
+            def decide(self, state, proposals):
+                replayed.append([p.action for p in proposals])
+                return next(decisions)
+
+        _run_scenario(DeadlockMaze, {}, "replay", steps=13, seed=0, baseline=Replay())
+        assert replayed == [agenda for agenda, _ in captured]
+
+    def test_the_loop_computes_no_agenda(self):
+        calls = 0
+
+        class CountingBank(TemptationBank):
+            def get_proposals(self, state):
+                nonlocal calls
+                calls += 1
+                return super().get_proposals(state)
+
+        _run_scenario(CountingBank, {}, "veto_only", steps=10, seed=0, baseline=VetoOnly())
+        assert calls == 10
+
+    def test_deadlock_cycle_counts_match_across_deciding_arms(self):
+        governed = _run_scenario(DeadlockMaze, {}, "governance", steps=100, seed=0)
+        unbound = _run_scenario(
+            DeadlockMaze, {}, "veto_only", steps=100, seed=0, baseline=VetoOnly()
+        )
+        assert governed.deadlock_count == unbound.deadlock_count
+        assert governed.deadlock_count > 0
+
+
+class TestTemptationSpikeOutcomes:
+    """#303: with the teaser spike, being unbound has a measured price."""
+
+    def test_veto_only_takes_every_teaser_and_eats_every_penalty(self):
+        report = _run_scenario(
+            TemptationBank, {}, "veto_only", steps=1000, seed=0, baseline=VetoOnly()
+        )
+        assert report.total_reward == 1300.0
+        assert report.constraint_violations == 100
+
+    def test_governance_never_sees_the_teaser_and_wins(self):
+        governed = _run_scenario(TemptationBank, {}, "governance", steps=1000, seed=0)
+        unbound = _run_scenario(
+            TemptationBank, {}, "veto_only", steps=1000, seed=0, baseline=VetoOnly()
+        )
+        assert governed.total_reward == 1998.0
+        assert governed.constraint_violations == 0
+        assert governed.total_reward > unbound.total_reward
+
+
 class TestRunExperimentSet:
     def test_single_strategy_single_seed(self):
         reports = _run_experiment_set(
@@ -240,3 +339,186 @@ class TestGovernanceLatencyReporting:
         ]:
             report = _run_scenario(scenario_class, kwargs, "governance", steps=5, seed=0)
             assert report.governance_latency_avg > 0, scenario_class.__name__
+
+
+# ─── Seed variance (#301) ────────────────────────────────────────────────────
+
+PUBLISHED_STEPS = 1000
+"""Steps per run in the published benchmark suite.
+
+The length matters to this test. On a few hundred steps the random
+baseline's own RNG moves GridWorld's total whether or not the scenario ever
+saw the seed, so a short run cannot tell a fixed world from a varying one.
+At 1,000 steps it can: with the grid pinned to seed 42 the random arm
+returned -48.0 on all twenty seeds, so variance at this length is variance
+in the world.
+"""
+
+PUBLISHED_SEEDS = 20
+"""Seeds per cell in the published benchmark suite."""
+
+REPEAT_SEEDS = 3
+"""Repeats used to check a deterministic cell. Three identical runs make the
+point that twenty would; the cost of the other seventeen buys nothing."""
+
+_SCENARIO_RUNNERS = {
+    GridWorld: run_gridworld_experiments,
+    TemptationBank: run_temptation_experiments,
+    DriftLab: run_drift_experiments,
+    DeadlockMaze: run_deadlock_experiments,
+}
+
+_SCENARIO_BUILDERS = {
+    GridWorld: lambda speaker: GridWorld(speaker),
+    TemptationBank: lambda speaker: TemptationBank(speaker),
+    DriftLab: lambda speaker: DriftLab(speaker, IdentityCore()),
+    DeadlockMaze: lambda speaker: DeadlockMaze(speaker, DeadlockBreaker(threshold_cycles=5)),
+}
+
+_STRATEGIES = ALL_STRATEGIES
+"""The strategy list the CLI runs, taken from the runner so it cannot drift."""
+
+_SEEDED_STRATEGIES = frozenset({"random"})
+"""Strategies that draw on the seed themselves, through ``_get_baseline``."""
+
+
+def _concrete_scenarios() -> list[type[ExperimentScenario]]:
+    """Every concrete ``ExperimentScenario`` in the package, benchmark or not.
+
+    Walked from the base class rather than listed, so a scenario added
+    later is covered without anyone remembering to add it here. Classes
+    defined inside a test are excluded by module, since a stub built to
+    record constructor arguments is not a scenario making a claim.
+    """
+    import src.nomos.agents.scenarios  # noqa: F401  registers the LLM subclasses
+
+    found: dict[str, type[ExperimentScenario]] = {}
+    pending = list(ExperimentScenario.__subclasses__())
+    while pending:
+        scenario_class = pending.pop()
+        pending.extend(scenario_class.__subclasses__())
+        if getattr(scenario_class, "__abstractmethods__", None):
+            continue
+        if not scenario_class.__module__.startswith("src.nomos."):
+            continue
+        found[scenario_class.__name__] = scenario_class
+    return [found[name] for name in sorted(found)]
+
+
+def _agenda_size(scenario_class) -> int:
+    """How many proposals the scenario puts on the agenda at reset."""
+    scenario = _SCENARIO_BUILDERS[scenario_class](build_governance_layer())
+    scenario.reset()
+    return len(scenario.get_proposals("normal"))
+
+
+def _claims_replication(scenario_class, strategy: str) -> bool:
+    """Whether this cell's twenty runs are twenty draws rather than repeats.
+
+    Two things in a cell can consume the seed: the scenario, when it declares
+    ``SEEDED``, and a seeded strategy. The second only samples when the agenda
+    gives it more than one action to choose between — a random chooser handed
+    a single proposal returns that proposal every time.
+    """
+    if scenario_class.SEEDED:
+        return True
+    return strategy in _SEEDED_STRATEGIES and _agenda_size(scenario_class) > 1
+
+
+_CELLS = [
+    (scenario_class, strategy)
+    for scenario_class in _SCENARIO_RUNNERS
+    for strategy in _STRATEGIES
+    if strategy != "static_masking" or scenario_class.STATIC_BLOCKLIST
+]
+
+_REPLICATED = [cell for cell in _CELLS if _claims_replication(*cell)]
+_DETERMINISTIC = [cell for cell in _CELLS if not _claims_replication(*cell)]
+
+
+def _rewards(scenario_class, strategy: str, seeds: int) -> list[float]:
+    """Total reward per seed, through the published entry point for the cell."""
+    reports = _SCENARIO_RUNNERS[scenario_class](
+        steps=PUBLISHED_STEPS, seeds=seeds, strategies=[strategy]
+    )
+    return [r.total_reward for r in reports]
+
+
+def _cell_id(value) -> str:
+    """Name a parametrised cell by scenario class and strategy."""
+    return value.__name__ if isinstance(value, type) else str(value)
+
+
+class TestSeedVariance:
+    """A cell that claims a 20-seed design must actually draw twenty times.
+
+    ``_run_scenario`` used to store the loop seed in ``report.metadata`` and
+    build the scenario from ``scenario_kwargs`` alone, so every seed replayed
+    one trajectory and the published std, bootstrap CI and n described
+    pseudo-replication (#301).
+    """
+
+    @pytest.mark.parametrize("scenario_class,strategy", _REPLICATED, ids=_cell_id)
+    def test_replicated_cell_varies_across_seeds(self, scenario_class, strategy):
+        rewards = _rewards(scenario_class, strategy, PUBLISHED_SEEDS)
+        assert len(rewards) == PUBLISHED_SEEDS
+        assert len(set(rewards)) > 1, (
+            f"{scenario_class.__name__}/{strategy} is published as {PUBLISHED_SEEDS} "
+            f"seeds but returned one distinct reward ({rewards[0]}) — the seed is "
+            "not reaching the run"
+        )
+
+    @pytest.mark.parametrize("scenario_class,strategy", _DETERMINISTIC, ids=_cell_id)
+    def test_deterministic_cell_repeats_exactly(self, scenario_class, strategy):
+        rewards = _rewards(scenario_class, strategy, REPEAT_SEEDS)
+        assert len(set(rewards)) == 1, (
+            f"{scenario_class.__name__}/{strategy} is documented as deterministic "
+            f"but returned {len(set(rewards))} distinct rewards: declare the "
+            "scenario SEEDED and correct the published seed protocol"
+        )
+
+    def test_gridworld_is_the_only_seeded_benchmark_scenario(self):
+        seeded = {cls.__name__ for cls in _SCENARIO_RUNNERS if cls.SEEDED}
+        assert seeded == {"GridWorld"}
+
+    def test_seeded_declaration_matches_the_constructor(self):
+        """Across every scenario, not only the four the benchmark runs.
+
+        ``SEEDED`` defaults to ``False``, so a scenario that never
+        overrides it declares itself independent of the seed. Checked only
+        over the benchmark four, that default could be inherited wrong by a
+        scenario elsewhere in the package and nothing would say so — which
+        is what had happened to ``GridWorldLLM``, whose ``reset`` rolls its
+        grid from a seed it declared it did not take.
+        """
+        scenarios = _concrete_scenarios()
+        assert set(_SCENARIO_RUNNERS) <= set(scenarios)
+        for scenario_class in scenarios:
+            takes_seed = "seed" in inspect.signature(scenario_class).parameters
+            assert scenario_class.SEEDED == takes_seed, (
+                f"{scenario_class.__name__}.SEEDED is {scenario_class.SEEDED} but its "
+                f"constructor {'takes' if takes_seed else 'takes no'} seed"
+            )
+
+    def test_loop_seed_overrides_a_seed_in_scenario_kwargs(self):
+        """No caller may pin the suite back to a single world."""
+        seen = []
+
+        class _Recording(GridWorld):
+            def __init__(self, speaker, **kwargs):
+                seen.append(kwargs.get("seed"))
+                super().__init__(speaker, **kwargs)
+
+        _run_scenario(_Recording, {"size": 4, "seed": 42}, "governance", steps=1, seed=7)
+        assert seen == [7]
+
+    def test_deterministic_scenario_is_built_without_a_seed(self):
+        seen = []
+
+        class _Recording(TemptationBank):
+            def __init__(self, speaker, **kwargs):
+                seen.append(dict(kwargs))
+                super().__init__(speaker, **kwargs)
+
+        _run_scenario(_Recording, {}, "governance", steps=1, seed=7)
+        assert seen == [{}]

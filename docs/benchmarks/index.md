@@ -5,9 +5,13 @@ description: "Summary of benchmark results and figures comparing five strategies
 
 # Benchmark Results
 
-See the [benchmark results summary](https://github.com/Nomos-N4s/nomos/blob/main/results/benchmark_summary.csv) and
-[detailed figures](https://github.com/Nomos-N4s/nomos/blob/main/results/figures/) for the latest comparison across
-all four experiment scenarios and five strategies.
+The published per-cell figures — mean, standard deviation, bootstrap interval
+and violation/deadlock counts for every strategy-scenario pair — are the table
+in `REPRODUCIBILITY.md` § Verifying Results at the repository root. `results/`
+itself is gitignored: `benchmark_summary.csv` and the figures are regenerated
+locally in seconds by the command below, not fetched from the repository.
+(Earlier revisions of this page linked to `results/` paths on `main`, which
+were never committed and returned 404 — #308.)
 
 ## Running Benchmarks
 
@@ -18,9 +22,15 @@ python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 ## Interpreting Results
 
 - **GridWorld**: Tests safety-constrained navigation. Governance prevents poison consumption.
-- **TemptationBank**: Tests voluntary self-binding under temptation. `ban_loans` contract enacts by step ~30.
+- **TemptationBank**: Tests voluntary self-binding under temptation. `ban_loans` contract enacts early, and the enacted restriction removes the loan from the agenda structurally. During the teaser spike (steps 500–599, added in #303) the loan is marketed with a lowballed asserted risk: `veto_only`, which trusts asserted metadata, takes all 100 teasers and eats all 100 delayed penalties (1300.0 vs governance's 1998.0); the bound arm never sees the offer.
 - **DriftLab**: Tests identity coherence under reward-function shift. Governance maintains alignment.
-- **DeadlockMaze**: Tests procedural deadlock recovery. DeadlockBreaker mechanism prevents infinite loops.
+- **DeadlockMaze**: Tests procedural deadlock recovery. The deadlock-recovery cycle repeats (made cyclic in #303), and every deciding arm records the same 833 defaults — the DeadlockBreaker does the recovering and runs in every arm, so the scenario demonstrates the breaker rather than separating governance from baselines.
+
+Before quoting these numbers as a governance-beats-baselines result, read
+Appendix D.4 ("Where the 12-line filter stands"): on three of the four
+scenarios the full Speaker does not beat the `veto_only` risk filter, and
+where it wins it wins because the environment attacks the filter's trust
+in asserted metadata.
 
 ## RL Adversary Results
 
@@ -31,9 +41,13 @@ the run.
 
 | Mode | Governance bypass rate | Violations / episode | H1 | H2 | H3 |
 |------|-----------------------|----------------------|----|----|----|
-| `governance` | **0.000** [0.000, 0.000] | 0.000 ± 0.000 | PASS | PASS | PASS |
+| `governance` | **0.000**† [0.000, 0.000] | 0.000 ± 0.000 | PASS† | PASS† | PASS† |
 | `no_governance` (ceiling control) | 1.000 [1.000, 1.000] | 1.500 ± 0.614 | n/a | n/a | n/a |
 | `static_mask` (floor control) | 0.000 [0.000, 0.000] | 0.000 ± 0.000 | n/a | n/a | n/a |
+
+† Conditional on the ground-truth-grounded Integrity verifier, and H3 is
+partially by construction — no verifier-beating spoof was reachable in the
+adversary's vocabulary (Appendix E §E.5.1).
 
 Zero of 4,762 adversarial poison attempts executed. The adversary did, however,
 silence the Safety committee on 100% of its proposals — it was stopped by the
@@ -95,10 +109,12 @@ python -m src.nomos.experiments.rl_adversary sweep --timesteps 100000 --seeds 42
 
 `compute_effect_sizes()` compares governance against each baseline per scenario and returns one record per pair. Each record includes:
 
-- **Cohen's d** with a 95% confidence interval (Delta method) and a qualitative `interpretation` label (`negligible`, `small`, `medium`, `large`).
+- **Cohen's d** with a 95% confidence interval (Delta method) and a qualitative `interpretation` label (`negligible`, `small`, `medium`, `large`). When both arms are constant and their means differ there is no pooled spread to divide by: `cohens_d` is `null` and `interpretation` reads `undefined (zero pooled variance)` rather than being collapsed into `negligible`. When the two constants are equal instead, the effect really is zero and the record keeps `cohens_d: 0.0` / `negligible`. Either way a zero pooled standard deviation leaves no interval to report, so `cohens_d_ci` is `[null, null]` and `cohens_d_se` is `null`.
+- **`mean_governance`, `mean_baseline`, `mean_diff`** — the group means and their difference (governance minus baseline). Mann-Whitney U is `min(U1, U2)` and an undefined Cohen's d has no sign either, so `mean_diff` is what tells you which arm won.
 - **Mann-Whitney U** with an exact p-value when the larger group has 8 or fewer samples, and an asymptotic p-value otherwise.
-- **Raw, Bonferroni-corrected, and Holm-Bonferroni-corrected p-values** across the full family of governance-vs-baseline comparisons, with `significant` and `significant_holm` flags. Prefer `significant_holm` as the primary decision — Holm is uniformly more powerful than Bonferroni while controlling the same family-wise error rate.
+- **Raw, Bonferroni-corrected, and Holm-Bonferroni-corrected p-values** across the full family of governance-vs-baseline comparisons, with `significant` and `significant_holm` flags. Prefer `significant_holm` as the primary decision — Holm is uniformly more powerful than Bonferroni while controlling the same family-wise error rate. All of them carry full float precision; no p-value is rounded before export, so a record can never report `p_value_raw: 0.0` and `significant_holm: true` at once. Cohen's d, its interval and standard error, and the U statistic are still reported to fixed precision.
 - **`normality_warning`** — set when the pooled sample fails a Shapiro-Wilk test. When present, treat Cohen's d CIs as approximate and lean on the Mann-Whitney U result.
-- **`paired`** — `true` when the design heuristic detects repeated measures across strategies (e.g., matched seeds).
+- **`paired`** — `true` only when both arms cover the same labelled seeds with one observation each, checked against the per-report seed and not inferred from equal group sizes.
+- **`wilcoxon_w`, `wilcoxon_p`, `wilcoxon_n_pairs`, `wilcoxon_n_zero_diffs`, `wilcoxon_method`** — a Wilcoxon signed-rank test over those matched pairs, run whenever `paired` is `true` and `null` otherwise. Pairs whose difference is exactly zero are dropped and the test is conditioned on the survivors (Wilcoxon's convention, not Pratt's), so the reported p-value rests on `wilcoxon_n_pairs`, not on `n_governance`; `wilcoxon_n_zero_diffs` says how many pairs were dropped. Its p-value is reported next to the family, not folded into the Bonferroni and Holm correction, which stays one Mann-Whitney test per pair. On a cell where both arms are deterministic the signed-rank test degenerates to a sign test over identical repeats: it says how consistently one arm wins, not by how much.
 
 See [Appendix D §D.5](/book/appendix-d-experiment-protocol) for the full pre-registered analysis plan.

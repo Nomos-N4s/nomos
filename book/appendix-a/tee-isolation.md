@@ -391,7 +391,7 @@ Oblivious RAM (ORAM) is the general solution for hiding memory access patterns. 
 
 > *Resolves the TEE throughput paradox (Phase 4, Attack 3).*
 
-Individual proposal validation through the TEE creates a throughput bottleneck. The optimization layer operates at GPU throughput (millions of actions per second); the TEE operates at CPU throughput (~43,000 validations per second from §A.5). Validating every action individually would limit throughput to the TEE's rate.
+Individual proposal validation through the TEE creates a throughput bottleneck. The optimization layer operates at GPU throughput (millions of actions per second); the TEE operates at CPU throughput (~43,000 *estimated* validations per second, derived from the §A.5 cycle estimate — no TEE path in this repository has been profiled). Validating every action individually would limit throughput to the TEE's rate.
 
 ### A.11.1 Protocol
 
@@ -407,6 +407,9 @@ Instead of submitting one proposal per TEE entry, the optimization layer batches
    - Is aggregate risk within acceptable bounds?
    - Is action diversity sufficient? (Not all identical)
 5. If valid, TEE signs the root hash and returns {signature, attestation}
+   (specification: the reference implementation's BatchVerifier.validate_batch
+   returns an unsigned (bool, str) and no signing primitive exists in the
+   codebase - #311)
 6. Optimization layer may execute any a_i with:
    - The signed root
    - The Merkle proof path from a_i to root
@@ -422,15 +425,25 @@ graph LR
     Opt -->|7. Execute actions with Merkle proofs| Env[Environment]
 ```
 
+*Diagram steps 5–6 are the specification; the reference implementation
+returns an unsigned `(bool, str)` and produces no signature (#311).*
+
 ### A.11.2 Throughput Analysis
 
-| Configuration | TEE entries per action | Max throughput (actions/sec) |
+| Configuration | TEE entries per action | Estimated throughput (actions/sec, derived from the §A.5 cycle estimate) |
 |---|---|---|
 | Individual validation | 1 | ~43,000 |
 | Batch N=100 | 0.01 | ~4,300,000 |
 | Batch N=1000 | 0.001 | ~43,000,000 |
 
-With $N = 1000$, the TEE overhead per action drops to approximately **0.023 microseconds** — negligible for any practical system.
+Every number in this table is arithmetic on the §A.5 estimate — the assumed
+~70,000-cycle budget divided into a 3 GHz clock, then scaled by the batch
+factor. Nothing here has been measured: the repository contains no TEE
+profiling harness and no TEE hardware or SDK dependency, so these are
+back-of-the-envelope ceilings for the architecture, not benchmarked
+throughput (#310).
+
+With $N = 1000$, the estimated TEE overhead per action drops to approximately **0.023 microseconds** — negligible for any practical system, if the §A.5 estimate holds.
 
 ### A.11.3 Security Properties
 

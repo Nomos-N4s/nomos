@@ -42,14 +42,67 @@ python -m src.nomos.runner all --baselines --steps 1000 --seeds 20
 
 ### Seed Strategy
 
-20 fixed seeds per scenario-strategy combination (19 combinations × 20
-seeds = 380 individual experiment runs). Four scenarios × five strategies
-is 20 combinations; GridWorld has no `static_masking` arm, for the reason
-given below the results table. Each experiment uses a
-deterministic seed for the RNG — same seed always produces identical
-results. The seed list covers a diverse range to detect sensitivity.
+Seeds 0-19 are run for every scenario-strategy combination (19
+combinations × 20 seeds = 380 individual experiment runs). Four scenarios
+× five strategies is 20 combinations; GridWorld has no `static_masking`
+arm, for the reason given below the results table. Every run is
+deterministic given its seed — the same seed always produces identical
+results — so the table below reproduces exactly, not approximately.
+
+**The seed does not move every cell, because most cells hold nothing for
+it to move.** Two components consume it:
+
+- The **scenario**, when it declares `ExperimentScenario.SEEDED`. GridWorld
+  is the only one that does: its `reset()` rolls walls, poison and apples
+  per tile, so each seed is a different grid.
+- The **`random` strategy**, whose `RandomBaseline` draws its choice from
+  the seed.
+
+TemptationBank, DriftLab and DeadlockMaze hold no RNG at all — their
+agendas, rewards and timers are constants. That is deliberate rather than
+an oversight. Each exists to demonstrate one mechanism (a Ulysses Contract
+binding, identity coherence holding under a drifting reward function, a
+deadlock breaker firing), and injecting noise would change what is being
+demonstrated instead of strengthening it. They are documented as
+deterministic rather than advertised as replicated.
+
+So GridWorld's four arms, plus the `random` arm on TemptationBank and on
+DriftLab, draw a fresh sample per seed. Every other combination returns
+the same number twenty times — including DeadlockMaze's `random` arm,
+because that scenario proposes exactly one action and a random chooser has
+nothing to choose between. For those cells `std_reward` is 0.0 and the
+bootstrap interval sits on the mean, since there is nothing to resample.
+Read them as exact values, not as twenty samples that happened to agree.
+
+Until #301 the loop seed was written into each report's metadata and
+handed to no scenario at all, while GridWorld's constructor kwargs pinned
+it to 42. Every cell but two therefore published a standard deviation,
+bootstrap interval and `n` taken over twenty repeats of a single run.
+The exceptions are the `random` arms on TemptationBank and DriftLab: the
+baseline drew from the loop seed then exactly as it does now, so those
+two were genuine 20-draw statistics, and the table below republishes
+their figures unchanged by the fix.
+
+Two further cells were invalidated by #303 and are republished from a
+re-run: TemptationBank's `veto_only` (the teaser-spike amendment,
+Appendix D.3.2) and the whole DeadlockMaze column (a stale-agenda harness
+bug plus the recovery-cycle amendment, Appendix D.3.4). Every published
+pre-#303 DeadlockMaze baseline figure of 0 deadlocks was a harness
+artifact — the loop handed baselines the phase-0 proposal on every step —
+and the old 999 for governance counted ~994 defaults on an
+empty-by-design agenda. TemptationBank's `random` cell survives #303
+unchanged: the random baseline enacts the loan ban within its first few
+steps on every seed, so the spike window never reaches its agenda.
 
 ## Output
+
+Every path in this table is a **local, gitignored** output: `.gitignore`
+excludes `results/*` and `git ls-files results/` returns only `.gitkeep`.
+Running the commands in this document regenerates each file in place; none of
+them is fetched from the repository, and none should be looked for on `main`.
+The committed record of the published benchmark run is the table under
+[Verifying Results](#verifying-results); the committed record of the RL
+campaigns is `book/appendix-e-data/` and `book/appendix-f-data/` (#308).
 
 | File | Description |
 |---|---|
@@ -77,13 +130,39 @@ verify it from the `Identity drift:` line the runner prints for each run
 
 | Strategy | GridWorld | TemptationBank | DriftLab | DeadlockMaze |
 |---|---|---|---|---|
-| Governance | 3.0 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 999 deadlocks |
-| MonolithicRL | — | — | — | — |
-| Random | — | — | — | — |
-| StaticMasking | not applicable | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 1000 deadlocks (total inaction — see below) |
-| VetoOnly | — | — | — | — |
+| Governance | 0.65 ± 0.88 reward, 0 violations | 1998.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 833 deadlocks |
+| MonolithicRL | -22.45 ± 12.50 reward, 5.25 violations | -4865.0 reward, 1000 violations | 4249.25 reward, 1000 violations, 0.1647 drift | 0.0 reward, 833 deadlocks |
+| Random | -34.90 ± 14.99 reward, 8.65 violations | 1990.30 ± 11.78 reward, 1.1 violations | 2621.41 ± 45.98 reward, 499.35 violations, 0.0777 drift | 0.0 reward, 833 deadlocks |
+| StaticMasking | not applicable | 2000.0 reward, 0 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 1000 deadlocks (total inaction — see below) |
+| VetoOnly | 0.65 ± 0.88 reward, 0 violations | 1300.0 reward, 100 violations | 1000.0 reward, 0 violations, 0.0 drift | 0.0 reward, 833 deadlocks |
 
-*Dash entries are filled after the full 20-seed run completes.*
+Every entry is a mean over the 20 seeds. `±` is the standard deviation
+across seeds and is shown only where it is not zero; the cells without one
+are the deterministic combinations described under [Seed
+Strategy](#seed-strategy), where the mean is a single exact value. Reward
+and violation figures come from `results/benchmark_summary.csv`; the drift
+column comes from the DriftLab command in [DriftLab Identity
+Drift](#driftlab-identity-drift) below, run at `--seeds 20`, because the
+CSV carries no drift column.
+
+The CSV also carries a 95% bootstrap interval per cell (10,000 resamples
+from a `random.Random(42)`, so it is reproducible). Only the six sampling
+combinations have an interval wider than a point: GridWorld Governance
+[0.30, 1.05], MonolithicRL [-27.80, -17.10], Random [-41.20, -28.40] and
+VetoOnly [0.30, 1.05]; TemptationBank Random [1984.70, 1994.50]; DriftLab
+Random [2602.22, 2641.92]. For the other thirteen the interval is the mean
+twice over, because resampling twenty copies of one number returns that
+number.
+
+GridWorld's `governance` and `veto_only` arms return identical rewards on
+every seed, which is why those two cells match. They part company on
+deadlocks — steps where no proposal cleared the vote and the Speaker's
+default was returned. Across the 20 grids `governance` records 0 deadlocks
+on 10 seeds and 993-1,000 on the other 10 (mean 498.3), while `veto_only`
+records 0 on 19 seeds and 1,000 on seed 4 (mean 50.0). The single grid the
+suite ran before #301, seed 42, was one of the quiet ones: 3.0 reward and
+no deadlocks at all under governance. Half of GridWorld's seeds gridlock
+the Parliament, and the old table could not show it.
 
 StaticMasking is not run on GridWorld. The scenario declares no static
 blocklist (Appendix D.4): its actions are bare directions and the poison is
@@ -91,15 +170,37 @@ in the target tile, so no fixed set of action names expresses the
 constraint. With an empty blocklist the arm would reproduce MonolithicRL's
 numbers under a second name, so the runner omits it.
 
-StaticMasking's DeadlockMaze cell does not measure the same thing as
-Governance's neighbouring 999. `tighten_quorum` is the only action the
-scenario ever proposes, and it is the one action the blocklist forbids, so
-the arm selects nothing on all 1,000 steps. `deadlock_count` counts default
-(no-decision) outcomes, so the 1,000 is total inaction: the quorum is never
-tightened and the gridlock the scenario studies never occurs. Governance's
-999 is genuine gridlock. The arm is kept because a blanket ban is a real
-ablation result for a single-action scenario, but it is not comparable
-step-for-step with the rows above it.
+DeadlockMaze's four deciding arms all read 833 because the scenario
+cycles: the temptation passes (1 step), five consecutive defaults fire
+the breaker, parameters reset, and the temptation is re-proposed — a
+6-step cycle, 166 recoveries per 1,000 steps, and 833 defaults for any
+arm that takes the single offered proposal. Every deciding rule does take
+it: the Speaker passes it, `monolithic_rl` and `random` have nothing else
+to pick, and `veto_only` sees asserted risk 0.0. The identical counts are
+the honest result — the deadlock breaker does the recovering and it runs
+in every arm, so the scenario demonstrates the breaker rather than
+separating governance from baselines (Appendix D.3.4, amended in #303).
+
+StaticMasking's DeadlockMaze cell does not measure the same thing as the
+deciding arms' 833. `tighten_quorum` is the only action the scenario ever
+proposes, and it is the one action the blocklist forbids, so the arm
+selects nothing on all 1,000 steps. `deadlock_count` counts default
+(no-decision) outcomes, so the 1,000 is total inaction: the quorum is
+never tightened and the gridlock the scenario studies never occurs. The
+deciding arms' 833 is genuine, recovered-from gridlock. The arm is kept
+because a blanket ban is a real ablation result for a single-action
+scenario, but it is not comparable step-for-step with the rows above it.
+
+TemptationBank's `veto_only` cell is the one place a baseline pays for
+being unbound: during the teaser spike (steps 500–599) the loan leads the
+agenda asserting `risk: 0.1`, the filter trusts the assertion 100 times,
+and 100 delayed −15 penalties land — 1300.0 total against governance's
+1998.0. The enacted Ulysses Contract never sees a teaser at all: the
+restriction removes the offer from the agenda structurally. StaticMasking
+still tops that column at 2000.0 — the hard-coded ban is the same rule
+the Parliament votes itself, minus the one-step cost of the vote. See
+Appendix D.4, "Where the 12-line filter stands", before quoting any of
+these numbers as a governance-beats-baselines result.
 
 ### DriftLab Identity Drift
 
@@ -146,20 +247,29 @@ arm never executes the violating action. Before per-scenario blocklists it
 ran with an empty set and reproduced MonolithicRL's row exactly, which is
 the defect that made this arm meaningless.
 
-DriftLab never consults its RNG and the governed path is deterministic, so
-every strategy except Random reports identical values on both seeds; Random
-is given per seed. Drift is a function of how many commitment violations a
+DriftLab holds no RNG and the governed path is deterministic, so every
+strategy except Random reports identical values on both seeds; Random is
+given per seed. At `--seeds 20` the deterministic rows are unchanged and
+Random's mean reward is 2621.41 with mean drift 0.0777 (per-seed drift
+ranges 0.0713 to 0.0852), which is the DriftLab column of the table
+above. Drift is a function of how many commitment violations a
 strategy actually executed, which is why Random lands between the fully
 compliant and fully adversarial strategies.
 
 ## Formal Predictions
 
 ```bash
-# Verify all 12 formal predictions pass
+# Run the 12 prediction tests over src/nomos/
 python -m src.nomos.runner prove --all
 ```
 
-Expected output: `12/12 PASS`
+Expected output: `12/12 PASS`, under the banner `Formal Prediction Tests
+(Python)` and above a footer repeating that no Lean proof is checked by the
+run. The predictions are Python asserts; this command invokes no Lean
+toolchain and compiles nothing in `gov-budget-proof/`. Which of them have a
+theorem of the Lean model behind them, and which have no counterpart there at
+all, is in
+[Prediction coverage](book/formal-verification-lean.md#prediction-coverage).
 
 ## Agent Benchmark (LLM) Protocol
 
@@ -233,7 +343,7 @@ Verification steps:
 # 1. Re-run with the same cache; expect "Cache: {'hits': N, 'misses': 0}"
 python -m src.nomos.runner agent --seeds 20 --steps 100 --backend pydanticai
 
-# 2. Check the committed manifest against the cache directory
+# 2. Check the local manifest against the cache directory
 python -m src.nomos.agents.schema check results/agent
 
 # 3. Manual digest comparison (Linux/macOS)
@@ -241,9 +351,13 @@ python -m src.nomos.agents.schema check results/agent
 ```
 
 The cache manifest (`results/agent/cache_manifest.json`) maps every
-entry to its SHA-256 digest and is committed with full runs, so
-reviewers can verify replay determinism. The cache directory itself is
-git-ignored.
+entry to its SHA-256 digest. Like everything under `results/`, both the
+manifest and the cache directory are **local, gitignored artifacts**
+(see [Output](#output)) — earlier revisions of this section said the
+manifest "is committed with full runs", which was never true of any ref
+(#308). Replay determinism is therefore a same-machine check: the
+manifest verifies the cache it was written next to, not a repository
+copy.
 
 ### Artifact contract
 
@@ -251,10 +365,8 @@ The committed reference for the agent artifacts is the schema contract
 in `src/nomos/agents/schema.py`. CI compares new runs against
 this contract (keys, types, non-emptiness) — **never values**, which
 change when model versions change. Schema stability is the CI
-contract; a run may also be rejected on a digest mismatch against the
-committed manifest.
-
-## Output
+contract; a run may also be rejected on a digest mismatch between the
+local manifest and the local cache it describes.
 
 ## Lean Proofs
 
@@ -283,8 +395,14 @@ Run the following to associate results with the exact code version:
 git log --oneline -1
 ```
 
-Results are committed to the repository under `results/` and tagged
-with the release version (e.g., `v0.1.0`).
+Results are **not** committed under `results/` — that directory is
+gitignored and holds only what your own runs write into it (see
+[Output](#output)). What the repository commits instead is the published
+per-cell table in this document, the RL campaign summaries under
+`book/appendix-e-data/` and `book/appendix-f-data/`, and the agent-run
+schema contract and manifest conventions. Earlier revisions of this
+section claimed committed, release-tagged results (`v0.1.0`); no such
+artifacts or tag ever existed (#308).
 
 ## Citation
 

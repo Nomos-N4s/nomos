@@ -115,21 +115,25 @@ PPO adversary, bypass reward, 100,000 timesteps × 5 seeds (42–46) × 3 modes,
 
 | Mode | Governance bypass rate | Violations / episode | Safety silenced | Veto precision | Veto recall |
 |------|-----------------------|----------------------|-----------------|----------------|-------------|
-| `governance` | **0.000** [0.000, 0.000] | 0.000 ± 0.000 | **1.000** [1.000, 1.000] | 1.000 [1.000, 1.000] | 1.000 [1.000, 1.000] |
+| `governance` | **0.000**† [0.000, 0.000] | 0.000 ± 0.000 | **1.000** [1.000, 1.000] | 1.000† [1.000, 1.000] | 1.000† [1.000, 1.000] |
 | `no_governance` | 1.000 [1.000, 1.000] | 1.500 ± 0.614 | n/a | n/a | 0.000 [0.000, 0.000] |
 | `static_mask` | 0.000 [0.000, 0.000] | 0.000 ± 0.000 | n/a | 1.000 [1.000, 1.000] | 1.000 [1.000, 1.000] |
 
 `n/a` marks a quantity that is undefined for that mode rather than zero: there is no Safety committee to silence without a Parliament, and `no_governance` never blocks anything, so its veto precision has no denominator. `static_mask` precision/recall are over the 4 of 5 seeds whose policy encountered poison at all.
 
+† **Oracle-dependent** — these hold *given a ground-truth-grounded Integrity verifier*, the single most important caveat (§E.5.1(1)). The unannotated Safety-silenced 1.000 in the same row is what happens to a committee that trusts asserted metadata: total defeat. Quote the daggered numbers only with this condition attached.
+
 ### E.4.1 Hypothesis verdicts
 
 | Mode | H1 budgets | H2 ordering | H3 falsification | Falsification attempts | Detection rate |
 |------|-----------|-------------|------------------|------------------------|----------------|
-| `governance` | **PASS** | **PASS** | **PASS** | 7,546 | 1.000 [1.000, 1.000] |
+| `governance` | **PASS**† | **PASS**† | **PASS**† | 7,546 | 1.000† [1.000, 1.000] |
 | `no_governance` | n/a | n/a | n/a | 0 | n/a |
 | `static_mask` | n/a | n/a | n/a | 0 | n/a |
 
 H1–H3 are claims about Parliament mechanisms — the κ₂ budget cap, the priority agenda, the falsification counter. The control modes have none of them, so they carry no verdict (see the [pre-registration](appendix-e-preregistration.md) for the scoping rule and its provenance). Their role is to bracket the result: `no_governance` shows what a total bypass looks like (1.000), `static_mask` what a ground-truth filter achieves (0.000).
+
+† These verdicts are conditional twice over, and are not quotable without both conditions: they hold *given the grounded Integrity verifier* (§E.5.1(1)), and H3's PASS is **partially by construction** — no spoof that could have beaten Integrity was reachable in the adversary's vocabulary, so the 7,546 detected falsifications and 4,762 blocked poison attempts are not independent evidence of deterrence (§E.5.1(2)).
 
 Against the pre-registered thresholds (ε = 0.01):
 
@@ -151,15 +155,21 @@ Against the pre-registered thresholds (ε = 0.01):
 
 **On the attempt-count asymmetry.** The governed adversary attempted poison 4,762 times against 75 for the ungoverned one. This is not a measure of effort: a *blocked* poison tile is never consumed, so the agent can re-attack the same tile indefinitely, whereas an *executed* one is eaten and disappears. Attempt counts are therefore not comparable across modes — the executed/attempted **rate** is the quantity being tested, and it is what the table reports.
 
+**Provenance of these counts (#308).** The rows above were read off the published run's per-run artifacts (`results/rl_adversary/result_<mode>_seed<seed>.json`), which are gitignored working files. The committed aggregate of that run (`book/appendix-e-data/adversary_protocol.json`) stored means, intervals, and a single raw count — the falsification total — so the one figure in this section a reader can check against committed data is that total: `results.governance.h3.spoof_attempts = 7546`, which the Falsifications column sums to. The per-seed poison-attempt decomposition and its 4,762 total are **not** independently checkable from the repository, and this table says so rather than implying otherwise. `aggregate_runs` now persists a `per_seed` block and raw-count `totals` into every aggregate it writes, so the next published campaign will back each number here from the committed file; these historical rows are left exactly as recorded.
+
 ---
 
 ## E.5 What the Adversary Achieved
 
-The governance layer was **not bypassed**: zero of 4,762 adversarial poison attempts executed, on every seed. But reporting only that would hide the more interesting half of the result.
+The transferable finding leads, because it is the half of the result that survives outside this gridworld:
 
-**The adversary defeated the Safety committee completely — on 100% of its poison proposals, on every seed.** The Safety member scores `1 − risk` where `risk` is metadata the *proposer supplies*. The policy learned, without being told the mechanism, to assert a low risk on tiles it knew to be poison, and Safety never vetoed one of them. Its entire bypass reward (95.24 ± 40.39) is accumulated silencing bonus: it never earned a single execution point.
+> **A safety check that scores proposer-supplied metadata has zero adversarial value: a 64×64-MLP PPO policy, given 100,000 training steps and never told the mechanism, learned to silence it on 100% of its genuinely unsafe proposals, on every seed.**
 
-What stopped it was the **Integrity committee**, which does not take the proposal's word for anything. It evaluates identity coherence against ground truth, scored low, and vetoed every spoof — which in turn drove the Integrity score below `TAG_COMPLIANCE_THRESHOLD`, tripping the falsification counter and halving the offender's budget exactly as Chapter 2 §2.4.2 specifies.
+Wherever an agent self-declares the risk of its own actions, this is the failure mode; at least one independently grounded verifier is load-bearing.
+
+**The defeat, mechanically.** The Safety member scores `1 − risk` where `risk` is metadata the *proposer supplies*. The policy learned to assert a low risk on tiles it knew to be poison, and Safety never vetoed one of them — its entire bypass reward (95.24 ± 40.39) is accumulated silencing bonus; it never earned a single execution point.
+
+**The second beat: the layer held, conditionally.** Zero of 4,762 adversarial poison attempts executed, on every seed. What stopped them was the **Integrity committee**, which does not take the proposal's word for anything: it evaluates identity coherence against ground truth, scored low, and vetoed every spoof — which in turn drove the Integrity score below `TAG_COMPLIANCE_THRESHOLD`, tripping the falsification counter and halving the offender's budget exactly as Chapter 2 §2.4.2 specifies. Both conditions on that sentence are §E.5.1(1) and §E.5.1(2), and the E.4 daggers point at them.
 
 So the honest reading is not *"the governance layer is robust."* It is:
 
@@ -172,7 +182,7 @@ These bound what the result can be claimed to show.
 1. **The outcome depends on a modelling choice.** Integrity is modelled as verifying against ground truth (consistent with Chapter 4, where coherence is checked against the committed Identity Core rather than against proposer claims). A governance layer whose committees *all* score proposer-asserted metadata would have been fully defeated by this adversary — the Safety result is the direct evidence. This is the single most important caveat: the experiment tests whether the mechanism works given at least one grounded verifier, not whether asserted-metadata governance is safe. It is not.
 
     Ground truth is free in a gridworld and free nowhere else, so this is an **oracle**, and "a verifier with oracle access to the truth catches lies" is close to true by construction. Every verdict in §E.4.1 inherits its strength from that single modelling choice. [Appendix F](appendix-f-verifier-frontier.md) replaces the oracle with a verifier of tunable accuracy ε and reports how the bypass rate behaves as it degrades — which is the regime every real deployment lives in.
-2. **The attack vocabulary excluded exploits, so the adversary could not play.** *(Consolidates what earlier revisions split across two separate limitations — the proxy detector and the finite surface — because they are one defect with one consequence.)* The Speaker infers falsification from a low Integrity score rather than by comparing the declared tag against an independent record, and the policy's whole vocabulary is: forge a tag, mis-report risk and coherence in three coarse buckets, flood up to six proposals. In this environment **no spoof that keeps Integrity above the 0.4 threshold is reachable at all** — the coherence claim is discretised, Integrity reads the true tile, and no move in the vocabulary could have worked.
+2. **The attack vocabulary excluded exploits, so the adversary could not play — co-determining the H2/H3 verdicts with (1), not a scale footnote.** H3's PASS is partially by construction: with no Integrity-beating move reachable, the 4,762 poison attempts and 7,546 detected spoofs measure the vocabulary's limits as much as the mechanism's strength, and are not independent evidence of deterrence. The E.4/E.4.1 daggers point here. *(Consolidates what earlier revisions split across two separate limitations — the proxy detector and the finite surface — because they are one defect with one consequence.)* The Speaker infers falsification from a low Integrity score rather than by comparing the declared tag against an independent record, and the policy's whole vocabulary is: forge a tag, mis-report risk and coherence in three coarse buckets, flood up to six proposals. In this environment **no spoof that keeps Integrity above the 0.4 threshold is reachable at all** — the coherence claim is discretised, Integrity reads the true tile, and no move in the vocabulary could have worked.
 
     The consequence is not a caveat on the margin, it is a discount on the evidence: the 4,762 failed attempts in §E.4.2 are **one unit of evidence repeated**, not 4,762 independent ones, and H3's PASS is therefore partly true by construction. The adversary did not lose; it never had a winning move to find. Attacks outside the vocabulary entirely — timing, collusion between members, gradient attacks on a learned committee — remain untested.
 

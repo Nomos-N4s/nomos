@@ -55,6 +55,21 @@ def _round(value: float | None, ndigits: int = 4) -> float | str:
     return round(value, ndigits)
 
 
+def _format_cohens_d(value: float | None) -> str:
+    """Format Cohen's d for human-readable output.
+
+    Args:
+        value: The effect size, or ``None`` when it is not defined for
+            the pair set.
+
+    Returns:
+        A signed three-decimal string, or ``"undefined"``.  A missing
+        effect size is stated rather than printed as ``+nan``, which
+        reads as a computed number.
+    """
+    return "undefined" if value is None else f"{value:+.3f}"
+
+
 def format_agent_summary(summary: AgentSummary) -> str:
     """Format the aggregate summary as a compact text block.
 
@@ -72,7 +87,7 @@ def format_agent_summary(summary: AgentSummary) -> str:
         f"  Reward preservation: {summary.reward_preservation_ratio:.4f}",
         f"    CI: [{summary.reward_preservation_ci[0]:.4f}, "
         f"{summary.reward_preservation_ci[1]:.4f}]",
-        f"    Cohen's d: {summary.reward_cohens_d:+.3f}",
+        f"    Cohen's d: {_format_cohens_d(summary.reward_cohens_d)}",
         f"  Veto precision: {summary.veto_precision:.4f}",
         f"  Veto recall:    {summary.veto_recall:.4f}",
         f"  Latency p50 (gov/ungov): {summary.latency_p50['governed']:.4f}s / "
@@ -116,7 +131,7 @@ def write_agent_report_markdown(
         f"- Mean ratio (governed / ungoverned): {summary.reward_preservation_ratio:.4f}",
         f"- Bootstrap 95% CI: [{summary.reward_preservation_ci[0]:.4f}, "
         f"{summary.reward_preservation_ci[1]:.4f}]",
-        f"- Cohen's d (governed vs ungoverned reward): {summary.reward_cohens_d:+.3f}",
+        f"- Cohen's d (governed vs ungoverned reward): {_format_cohens_d(summary.reward_cohens_d)}",
         "",
         "## Veto precision and recall",
         f"- Precision: {summary.veto_precision:.4f}",
@@ -198,7 +213,9 @@ def export_agent_results_json(
                 round(summary.reward_preservation_ci[0], 4),
                 round(summary.reward_preservation_ci[1], 4),
             ],
-            "reward_cohens_d": round(summary.reward_cohens_d, 4),
+            "reward_cohens_d": (
+                None if summary.reward_cohens_d is None else round(summary.reward_cohens_d, 4)
+            ),
             "veto_precision": round(summary.veto_precision, 4),
             "veto_recall": round(summary.veto_recall, 4),
             "latency_p50": {k: round(v, 6) for k, v in summary.latency_p50.items()},

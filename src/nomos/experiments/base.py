@@ -17,13 +17,17 @@ Real-world analogy:
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from ..models import GovernanceDecision, Proposal
 from ..speaker import SpeakerStateMachine
+
+#: A baseline's decision rule: called with the state and the proposals the
+#: scenario itself computed for the current step, in place of the Speaker.
+ExternalDecider = Callable[[Any, list[Proposal]], GovernanceDecision]
 
 
 @dataclass
@@ -110,6 +114,34 @@ class ExperimentScenario(ABC):
     #: arm instead of publishing the same numbers under a second name.
     STATIC_BLOCKLIST: ClassVar[frozenset[str]] = frozenset()
 
+    #: Whether this scenario's world is drawn from the benchmark seed.
+    #:
+    #: ``True`` means the constructor takes a ``seed`` and the run actually
+    #: consumes it, so two seeds are two different worlds. The benchmark
+    #: runner passes its loop seed to such a scenario, and repeating it
+    #: across seeds is real replication.
+    #:
+    #: ``False`` means the scenario draws nothing from the seed. The runner
+    #: passes it none, so a cell whose strategy draws nothing either returns
+    #: twenty copies of one trajectory — and a standard deviation or a
+    #: bootstrap interval taken over those repeats describes the harness,
+    #: not sampling variation, and must not be published as if it did. It
+    #: does not settle the whole row: the ``random`` baseline takes the loop
+    #: seed through :func:`~..benchmarks.run_all._get_baseline` and varies
+    #: wherever the agenda offers it more than one proposal.
+    #:
+    #: Every concrete scenario declares this for itself. ``False`` is the
+    #: default so that nothing is assumed to vary, but inheriting it is a
+    #: claim about the scenario rather than the absence of one — a class
+    #: that takes a seed and consumes it must say ``True``, whether or not
+    #: the benchmark runner is what builds it.
+    #:
+    #: Determinism here is a fact to declare, not a defect to paper over with
+    #: noise. A scenario exists to demonstrate a mechanism — a contract
+    #: binding, a breaker firing — and injecting randomness would change what
+    #: it measures rather than make it more rigorous.
+    SEEDED: ClassVar[bool] = False
+
     def __init__(self, speaker: SpeakerStateMachine):
         self.speaker = speaker
         self.metrics = ExperimentMetrics()
@@ -142,6 +174,7 @@ class ExperimentScenario(ABC):
         *,
         decision_class: str = "routine",
         external_decision: GovernanceDecision | None = None,
+        external_decider: ExternalDecider | None = None,
     ) -> StepResult:
         """Execute one step of the scenario.
 
@@ -152,17 +185,36 @@ class ExperimentScenario(ABC):
         and ``transition()`` for simple scenarios.
         """
         proposals = self.get_proposals(state)
-        if external_decision is not None:
-            decision = external_decision
-        else:
-            decision = self.speaker.run_governance_cycle(
-                state=state,
-                raw_proposals=proposals,
-                decision_class=decision_class,
-            )
+        decision = self._resolve_decision(
+            state, proposals, decision_class, external_decision, external_decider
+        )
         reward = self.compute_reward(state, decision)
         next_state = self.transition(state, decision)
         return StepResult(decision=decision, state=next_state, reward=reward)
+
+    def _resolve_decision(
+        self,
+        state: Any,
+        proposals: list[Proposal],
+        decision_class: str,
+        external_decision: GovernanceDecision | None,
+        external_decider: ExternalDecider | None,
+    ) -> GovernanceDecision:
+        """Produce this step's decision from the scenario's own agenda.
+
+        Precedence: an injected ``external_decision`` (a unit-test
+        fixture pinning one step), then ``external_decider`` called on
+        the proposals ``_run_step`` computed, then the Speaker. The
+        decider path is what keeps agenda parity between arms: a
+        baseline decides over the same phase-dependent list the Speaker
+        would see, built inside the scenario — never over an agenda a
+        harness computed separately (#303).
+        """
+        if external_decision is not None:
+            return external_decision
+        if external_decider is not None:
+            return external_decider(state, proposals)
+        return self.speaker.run_governance_cycle(state, proposals, decision_class)
 
     # ------------------------------------------------------------------
     # Optional hooks — override these if your scenario is simple
@@ -254,6 +306,7 @@ class ExperimentScenario(ABC):
         *,
         decision_class: str = "routine",
         external_decision: GovernanceDecision | None = None,
+        external_decider: ExternalDecider | None = None,
     ) -> StepResult:
         """Run a single governance experiment step.
 
@@ -262,26 +315,50 @@ class ExperimentScenario(ABC):
 
         The step runs inside :meth:`governance_latency_window`, so a
         step whose cycle runs in ``_run_step()`` records its latency
-        here and a step that runs no cycle at all (``external_decision``
-        supplied by a baseline) records none. A caller that runs the
-        cycle itself opens the window earlier and is credited there.
+        here and a step that runs no cycle at all (a baseline decided)
+        records none. A caller that runs the cycle itself opens the
+        window earlier and is credited there.
 
         Args:
             state: The current world state.
             decision_class: Classification for the governance cycle
                 (see :class:`~..speaker.SpeakerStateMachine`).
-            external_decision: Optional pre-computed decision (for
-                baseline comparisons like MonolithicRL).
+            external_decision: Optional pre-computed decision, for a
+                unit test pinning a single step. A benchmark arm must
+                use ``external_decider`` instead: a pre-computed
+                decision was necessarily made over an agenda computed
+                outside the scenario, which is how a stale proposal
+                list reached every baseline on DeadlockMaze (#303).
+            external_decider: Optional decision rule called as
+                ``decider(state, proposals)`` with the proposals the
+                scenario itself computed for this step — the same
+                phase-dependent agenda the Speaker would see. Supported
+                by the scenarios whose ``_run_step`` accepts the
+                parameter: the four benchmark experiment scenarios and
+                the default implementation. The LLM agent scenarios
+                (``agents/scenarios``) use a different decision
+                architecture — the agent's chosen action arrives *as*
+                ``external_decision`` — and take no decider; passing one
+                raises ``TypeError`` from their ``_run_step``.
 
         Returns:
             A :class:`StepResult` with the decision, next state, and reward.
+
+        Raises:
+            ValueError: If both ``external_decision`` and
+                ``external_decider`` are supplied.
         """
+        if external_decision is not None and external_decider is not None:
+            msg = "pass external_decision or external_decider, not both"
+            raise ValueError(msg)
+        kwargs: dict[str, Any] = {
+            "decision_class": decision_class,
+            "external_decision": external_decision,
+        }
+        if external_decider is not None:
+            kwargs["external_decider"] = external_decider
         with self.governance_latency_window():
-            result = self._run_step(
-                state,
-                decision_class=decision_class,
-                external_decision=external_decision,
-            )
+            result = self._run_step(state, **kwargs)
 
         self._history.append(result)
         self.metrics.total_steps += 1

@@ -1,3 +1,5 @@
+import pytest
+
 from src.nomos.contracts.contract import (
     ContractRegistry,
     ContractState,
@@ -275,12 +277,47 @@ class TestEnforcement:
 
     def test_stacked_enforcement_first_fail_shortcircuits(self):
         contract = UlyssesContract(
-            contract_id="t", restricted_indices={0}, revocation_threshold=0.0,
+            contract_id="t", restricted_indices={0},
+            enactment_threshold=0.2, revocation_threshold=0.4,
         )
         monitor = DistributedMonitor("m1", lambda i, ctx: True)
         result = stacked_enforcement(contract, 0.5, [monitor], 0, None, 0)
         assert result.compliant is False
         assert "Revocation threshold" in result.reason
+
+
+class TestThresholdAsymmetry:
+    """The constructor enforces revocation > enactment (#306)."""
+
+    def test_inverted_pair_is_rejected(self):
+        with pytest.raises(ValueError, match="strictly harder"):
+            UlyssesContract(
+                contract_id="inverted", restricted_indices={7},
+                enactment_threshold=1.0, revocation_threshold=0.1,
+            )
+
+    def test_flat_pair_is_rejected(self):
+        with pytest.raises(ValueError, match="strictly harder"):
+            UlyssesContract(
+                contract_id="flat", restricted_indices={7},
+                enactment_threshold=0.66, revocation_threshold=0.66,
+            )
+
+    def test_out_of_range_thresholds_are_rejected(self):
+        with pytest.raises(ValueError, match="enactment_threshold"):
+            UlyssesContract(
+                contract_id="t", restricted_indices={7},
+                enactment_threshold=-0.1, revocation_threshold=1.0,
+            )
+        with pytest.raises(ValueError, match="revocation_threshold"):
+            UlyssesContract(
+                contract_id="t", restricted_indices={7},
+                enactment_threshold=0.5, revocation_threshold=1.5,
+            )
+
+    def test_default_pair_still_constructs(self):
+        c = UlyssesContract(contract_id="t", restricted_indices={7})
+        assert c.revocation_threshold > c.enactment_threshold
 
 
 class TestMaskMerger:

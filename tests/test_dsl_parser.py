@@ -276,6 +276,18 @@ def test_validate_duplicate_contract_id() -> None:
         validate(config)
 
 
+@pytest.mark.parametrize("enactment,revocation", [(1.0, 0.1), (0.66, 0.66), (0.8, 0.5)])
+def test_validate_revocation_must_exceed_enactment(enactment: float, revocation: float) -> None:
+    config = _make_config(
+        members=(DSLMemberConfig(member_id="m", class_name="M", budget=10, veto_threshold=0.5, weight=1.0),),
+        contracts=(
+            DSLContractConfig(contract_id="c", restricted_indices=(0,), enactment_threshold=enactment, revocation_threshold=revocation, enforcement_mode="hard"),
+        )
+    )
+    with pytest.raises(DSLValidationError, match="strictly greater"):
+        validate(config)
+
+
 @pytest.mark.parametrize("budget", [0, -5])
 def test_validate_budget_range(budget: int) -> None:
     config = _make_config(
